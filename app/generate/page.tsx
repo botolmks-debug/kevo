@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { pengumumanTemplate } from "@/lib/templates/example-pengumuman";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Header } from "@/components/ui/Header";
+import { Input, Textarea } from "@/components/ui/Input";
 import { buildRenderInput, type GenerateFormState } from "./buildRenderInput";
 import { validateGenerateForm } from "./validateGenerateForm";
 
@@ -64,81 +68,70 @@ export default function GeneratePage() {
   const isLoading = status === "loading";
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-8">
-      <h1 className="text-2xl font-semibold">Generate Konten</h1>
+    <>
+      <Header />
+      <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-8">
+        <h1 className="text-2xl font-bold text-navy">Generate Konten</h1>
 
-      <div className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium">Template</span>
-          <select
-            disabled
-            className="rounded border border-gray-300 bg-gray-100 px-3 py-2 text-sm"
-          >
-            <option>{pengumumanTemplate.name}</option>
-          </select>
-        </label>
+        <Card className="flex flex-col gap-4">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-navy">Template</span>
+            <select
+              disabled
+              className="rounded-card border border-slate-200 bg-surface px-4 py-2.5 text-sm text-navy"
+            >
+              <option>{pengumumanTemplate.name}</option>
+            </select>
+          </label>
 
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium">Headline</span>
-          <input
+          <Input
+            label="Headline"
             type="text"
             value={form.headline}
             onChange={(e) => setForm((f) => ({ ...f, headline: e.target.value }))}
-            className="rounded border border-gray-300 px-3 py-2 text-sm"
             placeholder="Judul pengumuman"
           />
-        </label>
 
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium">Isi</span>
-          <textarea
+          <Textarea
+            label="Isi"
             value={form.body}
             onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
-            className="min-h-24 rounded border border-gray-300 px-3 py-2 text-sm"
             placeholder="Isi pengumuman"
           />
-        </label>
 
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium">URL Gambar (opsional)</span>
-          <input
+          <Input
+            label="URL Gambar (opsional)"
             type="url"
             value={form.photoUrl}
             onChange={(e) => setForm((f) => ({ ...f, photoUrl: e.target.value }))}
-            className="rounded border border-gray-300 px-3 py-2 text-sm"
             placeholder="https://..."
           />
-        </label>
 
-        <button
-          type="button"
-          onClick={handleGenerate}
-          disabled={isLoading}
-          className="w-fit rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {isLoading ? "Sedang membuat…" : "Generate"}
-        </button>
+          <Button type="button" onClick={handleGenerate} disabled={isLoading} className="w-fit">
+            {isLoading ? "Sedang membuat…" : "Generate"}
+          </Button>
 
-        {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
-      </div>
+          {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
+        </Card>
 
-      {previewUrl ? (
-        <div className="flex flex-col items-start gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element -- pratinjau blob lokal, bukan aset statis */}
-          <img
-            src={previewUrl}
-            alt="Hasil generate"
-            className="h-auto w-full max-w-sm rounded border border-gray-200"
-          />
-          <a
-            href={previewUrl}
-            download="hasil.png"
-            className="rounded border border-gray-300 px-4 py-2 text-sm font-medium"
-          >
-            Download PNG
-          </a>
-        </div>
-      ) : null}
-    </main>
+        {previewUrl ? (
+          <Card className="flex flex-col items-start gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element -- pratinjau blob lokal, bukan aset statis */}
+            <img
+              src={previewUrl}
+              alt="Hasil generate"
+              className="h-auto w-full max-w-sm rounded-card border border-slate-200"
+            />
+            <a
+              href={previewUrl}
+              download="hasil.png"
+              className="rounded-card border border-primary px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/5"
+            >
+              Download PNG
+            </a>
+          </Card>
+        ) : null}
+      </main>
+    </>
   );
 }
