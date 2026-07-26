@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderTemplate } from "@/lib/render/renderTemplate";
+import { loadImageAsDataUri, renderTemplate } from "@/lib/render/renderTemplate";
 import { pengumumanTemplate } from "@/lib/templates/example-pengumuman";
 import type { RenderInput } from "@/lib/templates/types";
 
@@ -66,6 +66,37 @@ describe("renderTemplate", () => {
     const input: RenderInput = {
       template: pengumumanTemplate,
       values: { ...baseInput.values, photo: "https://example.com/broken.jpg" },
+    };
+
+    const png = await renderTemplate(input);
+
+    expect(isPng(png)).toBe(true);
+  }, 20000);
+
+  it("does not treat a non-image response as an image", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response("<html>bukan gambar</html>", {
+        status: 200,
+        headers: { "content-type": "text/html; charset=utf-8" },
+      }),
+    );
+
+    const result = await loadImageAsDataUri("https://example.com");
+
+    expect(result).toBeNull();
+  });
+
+  it("falls back to a placeholder instead of throwing when a URL resolves but isn't an image (regression: reported as 'a is not iterable')", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response("<html>bukan gambar</html>", {
+        status: 200,
+        headers: { "content-type": "text/html; charset=utf-8" },
+      }),
+    );
+
+    const input: RenderInput = {
+      template: pengumumanTemplate,
+      values: { ...baseInput.values, photo: "https://example.com" },
     };
 
     const png = await renderTemplate(input);

@@ -40,7 +40,10 @@ export async function loadImageAsDataUri(
     if (!res.ok) {
       return null;
     }
-    const contentType = res.headers.get("content-type") ?? "image/png";
+    const contentType = res.headers.get("content-type") ?? "";
+    if (!contentType.startsWith("image/")) {
+      return null;
+    }
     const arrayBuffer = await res.arrayBuffer();
     const base64 = Buffer.from(arrayBuffer).toString("base64");
     return `data:${contentType};base64,${base64}`;
