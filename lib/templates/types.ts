@@ -13,6 +13,10 @@ export type TextSlot = {
   align: "left" | "center" | "right";
   color: string;
   fontWeight?: number;
+  /** Label manusiawi untuk form (fallback ke `id` kalau tidak diisi). */
+  label?: string;
+  /** Contoh isi (dipakai sebagai placeholder di form, bukan value awal). */
+  placeholder?: string;
 };
 
 export type ImageSlot = {
@@ -21,6 +25,10 @@ export type ImageSlot = {
   box: Box;
   fit: "cover" | "contain";
   borderRadius?: number;
+  /** Label manusiawi untuk form (fallback ke `id` kalau tidak diisi). */
+  label?: string;
+  /** Contoh isi (dipakai sebagai placeholder di form, bukan value awal). */
+  placeholder?: string;
 };
 
 export type Slot = TextSlot | ImageSlot;

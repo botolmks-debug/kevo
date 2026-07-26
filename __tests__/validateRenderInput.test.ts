@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { validateRenderInput } from "@/lib/templates/validateRenderInput";
-import { pengumumanTemplate } from "@/lib/templates/example-pengumuman";
+import { pengumumanTemplate } from "@/lib/templates/pengumuman";
 
 const validValues = { headline: "Judul", body: "Isi pengumuman." };
 

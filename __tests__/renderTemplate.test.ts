@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadImageAsDataUri, renderTemplate } from "@/lib/render/renderTemplate";
-import { pengumumanTemplate } from "@/lib/templates/example-pengumuman";
+import { pengumumanTemplate } from "@/lib/templates/pengumuman";
 import type { RenderInput } from "@/lib/templates/types";
 
 function isPng(buffer: Buffer): boolean {

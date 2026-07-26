@@ -168,14 +168,14 @@ export async function renderTemplate(input: RenderInput): Promise<Buffer> {
           alt=""
           width={64}
           height={64}
-          style={{ position: "absolute", top: 40, right: 40 }}
+          style={{ position: "absolute", top: 40, left: 40 }}
         />
       ) : (
         <div
           style={{
             position: "absolute",
             top: 40,
-            right: 40,
+            left: 40,
             width: 64,
             height: 64,
             borderRadius: 999,
@@ -190,9 +190,9 @@ export async function renderTemplate(input: RenderInput): Promise<Buffer> {
         <img
           src={badgeDataUri}
           alt=""
-          width={140}
-          height={32}
-          style={{ position: "absolute", top: 120, right: 40 }}
+          width={64}
+          height={64}
+          style={{ position: "absolute", top: 40, right: 40 }}
         />
       ) : null}
 

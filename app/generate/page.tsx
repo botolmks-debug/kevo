@@ -1,23 +1,29 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { pengumumanTemplate } from "@/lib/templates/example-pengumuman";
+import { templates } from "@/lib/templates";
+import type { Slot } from "@/lib/templates/types";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Header } from "@/components/ui/Header";
 import { Input, Textarea } from "@/components/ui/Input";
-import { buildRenderInput, type GenerateFormState } from "./buildRenderInput";
+import { buildRenderInput } from "./buildRenderInput";
 import { validateGenerateForm } from "./validateGenerateForm";
 
 type Status = "idle" | "loading" | "error" | "success";
 
-const initialForm: GenerateFormState = { headline: "", body: "", photoUrl: "" };
+function fieldLabel(slot: Slot): string {
+  return slot.label ?? slot.id;
+}
 
 export default function GeneratePage() {
-  const [form, setForm] = useState<GenerateFormState>(initialForm);
+  const [templateId, setTemplateId] = useState(templates[0].id);
+  const [values, setValues] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const selectedTemplate = templates.find((t) => t.id === templateId) ?? templates[0];
 
   useEffect(() => {
     return () => {
@@ -27,8 +33,19 @@ export default function GeneratePage() {
     };
   }, [previewUrl]);
 
+  function handleTemplateChange(id: string) {
+    setTemplateId(id);
+    setValues({});
+    setStatus("idle");
+    setErrorMessage(null);
+  }
+
+  function setFieldValue(slotId: string, value: string) {
+    setValues((v) => ({ ...v, [slotId]: value }));
+  }
+
   async function handleGenerate() {
-    const validation = validateGenerateForm(form);
+    const validation = validateGenerateForm(selectedTemplate, values);
     if (!validation.ok) {
       setStatus("error");
       setErrorMessage(validation.error);
@@ -42,7 +59,7 @@ export default function GeneratePage() {
       const res = await fetch("/api/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildRenderInput(form)),
+        body: JSON.stringify(buildRenderInput(selectedTemplate, values)),
       });
 
       if (!res.ok) {
@@ -77,35 +94,49 @@ export default function GeneratePage() {
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-navy">Template</span>
             <select
-              disabled
-              className="rounded-card border border-slate-200 bg-surface px-4 py-2.5 text-sm text-navy"
+              value={templateId}
+              onChange={(e) => handleTemplateChange(e.target.value)}
+              className="rounded-card border border-slate-200 bg-white px-4 py-2.5 text-sm text-navy focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             >
-              <option>{pengumumanTemplate.name}</option>
+              {templates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
             </select>
           </label>
 
-          <Input
-            label="Headline"
-            type="text"
-            value={form.headline}
-            onChange={(e) => setForm((f) => ({ ...f, headline: e.target.value }))}
-            placeholder="Judul pengumuman"
-          />
-
-          <Textarea
-            label="Isi"
-            value={form.body}
-            onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
-            placeholder="Isi pengumuman"
-          />
-
-          <Input
-            label="URL Gambar (opsional)"
-            type="url"
-            value={form.photoUrl}
-            onChange={(e) => setForm((f) => ({ ...f, photoUrl: e.target.value }))}
-            placeholder="https://..."
-          />
+          {selectedTemplate.slots.map((slot) =>
+            slot.type === "text" ? (
+              slot.maxLines > 1 ? (
+                <Textarea
+                  key={slot.id}
+                  label={fieldLabel(slot)}
+                  value={values[slot.id] ?? ""}
+                  onChange={(e) => setFieldValue(slot.id, e.target.value)}
+                  placeholder={slot.placeholder}
+                />
+              ) : (
+                <Input
+                  key={slot.id}
+                  label={fieldLabel(slot)}
+                  type="text"
+                  value={values[slot.id] ?? ""}
+                  onChange={(e) => setFieldValue(slot.id, e.target.value)}
+                  placeholder={slot.placeholder}
+                />
+              )
+            ) : (
+              <Input
+                key={slot.id}
+                label={`${fieldLabel(slot)} (opsional)`}
+                type="url"
+                value={values[slot.id] ?? ""}
+                onChange={(e) => setFieldValue(slot.id, e.target.value)}
+                placeholder={slot.placeholder ?? "https://..."}
+              />
+            ),
+          )}
 
           <Button type="button" onClick={handleGenerate} disabled={isLoading} className="w-fit">
             {isLoading ? "Sedang membuat…" : "Generate"}
