@@ -3,8 +3,10 @@ import type { Template } from "./types";
 // Logo & badge dibuat sebagai SVG inline lalu di-encode ke data URI saat
 // module di-load — tidak ada fetch/file eksternal, jadi template ini selalu
 // bisa dirender tanpa koneksi internet (lihat plan spec-01, keputusan #5).
+// Pakai btoa (bukan Buffer) supaya modul ini aman diimport di client bundle
+// juga (app/generate/page.tsx) — btoa tersedia di browser maupun Node.
 function svgToDataUri(svg: string): string {
-  return `data:image/svg+xml;base64,${Buffer.from(svg).toString("base64")}`;
+  return `data:image/svg+xml;base64,${btoa(svg)}`;
 }
 
 const logoSvg = `
