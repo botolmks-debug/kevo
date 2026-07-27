@@ -1,19 +1,43 @@
-import type { Template } from "./types";
+import type { Template, TemplateLayout } from "./types";
 import { defaultBrand } from "./brand";
 
-export const eventTemplate: Template = {
-  id: "event",
-  name: "Event / Acara",
+const layout45: TemplateLayout = {
   canvas: { width: 1080, height: 1350 },
-  brand: { ...defaultBrand, backgroundColor: "#0f172a" },
+  logo: { x: 40, y: 36, size: 56 },
+  footerLayout: {
+    x: 60,
+    y: 1270,
+    direction: "row",
+    gap: 26,
+    iconSize: 42,
+    textSize: 24,
+    textColor: "#e2e8f0",
+    nameColor: "#ffffff",
+  },
+  decorations: [
+    {
+      box: { x: 24, y: 24, width: 1032, height: 1302 },
+      shape: "rect",
+      color: "transparent",
+      borderStyle: "dashed",
+      borderWidth: 3,
+      borderColor: "#facc15",
+    },
+    {
+      box: { x: 60, y: 300, width: 960, height: 170 },
+      shape: "rect",
+      color: "#1e293b",
+      borderRadius: 16,
+    },
+  ],
   slots: [
     {
       id: "title",
       type: "text",
       box: { x: 60, y: 150, width: 960, height: 140 },
       fontFamily: "Inter",
-      maxFontSize: 52,
-      minFontSize: 32,
+      maxFontSize: 56,
+      minFontSize: 36,
       maxLines: 2,
       align: "left",
       color: "#ffffff",
@@ -24,10 +48,10 @@ export const eventTemplate: Template = {
     {
       id: "datetime",
       type: "text",
-      box: { x: 60, y: 310, width: 960, height: 60 },
+      box: { x: 90, y: 325, width: 900, height: 60 },
       fontFamily: "Inter",
-      maxFontSize: 32,
-      minFontSize: 24,
+      maxFontSize: 36,
+      minFontSize: 26,
       maxLines: 1,
       align: "left",
       color: "#facc15",
@@ -38,10 +62,10 @@ export const eventTemplate: Template = {
     {
       id: "location",
       type: "text",
-      box: { x: 60, y: 380, width: 960, height: 60 },
+      box: { x: 90, y: 395, width: 900, height: 60 },
       fontFamily: "Inter",
-      maxFontSize: 26,
-      minFontSize: 20,
+      maxFontSize: 30,
+      minFontSize: 22,
       maxLines: 2,
       align: "left",
       color: "#e2e8f0",
@@ -52,19 +76,18 @@ export const eventTemplate: Template = {
     {
       id: "photo",
       type: "image",
-      box: { x: 60, y: 470, width: 960, height: 500 },
-      fit: "cover",
+      box: { x: 60, y: 490, width: 960, height: 480 },
+      fit: "contain",
       borderRadius: 24,
       label: "Foto",
-      placeholder: "https://...",
     },
     {
       id: "cta",
       type: "text",
       box: { x: 60, y: 1000, width: 960, height: 70 },
       fontFamily: "Inter",
-      maxFontSize: 30,
-      minFontSize: 22,
+      maxFontSize: 34,
+      minFontSize: 24,
       maxLines: 1,
       align: "left",
       color: "#facc15",
@@ -73,4 +96,15 @@ export const eventTemplate: Template = {
       placeholder: "Daftar sekarang via WA →",
     },
   ],
+};
+
+export const eventTemplate: Template = {
+  id: "event",
+  name: "Event / Acara",
+  brand: { ...defaultBrand, backgroundColor: "#0f172a" },
+  layouts: {
+    "4:5": layout45,
+    "1:1": { ...layout45, canvas: { width: 1080, height: 1080 } },
+    "9:16": { ...layout45, canvas: { width: 1080, height: 1920 } },
+  },
 };

@@ -1,19 +1,43 @@
-import type { Template } from "./types";
+import type { Template, TemplateLayout } from "./types";
 import { defaultBrand } from "./brand";
 
-export const promoTemplate: Template = {
-  id: "promo",
-  name: "Promo Harga",
+const layout45: TemplateLayout = {
   canvas: { width: 1080, height: 1350 },
-  brand: { ...defaultBrand, backgroundColor: "#ffffff" },
+  logo: { x: 976, y: 34, size: 64 },
+  footerLayout: {
+    x: 700,
+    y: 1190,
+    direction: "column",
+    align: "flex-end",
+    gap: 14,
+    iconSize: 44,
+    textSize: 24,
+    textColor: "#475569",
+    nameColor: "#0f172a",
+  },
+  decorations: [
+    {
+      box: { x: -200, y: -260, width: 900, height: 900 },
+      shape: "rect",
+      color: "#2563eb",
+      opacity: 0.08,
+      rotateDeg: -18,
+    },
+    {
+      box: { x: 620, y: -120, width: 560, height: 560 },
+      shape: "circle",
+      color: "#facc15",
+      opacity: 0.18,
+    },
+  ],
   slots: [
     {
       id: "promoLabel",
       type: "text",
-      box: { x: 60, y: 140, width: 400, height: 50 },
+      box: { x: 60, y: 150, width: 500, height: 50 },
       fontFamily: "Inter",
-      maxFontSize: 28,
-      minFontSize: 20,
+      maxFontSize: 30,
+      minFontSize: 22,
       maxLines: 1,
       align: "left",
       color: "#2563eb",
@@ -24,10 +48,10 @@ export const promoTemplate: Template = {
     {
       id: "title",
       type: "text",
-      box: { x: 60, y: 190, width: 960, height: 100 },
+      box: { x: 60, y: 200, width: 960, height: 100 },
       fontFamily: "Inter",
-      maxFontSize: 44,
-      minFontSize: 28,
+      maxFontSize: 50,
+      minFontSize: 32,
       maxLines: 2,
       align: "left",
       color: "#0f172a",
@@ -38,10 +62,10 @@ export const promoTemplate: Template = {
     {
       id: "price",
       type: "text",
-      box: { x: 60, y: 310, width: 960, height: 160 },
+      box: { x: 60, y: 320, width: 960, height: 170 },
       fontFamily: "Inter",
-      maxFontSize: 96,
-      minFontSize: 56,
+      maxFontSize: 104,
+      minFontSize: 60,
       maxLines: 1,
       align: "left",
       color: "#2563eb",
@@ -52,19 +76,18 @@ export const promoTemplate: Template = {
     {
       id: "productImage",
       type: "image",
-      box: { x: 60, y: 490, width: 960, height: 480 },
-      fit: "cover",
+      box: { x: 60, y: 500, width: 960, height: 480 },
+      fit: "contain",
       borderRadius: 24,
       label: "Foto Produk",
-      placeholder: "https://...",
     },
     {
       id: "cta",
       type: "text",
       box: { x: 60, y: 1000, width: 960, height: 70 },
       fontFamily: "Inter",
-      maxFontSize: 32,
-      minFontSize: 24,
+      maxFontSize: 34,
+      minFontSize: 26,
       maxLines: 1,
       align: "left",
       color: "#0f172a",
@@ -73,4 +96,15 @@ export const promoTemplate: Template = {
       placeholder: "Pesan sekarang via WA →",
     },
   ],
+};
+
+export const promoTemplate: Template = {
+  id: "promo",
+  name: "Promo Harga",
+  brand: { ...defaultBrand, backgroundColor: "#ffffff" },
+  layouts: {
+    "4:5": layout45,
+    "1:1": { ...layout45, canvas: { width: 1080, height: 1080 } },
+    "9:16": { ...layout45, canvas: { width: 1080, height: 1920 } },
+  },
 };

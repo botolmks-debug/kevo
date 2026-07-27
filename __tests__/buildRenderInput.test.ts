@@ -6,18 +6,22 @@ describe("buildRenderInput", () => {
   it("pairs the selected template with the given values unchanged", () => {
     const values = { headline: "Judul acara", body: "Detail acara.", photo: "" };
 
-    const result = buildRenderInput(pengumumanTemplate, values);
+    const result = buildRenderInput(pengumumanTemplate, values, "4:5");
 
     expect(result.template).toBe(pengumumanTemplate);
     expect(result.values).toEqual(values);
   });
 
   it("passes an empty image field through unchanged (handled by the render engine)", () => {
-    const result = buildRenderInput(pengumumanTemplate, {
-      headline: "A",
-      body: "B",
-      photo: "",
-    });
+    const result = buildRenderInput(
+      pengumumanTemplate,
+      {
+        headline: "A",
+        body: "B",
+        photo: "",
+      },
+      "4:5",
+    );
 
     expect(result.values.photo).toBe("");
   });

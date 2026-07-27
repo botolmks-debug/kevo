@@ -1,20 +1,31 @@
-import type { Template } from "./types";
+import type { Template, TemplateLayout } from "./types";
 import { defaultBrand } from "./brand";
 
-export const rekrutmenTemplate: Template = {
-  id: "rekrutmen",
-  name: "Rekrutmen / Lowongan",
+const layout45: TemplateLayout = {
   canvas: { width: 1080, height: 1350 },
-  brand: { ...defaultBrand, backgroundColor: "#0f172a" },
+  logo: { x: 508, y: 34, size: 64 },
+  footerLayout: {
+    x: 60,
+    y: 1080,
+    direction: "column",
+    gap: 16,
+    iconSize: 44,
+    textSize: 24,
+    textColor: "#e2e8f0",
+    nameColor: "#ffffff",
+  },
+  decorations: [
+    { box: { x: 520, y: 150, width: 4, height: 860 }, shape: "rect", color: "#facc15", opacity: 0.5 },
+  ],
   slots: [
     {
       id: "title",
       type: "text",
-      box: { x: 60, y: 140, width: 960, height: 60 },
+      box: { x: 60, y: 150, width: 440, height: 90 },
       fontFamily: "Inter",
-      maxFontSize: 36,
+      maxFontSize: 40,
       minFontSize: 28,
-      maxLines: 1,
+      maxLines: 2,
       align: "left",
       color: "#facc15",
       fontWeight: 800,
@@ -24,11 +35,11 @@ export const rekrutmenTemplate: Template = {
     {
       id: "intro",
       type: "text",
-      box: { x: 60, y: 210, width: 960, height: 90 },
+      box: { x: 60, y: 250, width: 440, height: 130 },
       fontFamily: "Inter",
-      maxFontSize: 26,
+      maxFontSize: 28,
       minFontSize: 20,
-      maxLines: 2,
+      maxLines: 3,
       align: "left",
       color: "#e2e8f0",
       fontWeight: 400,
@@ -38,9 +49,9 @@ export const rekrutmenTemplate: Template = {
     {
       id: "position1",
       type: "text",
-      box: { x: 60, y: 320, width: 960, height: 50 },
+      box: { x: 60, y: 400, width: 440, height: 60 },
       fontFamily: "Inter",
-      maxFontSize: 28,
+      maxFontSize: 30,
       minFontSize: 22,
       maxLines: 1,
       align: "left",
@@ -52,9 +63,9 @@ export const rekrutmenTemplate: Template = {
     {
       id: "position2",
       type: "text",
-      box: { x: 60, y: 380, width: 960, height: 50 },
+      box: { x: 60, y: 465, width: 440, height: 60 },
       fontFamily: "Inter",
-      maxFontSize: 28,
+      maxFontSize: 30,
       minFontSize: 22,
       maxLines: 1,
       align: "left",
@@ -66,9 +77,9 @@ export const rekrutmenTemplate: Template = {
     {
       id: "position3",
       type: "text",
-      box: { x: 60, y: 440, width: 960, height: 50 },
+      box: { x: 60, y: 530, width: 440, height: 60 },
       fontFamily: "Inter",
-      maxFontSize: 28,
+      maxFontSize: 30,
       minFontSize: 22,
       maxLines: 1,
       align: "left",
@@ -80,9 +91,9 @@ export const rekrutmenTemplate: Template = {
     {
       id: "position4",
       type: "text",
-      box: { x: 60, y: 500, width: 960, height: 50 },
+      box: { x: 60, y: 595, width: 440, height: 60 },
       fontFamily: "Inter",
-      maxFontSize: 28,
+      maxFontSize: 30,
       minFontSize: 22,
       maxLines: 1,
       align: "left",
@@ -92,27 +103,37 @@ export const rekrutmenTemplate: Template = {
       placeholder: "Satpam",
     },
     {
-      id: "photo",
-      type: "image",
-      box: { x: 60, y: 570, width: 960, height: 460 },
-      fit: "cover",
-      borderRadius: 24,
-      label: "Foto",
-      placeholder: "https://...",
-    },
-    {
       id: "cta",
       type: "text",
-      box: { x: 60, y: 1050, width: 960, height: 70 },
+      box: { x: 60, y: 700, width: 440, height: 80 },
       fontFamily: "Inter",
-      maxFontSize: 30,
-      minFontSize: 22,
-      maxLines: 1,
+      maxFontSize: 32,
+      minFontSize: 24,
+      maxLines: 2,
       align: "left",
       color: "#facc15",
       fontWeight: 700,
       label: "Kontak",
       placeholder: "Kirim CV ke WA 0812-0000-0000",
     },
+    {
+      id: "photo",
+      type: "image",
+      box: { x: 560, y: 150, width: 460, height: 860 },
+      fit: "contain",
+      borderRadius: 24,
+      label: "Foto",
+    },
   ],
+};
+
+export const rekrutmenTemplate: Template = {
+  id: "rekrutmen",
+  name: "Rekrutmen / Lowongan",
+  brand: { ...defaultBrand, backgroundColor: "#0f172a" },
+  layouts: {
+    "4:5": layout45,
+    "1:1": { ...layout45, canvas: { width: 1080, height: 1080 } },
+    "9:16": { ...layout45, canvas: { width: 1080, height: 1920 } },
+  },
 };

@@ -9,6 +9,7 @@ import { produkTemplate } from "./produk";
 import { eventTemplate } from "./event";
 import { quoteTemplate } from "./quote";
 import { profilTemplate } from "./profil";
+import { polosTemplate } from "./polos";
 
 export const templates: Template[] = [
   pengumumanTemplate,
@@ -21,4 +22,5 @@ export const templates: Template[] = [
   eventTemplate,
   quoteTemplate,
   profilTemplate,
+  polosTemplate,
 ];

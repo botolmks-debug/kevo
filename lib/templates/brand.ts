@@ -1,9 +1,8 @@
 import type { Template } from "./types";
 
-// Logo & badge generik (bukan spesifik satu template) — dipakai ulang oleh
-// semua 10 template supaya posisi & identitas brand terasa konsisten
-// (lihat plan spec-03). btoa (bukan Buffer) supaya aman diimport di client
-// bundle juga (app/generate/page.tsx).
+// Logo generik (bukan spesifik satu template), dipakai ulang oleh semua 10
+// template. btoa (bukan Buffer) supaya aman diimport di client bundle juga
+// (app/generate/page.tsx).
 function svgToDataUri(svg: string): string {
   return `data:image/svg+xml;base64,${btoa(svg)}`;
 }
@@ -16,18 +15,19 @@ const logoSvg = `
 </svg>
 `.trim();
 
-const badgeSvg = `
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <circle cx="32" cy="32" r="30" fill="#FACC15" />
-</svg>
-`.trim();
-
-export const defaultBrand: Omit<Template["brand"], "backgroundColor"> = {
+/**
+ * Bagian brand yang sama untuk semua template: logo & isi footer demo.
+ * Tata letak (`logo`, `footerLayout`) & motif (`decorations`) sengaja TIDAK
+ * di sini — itu yang harus beda per template (lihat spec-07).
+ */
+export const defaultBrand: Pick<Template["brand"], "logoUrl" | "footer"> = {
   logoUrl: svgToDataUri(logoSvg),
-  badgeUrl: svgToDataUri(badgeSvg),
   footer: {
     text: "Kevo Demo Instansi",
-    waNumber: "+62 812-0000-0000",
-    handles: "@kevo.demo",
+    socials: [
+      { platformId: "instagram", value: "@kevo.demo" },
+      { platformId: "whatsapp", value: "+62 812-0000-0000" },
+      { platformId: "website", value: "kevo.demo" },
+    ],
   },
 };

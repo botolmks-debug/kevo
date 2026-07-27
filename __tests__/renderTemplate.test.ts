@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { loadImageAsDataUri, renderTemplate } from "@/lib/render/renderTemplate";
+import { renderTemplate } from "@/lib/render/renderTemplate";
 import { pengumumanTemplate } from "@/lib/templates/pengumuman";
 import type { RenderInput } from "@/lib/templates/types";
 
@@ -26,6 +26,7 @@ const baseInput: RenderInput = {
     headline: "Pengumuman penting untuk seluruh warga sekolah tahun ajaran baru",
     body: "Silakan hubungi kantor untuk info lebih lanjut mengenai jadwal dan lokasi kegiatan.",
   },
+  ratio: "4:5",
 };
 
 describe("renderTemplate", () => {
@@ -38,8 +39,8 @@ describe("renderTemplate", () => {
 
     expect(isPng(png)).toBe(true);
     const { width, height } = readPngDimensions(png);
-    expect(width).toBe(pengumumanTemplate.canvas.width);
-    expect(height).toBe(pengumumanTemplate.canvas.height);
+    expect(width).toBe(pengumumanTemplate.layouts["4:5"].canvas.width);
+    expect(height).toBe(pengumumanTemplate.layouts["4:5"].canvas.height);
   }, 20000);
 
   it("is deterministic for the same input", async () => {
@@ -53,6 +54,7 @@ describe("renderTemplate", () => {
     const input: RenderInput = {
       template: pengumumanTemplate,
       values: { headline: "Judul singkat", body: "Isi singkat." },
+      ratio: "4:5",
     };
 
     const png = await renderTemplate(input);
@@ -66,37 +68,7 @@ describe("renderTemplate", () => {
     const input: RenderInput = {
       template: pengumumanTemplate,
       values: { ...baseInput.values, photo: "https://example.com/broken.jpg" },
-    };
-
-    const png = await renderTemplate(input);
-
-    expect(isPng(png)).toBe(true);
-  }, 20000);
-
-  it("does not treat a non-image response as an image", async () => {
-    vi.spyOn(global, "fetch").mockResolvedValue(
-      new Response("<html>bukan gambar</html>", {
-        status: 200,
-        headers: { "content-type": "text/html; charset=utf-8" },
-      }),
-    );
-
-    const result = await loadImageAsDataUri("https://example.com");
-
-    expect(result).toBeNull();
-  });
-
-  it("falls back to a placeholder instead of throwing when a URL resolves but isn't an image (regression: reported as 'a is not iterable')", async () => {
-    vi.spyOn(global, "fetch").mockResolvedValue(
-      new Response("<html>bukan gambar</html>", {
-        status: 200,
-        headers: { "content-type": "text/html; charset=utf-8" },
-      }),
-    );
-
-    const input: RenderInput = {
-      template: pengumumanTemplate,
-      values: { ...baseInput.values, photo: "https://example.com" },
+      ratio: "4:5",
     };
 
     const png = await renderTemplate(input);

@@ -1,6 +1,7 @@
 export type SupabaseEnvPresence = {
   supabaseUrl: boolean;
   supabaseAnonKey: boolean;
+  supabaseServiceRoleKey: boolean;
 };
 
 export function checkSupabaseEnvPresence(
@@ -9,5 +10,6 @@ export function checkSupabaseEnvPresence(
   return {
     supabaseUrl: Boolean(env.NEXT_PUBLIC_SUPABASE_URL),
     supabaseAnonKey: Boolean(env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+    supabaseServiceRoleKey: Boolean(env.SUPABASE_SERVICE_ROLE_KEY),
   };
 }

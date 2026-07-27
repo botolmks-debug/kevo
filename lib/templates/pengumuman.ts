@@ -1,19 +1,31 @@
-import type { Template } from "./types";
+import type { Template, TemplateLayout } from "./types";
 import { defaultBrand } from "./brand";
 
-export const pengumumanTemplate: Template = {
-  id: "pengumuman",
-  name: "Pengumuman",
+// Beda dari warna logo (#2563EB) supaya logo tidak "hilang" ditelan band.
+const BAND_COLOR = "#1e293b";
+
+const layout45: TemplateLayout = {
   canvas: { width: 1080, height: 1350 },
-  brand: { ...defaultBrand, backgroundColor: "#0f172a" },
+  logo: { x: 40, y: 34, size: 64 },
+  footerLayout: {
+    x: 60,
+    y: 1250,
+    direction: "row",
+    gap: 28,
+    iconSize: 48,
+    textSize: 26,
+    textColor: "#e2e8f0",
+    nameColor: "#ffffff",
+  },
+  decorations: [{ box: { x: 0, y: 0, width: 1080, height: 140 }, shape: "rect", color: BAND_COLOR }],
   slots: [
     {
       id: "headline",
       type: "text",
-      box: { x: 60, y: 160, width: 960, height: 260 },
+      box: { x: 60, y: 190, width: 960, height: 260 },
       fontFamily: "Inter",
-      maxFontSize: 64,
-      minFontSize: 36,
+      maxFontSize: 68,
+      minFontSize: 38,
       maxLines: 3,
       align: "left",
       color: "#ffffff",
@@ -24,19 +36,18 @@ export const pengumumanTemplate: Template = {
     {
       id: "photo",
       type: "image",
-      box: { x: 60, y: 460, width: 960, height: 520 },
-      fit: "cover",
+      box: { x: 60, y: 480, width: 960, height: 500 },
+      fit: "contain",
       borderRadius: 24,
       label: "Foto",
-      placeholder: "https://...",
     },
     {
       id: "body",
       type: "text",
-      box: { x: 60, y: 1020, width: 960, height: 200 },
+      box: { x: 60, y: 1010, width: 960, height: 200 },
       fontFamily: "Inter",
-      maxFontSize: 32,
-      minFontSize: 22,
+      maxFontSize: 34,
+      minFontSize: 24,
       maxLines: 4,
       align: "left",
       color: "#e2e8f0",
@@ -45,4 +56,15 @@ export const pengumumanTemplate: Template = {
       placeholder: "Mulai Senin depan, layanan buka pukul 08.00–15.00. Terima kasih atas pengertiannya.",
     },
   ],
+};
+
+export const pengumumanTemplate: Template = {
+  id: "pengumuman",
+  name: "Pengumuman",
+  brand: { ...defaultBrand, backgroundColor: "#0f172a" },
+  layouts: {
+    "4:5": layout45,
+    "1:1": { ...layout45, canvas: { width: 1080, height: 1080 } },
+    "9:16": { ...layout45, canvas: { width: 1080, height: 1920 } },
+  },
 };

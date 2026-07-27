@@ -1,9 +1,9 @@
 import { Header } from "@/components/ui/Header";
 import { Card } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
+import { ImageLibrary } from "./ImageLibrary";
 
 const comingSoon = [
-  { title: "Database Gambar", description: "Simpan & kelola aset gambar bisnis Anda." },
   { title: "Daftar Konten", description: "Riwayat semua konten yang pernah dibuat." },
   { title: "Editor Tata Letak", description: "Atur ulang posisi & ukuran elemen template." },
 ];
@@ -23,9 +23,11 @@ export default function DashboardPage() {
           </LinkButton>
         </Card>
 
+        <ImageLibrary />
+
         <section>
           <h2 className="text-lg font-semibold text-navy">Segera Hadir</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {comingSoon.map((item) => (
               <Card key={item.title} className="flex flex-col gap-2 opacity-70">
                 <h3 className="font-semibold text-navy">{item.title}</h3>

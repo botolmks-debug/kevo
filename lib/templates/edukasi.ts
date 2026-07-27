@@ -1,19 +1,27 @@
-import type { Template } from "./types";
+import type { Template, TemplateLayout } from "./types";
 import { defaultBrand } from "./brand";
 
-export const edukasiTemplate: Template = {
-  id: "edukasi",
-  name: "Edukasi / Tips",
+const layout45: TemplateLayout = {
   canvas: { width: 1080, height: 1350 },
-  brand: { ...defaultBrand, backgroundColor: "#ffffff" },
+  logo: { x: 984, y: 32, size: 40 },
+  footerLayout: {
+    x: 60,
+    y: 1280,
+    direction: "row",
+    gap: 20,
+    iconSize: 32,
+    textSize: 20,
+    textColor: "#64748b",
+    nameColor: "#0f172a",
+  },
   slots: [
     {
       id: "title",
       type: "text",
-      box: { x: 60, y: 140, width: 960, height: 90 },
+      box: { x: 60, y: 140, width: 880, height: 100 },
       fontFamily: "Inter",
-      maxFontSize: 44,
-      minFontSize: 30,
+      maxFontSize: 48,
+      minFontSize: 32,
       maxLines: 2,
       align: "left",
       color: "#0f172a",
@@ -24,10 +32,10 @@ export const edukasiTemplate: Template = {
     {
       id: "tip1",
       type: "text",
-      box: { x: 60, y: 280, width: 960, height: 60 },
+      box: { x: 60, y: 290, width: 960, height: 60 },
       fontFamily: "Inter",
-      maxFontSize: 28,
-      minFontSize: 22,
+      maxFontSize: 32,
+      minFontSize: 24,
       maxLines: 1,
       align: "left",
       color: "#0f172a",
@@ -38,10 +46,10 @@ export const edukasiTemplate: Template = {
     {
       id: "tip2",
       type: "text",
-      box: { x: 60, y: 365, width: 960, height: 60 },
+      box: { x: 60, y: 380, width: 960, height: 60 },
       fontFamily: "Inter",
-      maxFontSize: 28,
-      minFontSize: 22,
+      maxFontSize: 32,
+      minFontSize: 24,
       maxLines: 1,
       align: "left",
       color: "#0f172a",
@@ -52,10 +60,10 @@ export const edukasiTemplate: Template = {
     {
       id: "tip3",
       type: "text",
-      box: { x: 60, y: 450, width: 960, height: 60 },
+      box: { x: 60, y: 470, width: 960, height: 60 },
       fontFamily: "Inter",
-      maxFontSize: 28,
-      minFontSize: 22,
+      maxFontSize: 32,
+      minFontSize: 24,
       maxLines: 1,
       align: "left",
       color: "#0f172a",
@@ -66,10 +74,10 @@ export const edukasiTemplate: Template = {
     {
       id: "tip4",
       type: "text",
-      box: { x: 60, y: 535, width: 960, height: 60 },
+      box: { x: 60, y: 560, width: 960, height: 60 },
       fontFamily: "Inter",
-      maxFontSize: 28,
-      minFontSize: 22,
+      maxFontSize: 32,
+      minFontSize: 24,
       maxLines: 1,
       align: "left",
       color: "#0f172a",
@@ -80,10 +88,10 @@ export const edukasiTemplate: Template = {
     {
       id: "tip5",
       type: "text",
-      box: { x: 60, y: 620, width: 960, height: 60 },
+      box: { x: 60, y: 650, width: 960, height: 60 },
       fontFamily: "Inter",
-      maxFontSize: 28,
-      minFontSize: 22,
+      maxFontSize: 32,
+      minFontSize: 24,
       maxLines: 1,
       align: "left",
       color: "#0f172a",
@@ -94,11 +102,21 @@ export const edukasiTemplate: Template = {
     {
       id: "photo",
       type: "image",
-      box: { x: 60, y: 730, width: 960, height: 420 },
-      fit: "cover",
+      box: { x: 60, y: 750, width: 960, height: 460 },
+      fit: "contain",
       borderRadius: 24,
       label: "Foto",
-      placeholder: "https://...",
     },
   ],
+};
+
+export const edukasiTemplate: Template = {
+  id: "edukasi",
+  name: "Edukasi / Tips",
+  brand: { ...defaultBrand, backgroundColor: "#ffffff" },
+  layouts: {
+    "4:5": layout45,
+    "1:1": { ...layout45, canvas: { width: 1080, height: 1080 } },
+    "9:16": { ...layout45, canvas: { width: 1080, height: 1920 } },
+  },
 };

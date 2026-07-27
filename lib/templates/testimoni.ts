@@ -1,19 +1,37 @@
-import type { Template } from "./types";
+import type { Template, TemplateLayout } from "./types";
 import { defaultBrand } from "./brand";
 
-export const testimoniTemplate: Template = {
-  id: "testimoni",
-  name: "Testimoni / Review",
+const layout45: TemplateLayout = {
   canvas: { width: 1080, height: 1350 },
-  brand: { ...defaultBrand, backgroundColor: "#f8fafc" },
+  logo: { x: 60, y: 32, size: 40 },
+  footerLayout: {
+    x: 60,
+    y: 1275,
+    direction: "row",
+    gap: 24,
+    iconSize: 40,
+    textSize: 22,
+    textColor: "#475569",
+    nameColor: "#0f172a",
+  },
+  decorations: [
+    {
+      box: { x: 10, y: 90, width: 260, height: 260 },
+      shape: "text",
+      content: "“",
+      color: "#e2e8f0",
+      fontSize: 260,
+      fontWeight: 800,
+    },
+  ],
   slots: [
     {
       id: "quote",
       type: "text",
-      box: { x: 60, y: 200, width: 960, height: 380 },
+      box: { x: 60, y: 210, width: 960, height: 380 },
       fontFamily: "Inter",
-      maxFontSize: 48,
-      minFontSize: 30,
+      maxFontSize: 52,
+      minFontSize: 32,
       maxLines: 5,
       align: "left",
       color: "#0f172a",
@@ -24,10 +42,10 @@ export const testimoniTemplate: Template = {
     {
       id: "rating",
       type: "text",
-      box: { x: 60, y: 600, width: 960, height: 50 },
+      box: { x: 60, y: 610, width: 960, height: 50 },
       fontFamily: "Inter",
-      maxFontSize: 28,
-      minFontSize: 20,
+      maxFontSize: 32,
+      minFontSize: 22,
       maxLines: 1,
       align: "left",
       color: "#facc15",
@@ -38,10 +56,10 @@ export const testimoniTemplate: Template = {
     {
       id: "name",
       type: "text",
-      box: { x: 60, y: 660, width: 960, height: 50 },
+      box: { x: 60, y: 670, width: 960, height: 50 },
       fontFamily: "Inter",
-      maxFontSize: 28,
-      minFontSize: 22,
+      maxFontSize: 32,
+      minFontSize: 24,
       maxLines: 1,
       align: "left",
       color: "#0f172a",
@@ -52,10 +70,10 @@ export const testimoniTemplate: Template = {
     {
       id: "role",
       type: "text",
-      box: { x: 60, y: 710, width: 960, height: 40 },
+      box: { x: 60, y: 720, width: 960, height: 40 },
       fontFamily: "Inter",
-      maxFontSize: 22,
-      minFontSize: 18,
+      maxFontSize: 26,
+      minFontSize: 20,
       maxLines: 1,
       align: "left",
       color: "#64748b",
@@ -66,11 +84,21 @@ export const testimoniTemplate: Template = {
     {
       id: "photo",
       type: "image",
-      box: { x: 60, y: 780, width: 200, height: 200 },
-      fit: "cover",
+      box: { x: 60, y: 790, width: 200, height: 200 },
+      fit: "contain",
       borderRadius: 100,
       label: "Foto",
-      placeholder: "https://...",
     },
   ],
+};
+
+export const testimoniTemplate: Template = {
+  id: "testimoni",
+  name: "Testimoni / Review",
+  brand: { ...defaultBrand, backgroundColor: "#f8fafc" },
+  layouts: {
+    "4:5": layout45,
+    "1:1": { ...layout45, canvas: { width: 1080, height: 1080 } },
+    "9:16": { ...layout45, canvas: { width: 1080, height: 1920 } },
+  },
 };

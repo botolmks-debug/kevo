@@ -5,7 +5,7 @@ import { rekrutmenTemplate } from "@/lib/templates/rekrutmen";
 
 describe("validateGenerateForm", () => {
   it("rejects when a required text slot is empty", () => {
-    const result = validateGenerateForm(pengumumanTemplate, { headline: "  ", body: "Isi" });
+    const result = validateGenerateForm(pengumumanTemplate, { headline: "  ", body: "Isi" }, "4:5");
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -14,25 +14,33 @@ describe("validateGenerateForm", () => {
   });
 
   it("accepts a form with every text slot filled, even with an empty image field", () => {
-    const result = validateGenerateForm(pengumumanTemplate, {
-      headline: "Judul",
-      body: "Isi",
-      photo: "",
-    });
+    const result = validateGenerateForm(
+      pengumumanTemplate,
+      {
+        headline: "Judul",
+        body: "Isi",
+        photo: "",
+      },
+      "4:5",
+    );
 
     expect(result.ok).toBe(true);
   });
 
   it("names the specific missing field for templates with multiple text slots", () => {
-    const result = validateGenerateForm(rekrutmenTemplate, {
-      title: "OPEN RECRUITMENT",
-      intro: "Ayo bergabung",
-      position1: "Admin",
-      position2: "",
-      position3: "Satpam",
-      position4: "Kasir",
-      cta: "Hubungi HRD",
-    });
+    const result = validateGenerateForm(
+      rekrutmenTemplate,
+      {
+        title: "OPEN RECRUITMENT",
+        intro: "Ayo bergabung",
+        position1: "Admin",
+        position2: "",
+        position3: "Satpam",
+        position4: "Kasir",
+        cta: "Hubungi HRD",
+      },
+      "4:5",
+    );
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
