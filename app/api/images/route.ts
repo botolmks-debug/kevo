@@ -23,7 +23,14 @@ export async function GET() {
   }
 
   const supabase = await createClient();
-  const result = await listImages(supabase);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Belum login." }, { status: 401 });
+  }
+
+  const result = await listImages(supabase, user.id);
 
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 502 });
@@ -66,11 +73,19 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Belum login." }, { status: 401 });
+  }
+
   const result = await uploadImage(supabase, {
     file,
     description: typeof description === "string" ? description : "",
     category,
     usage: usage as ImageUsage,
+    businessId: user.id,
   });
 
   if (!result.ok) {

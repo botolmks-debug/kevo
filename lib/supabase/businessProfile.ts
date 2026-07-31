@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { BusinessProfile, ContentGoal, ToneOfVoice } from "@/lib/onboarding/businessProfile";
+import type { BusinessProfile, ContentGoal, LogoPosition, ToneOfVoice } from "@/lib/onboarding/businessProfile";
+import { publicImageUrl } from "./images";
 import { DEV_BUSINESS_ID } from "./devBusiness";
 import { describeSupabaseError } from "./logError";
 
@@ -23,12 +24,26 @@ export type BusinessProfileRow = {
   social_entries: { platformId: string; value: string }[];
   selected_social_platform_ids: string[];
   logo_storage_path: string | null;
+  logo_position: LogoPosition;
+  logo_light_storage_path: string | null;
+  logo_light_position: LogoPosition;
 };
+
+// Logo (dark & light) TIDAK termasuk di sini dengan sengaja: kolom
+// logo_storage_path / logo_position / logo_light_storage_path /
+// logo_light_position hanya ditulis lewat /api/business-logo
+// (lib/supabase/logo.ts), supaya save profil biasa (form onboarding) tidak
+// menimpa logo yang sudah diatur user. Upsert Supabase hanya meng-update kolom
+// yang dikirim.
+export type BusinessProfileWriteRow = Omit<
+  BusinessProfileRow,
+  "logo_storage_path" | "logo_position" | "logo_light_storage_path" | "logo_light_position"
+>;
 
 export function businessProfileToRow(
   profile: BusinessProfile,
   businessId: string = DEV_BUSINESS_ID,
-): BusinessProfileRow {
+): BusinessProfileWriteRow {
   return {
     business_id: businessId,
     business_name: profile.business.name,
@@ -48,11 +63,10 @@ export function businessProfileToRow(
     story: profile.story,
     social_entries: profile.socials.entries,
     selected_social_platform_ids: profile.socials.selectedPlatformIds,
-    logo_storage_path: null,
   };
 }
 
-export function rowToBusinessProfile(row: BusinessProfileRow): BusinessProfile {
+export function rowToBusinessProfile(row: BusinessProfileRow, client: SupabaseClient): BusinessProfile {
   return {
     business: {
       name: row.business_name,
@@ -79,6 +93,12 @@ export function rowToBusinessProfile(row: BusinessProfileRow): BusinessProfile {
       selectedPlatformIds: row.selected_social_platform_ids,
     },
     story: row.story,
+    logo: row.logo_storage_path
+      ? { url: publicImageUrl(client, row.logo_storage_path), position: row.logo_position ?? "bottom-right" }
+      : null,
+    logoLight: row.logo_light_storage_path
+      ? { url: publicImageUrl(client, row.logo_light_storage_path), position: row.logo_light_position ?? "bottom-right" }
+      : null,
   };
 }
 
@@ -122,5 +142,5 @@ export async function loadBusinessProfile(
   if (!data) {
     return { ok: true, profile: null };
   }
-  return { ok: true, profile: rowToBusinessProfile(data as BusinessProfileRow) };
+  return { ok: true, profile: rowToBusinessProfile(data as BusinessProfileRow, client) };
 }

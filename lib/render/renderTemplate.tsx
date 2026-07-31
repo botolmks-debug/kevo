@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import satori from "satori";
 import { Resvg } from "@resvg/resvg-js";
 import type { Decoration, RenderInput, Slot } from "../templates/types";
+import { FONT_OPTIONS } from "../templates/fonts";
 import { fitTextForDisplay } from "./fitText";
 import { renderFooterSocials } from "./renderFooter";
 
@@ -19,11 +20,23 @@ export function resolveSlotValue(
   return values[slot.id];
 }
 
-export function loadFontBuffers(): { regular: Buffer; bold: Buffer } {
+// "extra" = 9 font pilihan editor kanvas selain Inter (lihat lib/templates/fonts.ts
+// dan spec-editor-kanvas-kevo.md). Template bawaan semua masih pakai "Inter" saja —
+// font ini cuma dipakai kalau user pilih lewat editor.
+export function loadFontBuffers(): {
+  regular: Buffer;
+  bold: Buffer;
+  extra: { family: string; data: Buffer }[];
+} {
   const fontsDir = path.join(process.cwd(), "public", "fonts");
+  const extra = FONT_OPTIONS.filter((font) => font.id !== "inter").map((font) => ({
+    family: font.family,
+    data: fs.readFileSync(path.join(fontsDir, font.fileName)),
+  }));
   return {
     regular: fs.readFileSync(path.join(fontsDir, "Inter-Regular.ttf")),
     bold: fs.readFileSync(path.join(fontsDir, "Inter-Bold.ttf")),
+    extra,
   };
 }
 
@@ -85,6 +98,31 @@ async function renderSlotElement(slot: Slot, values: Record<string, string>) {
       textAlign: slot.align,
       lineClamp: slot.maxLines,
     };
+
+    // Outline + shadow (dari editor overrides) → disimulasikan via textShadow
+    // supaya ikut ter-render di PNG (Satori), konsisten dengan preview kanvas.
+    const ext = slot as typeof slot & {
+      shadow?: { blur: number; color: string; opacity: number } | null;
+      outline?: { width: number; color: string } | null;
+    };
+    const shadowParts: string[] = [];
+    if (ext.outline && ext.outline.width > 0) {
+      const w = ext.outline.width;
+      const c = ext.outline.color;
+      const dirs = [[-w, 0], [w, 0], [0, -w], [0, w], [-w, -w], [w, -w], [-w, w], [w, w]];
+      for (const [dx, dy] of dirs) shadowParts.push(`${dx}px ${dy}px 0 ${c}`);
+    }
+    if (ext.shadow) {
+      const s = ext.shadow;
+      const h = s.color.replace("#", "");
+      const r = parseInt(h.slice(0, 2), 16);
+      const g = parseInt(h.slice(2, 4), 16);
+      const b = parseInt(h.slice(4, 6), 16);
+      shadowParts.push(`0px 0px ${s.blur}px rgba(${r},${g},${b},${s.opacity})`);
+    }
+    if (shadowParts.length) {
+      (textStyle as { textShadow?: string }).textShadow = shadowParts.join(", ");
+    }
 
     return (
       <div
@@ -198,7 +236,9 @@ function renderDecoration(decoration: Decoration, key: number) {
     return (
       <div
         key={key}
-        style={{ ...baseStyle, backgroundColor: decoration.color, borderRadius: 9999 }}
+        style={{ ...baseStyle, ...(decoration.color.startsWith("linear-gradient")
+            ? { backgroundImage: decoration.color }
+            : { backgroundColor: decoration.color }), borderRadius: 9999 }}
       />
     );
   }
@@ -208,8 +248,10 @@ function renderDecoration(decoration: Decoration, key: number) {
       <div
         key={key}
         style={{
-          ...baseStyle,
-          backgroundColor: decoration.color,
+         ...baseStyle,
+          ...(decoration.color.startsWith("linear-gradient")
+            ? { backgroundImage: decoration.color }
+            : { backgroundColor: decoration.color }),
           borderRadius: decoration.borderRadius ?? 0,
           ...(decoration.borderStyle
             ? {
@@ -301,7 +343,7 @@ export async function renderTemplate(input: RenderInput): Promise<Buffer> {
           alt=""
           width={logo.size}
           height={logo.size}
-          style={{ position: "absolute", top: logo.y, left: logo.x }}
+          style={{ position: "absolute", top: logo.y, left: logo.x, objectFit: "contain" }}
         />
       ) : (
         <div
@@ -320,13 +362,22 @@ export async function renderTemplate(input: RenderInput): Promise<Buffer> {
     </div>
   );
 
+  // Tiap font ekstra didaftarkan di weight 400 & 700 sekaligus (menunjuk buffer
+  // yang sama) supaya slot dengan fontWeight berapa pun tetap resolve, terlepas
+  // dari apakah file sumbernya variable font atau statis satu bobot.
+  const satoriFonts: { name: string; data: Buffer; weight: 400 | 700; style: "normal" }[] = [
+    { name: "Inter", data: fonts.regular, weight: 400, style: "normal" },
+    { name: "Inter", data: fonts.bold, weight: 700, style: "normal" },
+  ];
+  for (const font of fonts.extra) {
+    satoriFonts.push({ name: font.family, data: font.data, weight: 400, style: "normal" });
+    satoriFonts.push({ name: font.family, data: font.data, weight: 700, style: "normal" });
+  }
+
   const svg = await satori(element, {
     width: layout.canvas.width,
     height: layout.canvas.height,
-    fonts: [
-      { name: "Inter", data: fonts.regular, weight: 400, style: "normal" },
-      { name: "Inter", data: fonts.bold, weight: 700, style: "normal" },
-    ],
+    fonts: satoriFonts,
   });
 
   const resvg = new Resvg(svg, { fitTo: { mode: "original" } });

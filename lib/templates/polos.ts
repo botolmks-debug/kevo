@@ -1,33 +1,31 @@
 import type { Template, TemplateLayout } from "./types";
 import { defaultBrand } from "./brand";
 
-// "Tanpa Template" = benar-benar polos: foto full-bleed menutupi seluruh
-// kanvas, teks + footer jadi overlay di atasnya (scrim gelap tipis di bawah
-// supaya kebaca), tanpa frame/pattern apa pun (spec-perbaikan-render-generate
-// bagian A2). Dihitung dari tinggi kanvas supaya proporsional di ketiga rasio.
 function buildLayout(height: number): TemplateLayout {
-  const scrimHeight = Math.round(height * 0.28);
-  const scrimY = height - scrimHeight;
+  const scrimH = Math.round(height * 0.38);
+  const scrimY = height - scrimH;
+  // Footer: 80px dari bawah kanvas (cukup jauh dari tepi bawah)
+  const footerY = height - 80;
 
   return {
     canvas: { width: 1080, height },
     logo: { x: 992, y: 40, size: 36 },
     footerLayout: {
       x: 60,
-      y: height - 60,
+      y: footerY,
       direction: "row",
       gap: 18,
-      iconSize: 32,
-      textSize: 20,
+      iconSize: 42,
+      textSize: 26,
       textColor: "#e2e8f0",
       nameColor: "#ffffff",
     },
     decorations: [
       {
-        box: { x: 0, y: scrimY, width: 1080, height: scrimHeight },
+        box: { x: 0, y: scrimY, width: 1080, height: scrimH },
         shape: "rect",
-        color: "#000000",
-        opacity: 0.55,
+        color: "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.15) 25%, rgba(0,0,0,0.72) 100%)",
+        opacity: 1,
         layer: "front",
       },
     ],
@@ -43,7 +41,7 @@ function buildLayout(height: number): TemplateLayout {
       {
         id: "caption",
         type: "text",
-        box: { x: 60, y: scrimY + 20, width: 960, height: scrimHeight - 130 },
+        box: { x: 60, y: scrimY + 40, width: 960, height: scrimH - 170 },
         fontFamily: "Inter",
         maxFontSize: 36,
         minFontSize: 22,

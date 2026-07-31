@@ -4,12 +4,12 @@ import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from "react";
 export type ButtonVariant = "primary" | "secondary" | "cta";
 
 const base =
-  "inline-flex items-center justify-center rounded-card px-5 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50 disabled:pointer-events-none";
+  "inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none";
 
 const variants: Record<ButtonVariant, string> = {
-  primary: "bg-primary text-white hover:bg-primary-hover",
-  secondary: "border border-primary text-primary bg-transparent hover:bg-primary/5",
-  cta: "bg-accent text-navy hover:brightness-95",
+  primary: "bg-primary text-white shadow-sm shadow-primary/20 hover:bg-primary-hover",
+  secondary: "border border-primary/30 bg-white text-primary hover:bg-primary/5",
+  cta: "bg-accent text-white shadow-sm shadow-accent/25 hover:brightness-95",
 };
 
 export function buttonClassName(variant: ButtonVariant = "primary", className = ""): string {

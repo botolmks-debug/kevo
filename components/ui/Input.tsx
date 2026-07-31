@@ -1,7 +1,7 @@
 import type { InputHTMLAttributes, TextareaHTMLAttributes } from "react";
 
 const fieldClassName =
-  "rounded-card border border-slate-200 bg-white px-4 py-2.5 text-sm text-navy placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
+  "w-full rounded-2xl border border-line bg-white px-4 py-3 text-sm text-navy placeholder:text-slate-400 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15";
 
 function slugify(label: string): string {
   return label.toLowerCase().replace(/\s+/g, "-");

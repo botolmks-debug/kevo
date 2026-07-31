@@ -5,6 +5,12 @@ export type ToneOfVoice = "santai" | "profesional" | "hangat" | "lucu" | "formal
 
 export type SocialEntry = { platformId: string; value: string };
 
+// Pojok kanvas tempat logo ditempatkan otomatis di tiap konten yang
+// digenerate. Diatur user lewat Dashboard, terpisah dari upload gambar biasa.
+export type LogoPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+
+export type BusinessLogo = { url: string; position: LogoPosition };
+
 export type BusinessProfile = {
   business: {
     name: string;
@@ -31,9 +37,15 @@ export type BusinessProfile = {
     selectedPlatformIds: string[];
   };
   story: string;
+  // null = belum upload logo. Diatur lewat /api/business-logo, bukan lewat
+  // form onboarding biasa (lihat buildBusinessProfile).
+  // logo = versi GELAP (untuk latar terang); logoLight = versi TERANG (untuk
+  // latar gelap). Keduanya tersimpan terpisah, tidak saling menimpa.
+  logo: BusinessLogo | null;
+  logoLight: BusinessLogo | null;
 };
 
-export type BusinessProfileDraft = Omit<BusinessProfile, "socials"> & {
+export type BusinessProfileDraft = Omit<BusinessProfile, "socials" | "logo" | "logoLight"> & {
   socials: {
     values: Record<string, string>;
     selectedPlatformIds: string[];
@@ -56,6 +68,8 @@ export function buildBusinessProfile(draft: BusinessProfileDraft): BusinessProfi
     positioning: draft.positioning,
     socials: { entries, selectedPlatformIds },
     story: draft.story,
+    logo: null,
+    logoLight: null,
   };
 }
 

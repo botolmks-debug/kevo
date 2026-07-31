@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { FileButton } from "@/components/ui/FileButton";
 import { Card } from "@/components/ui/Card";
 import { Textarea } from "@/components/ui/Input";
 import { DEFAULT_IMAGE_CATEGORY, IMAGE_CATEGORIES, type ImageUsage } from "@/lib/images/categories";
@@ -136,13 +137,15 @@ export function ImageLibrary() {
         </p>
       </div>
 
-      <input
-        type="file"
-        accept="image/*"
-        aria-label="Pilih file gambar"
-        onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-        className="text-sm"
-      />
+      <div className="flex items-center gap-2">
+        <FileButton
+          accept="image/*"
+          aria-label="Pilih file gambar"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          label="Pilih Gambar"
+        />
+        {file ? <span className="text-sm text-navy/50">{file.name}</span> : null}
+      </div>
 
       <Textarea
         label="Deskripsi"

@@ -19,6 +19,10 @@ describe("Header", () => {
       "href",
       "/generate",
     );
+    expect(screen.getByRole("link", { name: "Generate Otomatis" })).toHaveAttribute(
+      "href",
+      "/generate-otomatis",
+    );
   });
 
   it("logo links back to the dashboard", () => {

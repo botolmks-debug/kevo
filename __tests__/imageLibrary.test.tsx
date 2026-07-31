@@ -24,7 +24,7 @@ describe("ImageLibrary", () => {
         jsonResponse({
           images: [
             { id: "1", category: "Produk", description: "Ayam geprek", publicUrl: "https://cdn/1.jpg" },
-            { id: "2", category: "Logo", description: "Logo klinik", publicUrl: "https://cdn/2.jpg" },
+            { id: "2", category: "Wajah/Orang", description: "Dokter", publicUrl: "https://cdn/2.jpg" },
           ],
         }),
       ),
@@ -33,9 +33,26 @@ describe("ImageLibrary", () => {
     render(<ImageLibrary />);
 
     expect(await screen.findByRole("heading", { name: "Produk" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Logo" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Wajah / Orang" })).toBeInTheDocument();
     expect(screen.getByAltText("Ayam geprek")).toBeInTheDocument();
-    expect(screen.getByAltText("Logo klinik")).toBeInTheDocument();
+    expect(screen.getByAltText("Dokter")).toBeInTheDocument();
+  });
+
+  it("omits legacy 'Logo' category images instead of crashing, since logo now has its own dedicated slot", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          images: [{ id: "1", category: "Logo", description: "Logo lama", publicUrl: "https://cdn/1.jpg" }],
+        }),
+      ),
+    );
+
+    render(<ImageLibrary />);
+    await screen.findByRole("button", { name: "Unggah Gambar" });
+
+    expect(screen.queryByAltText("Logo lama")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Logo" })).not.toBeInTheDocument();
   });
 
   it("shows a friendly error when the initial list load fails", async () => {
@@ -65,7 +82,13 @@ describe("ImageLibrary", () => {
       if (init?.method === "POST") {
         return Promise.resolve(jsonResponse({ image: { id: "new-1" } }));
       }
-      return Promise.resolve(jsonResponse({ images: [{ id: "new-1", category: "Logo", description: "Logo baru", publicUrl: "https://cdn/new-1.jpg" }] }));
+      return Promise.resolve(
+        jsonResponse({
+          images: [
+            { id: "new-1", category: "Wajah/Orang", description: "Dokter baru", publicUrl: "https://cdn/new-1.jpg" },
+          ],
+        }),
+      );
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -73,8 +96,8 @@ describe("ImageLibrary", () => {
     await screen.findByRole("button", { name: "Unggah Gambar" });
 
     fireEvent.change(screen.getByLabelText("Pilih file gambar"), { target: { files: [fakeFile()] } });
-    fireEvent.change(screen.getByLabelText("Deskripsi"), { target: { value: "Logo baru" } });
-    fireEvent.change(screen.getByLabelText("Kategori"), { target: { value: "Logo" } });
+    fireEvent.change(screen.getByLabelText("Deskripsi"), { target: { value: "Dokter baru" } });
+    fireEvent.change(screen.getByLabelText("Kategori"), { target: { value: "Wajah/Orang" } });
     fireEvent.click(screen.getByLabelText("Boleh diolah AI"));
 
     fireEvent.click(screen.getByRole("button", { name: "Unggah Gambar" }));
@@ -83,12 +106,12 @@ describe("ImageLibrary", () => {
 
     const [, init] = fetchMock.mock.calls.find(([, opts]) => opts?.method === "POST")!;
     const body = init!.body as FormData;
-    expect(body.get("description")).toBe("Logo baru");
-    expect(body.get("category")).toBe("Logo");
+    expect(body.get("description")).toBe("Dokter baru");
+    expect(body.get("category")).toBe("Wajah/Orang");
     expect(body.get("usage")).toBe("olah_ai");
     expect(body.get("file")).toBeInstanceOf(File);
 
-    expect(await screen.findByAltText("Logo baru")).toBeInTheDocument();
+    expect(await screen.findByAltText("Dokter baru")).toBeInTheDocument();
     expect((screen.getByLabelText("Deskripsi") as HTMLTextAreaElement).value).toBe("");
   });
 

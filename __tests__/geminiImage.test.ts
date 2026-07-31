@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { editImage } from "@/lib/ai/geminiImage";
+import { editImage, generateImage } from "@/lib/ai/geminiImage";
 
 const ORIGINAL_ENV = { ...process.env };
 
@@ -100,6 +100,78 @@ describe("editImage", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await editImage({ imageBase64: "abc", mimeType: "image/jpeg", aspectRatio: "1:1", prompt: "x" });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/tidak mengembalikan gambar/i);
+  });
+});
+
+describe("generateImage", () => {
+  beforeEach(() => {
+    process.env = { ...ORIGINAL_ENV, GEMINI_API_KEY: "test-key" };
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+    process.env = { ...ORIGINAL_ENV };
+  });
+
+  it("sends only a text part, with no source image, to Gemini", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse(200, {
+        candidates: [
+          { content: { parts: [{ inlineData: { mimeType: "image/png", data: "ZmFrZS1iYXNlNjQ=" } }] } },
+        ],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await generateImage({ prompt: "foto suasana kedai kopi", aspectRatio: "4:5" });
+
+    expect(result).toEqual({ ok: true, dataUri: "data:image/png;base64,ZmFrZS1iYXNlNjQ=" });
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse(init.body);
+    expect(body.contents[0].parts).toEqual([{ text: "foto suasana kedai kopi" }]);
+    expect(body.generationConfig.imageConfig.aspectRatio).toBe("4:5");
+  });
+
+  it("returns a friendly error and never calls fetch when the API key is missing", async () => {
+    delete process.env.GEMINI_API_KEY;
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await generateImage({ prompt: "x", aspectRatio: "1:1" });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/GEMINI_API_KEY/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("retries on 503 and eventually gives up with a friendly message", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(503, {}));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const pending = generateImage({ prompt: "x", aspectRatio: "9:16" });
+    await Promise.resolve();
+
+    await vi.advanceTimersByTimeAsync(3_000);
+    await vi.advanceTimersByTimeAsync(6_000);
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    const result = await pending;
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/sibuk/i);
+  });
+
+  it("returns a friendly message instead of throwing when no image comes back", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { candidates: [{ content: { parts: [{}] } }] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await generateImage({ prompt: "x", aspectRatio: "1:1" });
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toMatch(/tidak mengembalikan gambar/i);

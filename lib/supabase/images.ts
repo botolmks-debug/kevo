@@ -4,7 +4,7 @@ import { categoryToType, type ImageUsage } from "@/lib/images/categories";
 import { DEV_BUSINESS_ID } from "./devBusiness";
 import { describeSupabaseError } from "./logError";
 
-const BUCKET = "user-images";
+export const BUCKET = "user-images";
 
 export type ImageRow = {
   id: string;

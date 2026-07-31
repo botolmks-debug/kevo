@@ -1,41 +1,54 @@
+import { redirect } from "next/navigation";
 import { Header } from "@/components/ui/Header";
-import { Card } from "@/components/ui/Card";
-import { LinkButton } from "@/components/ui/Button";
+import { createClient } from "@/lib/supabase/server";
+import { loadBusinessProfile } from "@/lib/supabase/businessProfile";
+import { TokenSlot } from "@/components/dashboard/TokenSlot";
+import { SocialLinks } from "@/components/dashboard/SocialLinks";
+import { ContentReminderBell } from "@/components/dashboard/ContentReminderBell";
+import { LogoSettings } from "./LogoSettings";
 import { ImageLibrary } from "./ImageLibrary";
 
-const comingSoon = [
-  { title: "Daftar Konten", description: "Riwayat semua konten yang pernah dibuat." },
-  { title: "Editor Tata Letak", description: "Atur ulang posisi & ukuran elemen template." },
-];
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
-export default function DashboardPage() {
+  const result = await loadBusinessProfile(supabase, user.id);
+  if (!result.ok || !result.profile) {
+    redirect("/onboarding");
+  }
+
+  const namaBisnis = result.profile.business?.name?.trim() || "Bisnismu";
+
   return (
     <>
       <Header />
-      <main className="mx-auto flex max-w-5xl flex-col gap-8 px-6 py-10">
-        <Card className="flex flex-col items-start gap-3 bg-navy text-white">
-          <h1 className="text-2xl font-bold">Buat Konten Baru</h1>
-          <p className="text-white/70">
-            Pilih template, isi teks, dan render jadi PNG siap posting.
-          </p>
-          <LinkButton href="/generate" variant="cta">
-            Buat Konten
-          </LinkButton>
-        </Card>
-
-        <ImageLibrary />
-
-        <section>
-          <h2 className="text-lg font-semibold text-navy">Segera Hadir</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {comingSoon.map((item) => (
-              <Card key={item.title} className="flex flex-col gap-2 opacity-70">
-                <h3 className="font-semibold text-navy">{item.title}</h3>
-                <p className="text-sm text-navy/60">{item.description}</p>
-                <span className="text-xs font-medium text-primary">Segera hadir</span>
-              </Card>
-            ))}
+      <main className="mx-auto flex max-w-4xl flex-col gap-8 px-6 py-10">
+        <header className="flex items-start justify-between gap-3">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-2xl font-bold text-navy">Halo, {namaBisnis} 👋</h1>
+            <p className="text-navy/60">Atur aset bisnismu di sini. Untuk bikin konten, buka menu di atas.</p>
           </div>
+          <ContentReminderBell />
+        </header>
+
+        <TokenSlot />
+
+        <section className="flex flex-col gap-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-navy/50">Logo Bisnis</h2>
+          <LogoSettings />
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-navy/50">Sosial Media</h2>
+          <SocialLinks />
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-navy/50">Data & Aset Bisnis</h2>
+          <ImageLibrary />
         </section>
       </main>
     </>

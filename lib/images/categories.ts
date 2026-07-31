@@ -5,8 +5,11 @@ export type ImageCategoryDef = { category: string; type: ImageType; label: strin
 
 // Daftar kategori tetap (spec-08 mengizinkan ini cukup di kode, bukan tabel
 // terpisah). Tambahkan entri baru di sini kalau perlu kategori lain.
+//
+// "Logo" sengaja tidak ada di sini: logo bisnis sekarang punya slot khusus
+// (lihat lib/onboarding/businessProfile.ts `logo`, upload lewat
+// /api/business-logo), bukan lagi salah satu kategori Database Gambar.
 export const IMAGE_CATEGORIES: ImageCategoryDef[] = [
-  { category: "Logo", type: "logo", label: "Logo" },
   { category: "Produk", type: "produk", label: "Produk" },
   { category: "Wajah/Orang", type: "wajah", label: "Wajah / Orang" },
   { category: "Suasana/Fasilitas", type: "suasana", label: "Suasana / Fasilitas" },

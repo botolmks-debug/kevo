@@ -20,6 +20,7 @@ const profile: BusinessProfile = {
   },
   socials: { entries: [], selectedPlatformIds: [] },
   story: "Berdiri sejak 2021...",
+  logo: null,
 };
 
 describe("buildCaptionPrompt", () => {

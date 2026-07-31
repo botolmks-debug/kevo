@@ -29,11 +29,26 @@ describe("DashboardPage", () => {
     expect(screen.getByRole("button", { name: "Unggah Gambar" })).toBeInTheDocument();
   });
 
+  it("shows the business logo section above the image library", () => {
+    render(<DashboardPage />);
+
+    expect(screen.getByRole("heading", { name: "Logo Bisnis" })).toBeInTheDocument();
+  });
+
   it("keeps only the remaining features as coming-soon placeholders", () => {
     render(<DashboardPage />);
 
-    expect(screen.getByText("Daftar Konten")).toBeInTheDocument();
     expect(screen.getByText("Editor Tata Letak")).toBeInTheDocument();
-    expect(screen.getAllByText("Segera hadir")).toHaveLength(2);
+    expect(screen.queryByText("Daftar Konten")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Segera hadir")).toHaveLength(1);
+  });
+
+  it("shows a Konten Otomatis card linking to /generate-otomatis", () => {
+    render(<DashboardPage />);
+
+    expect(screen.getByRole("link", { name: "Buka Generate Otomatis" })).toHaveAttribute(
+      "href",
+      "/generate-otomatis",
+    );
   });
 });

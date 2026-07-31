@@ -1,0 +1,827 @@
+export const maxDuration = 60;
+import { createClient } from '@supabase/supabase-js';
+
+// ============ PENGATURAN ============
+const MODEL_GAMBAR = 'gemini-3.1-flash-image';
+const UKURAN_GAMBAR = '1024';
+const UKURAN_PILIHAN = {
+  feed: { rasio: '4:5', tinggi: 1350 },
+  kotak: { rasio: '1:1', tinggi: 1080 },
+  story: { rasio: '9:16', tinggi: 1920 },
+};
+
+const MODEL_TEKS = [
+  'gemini-flash-lite-latest',
+  'gemini-2.5-flash-lite',
+  'gemini-flash-latest',
+  'gemini-2.5-flash',
+];
+
+const TAHAP_URUT = ['hook', 'build_up', 'closing'];
+
+const SUASANA = [
+  'di atas meja kayu sebuah cafe yang hangat, cahaya alami masuk dari jendela besar',
+  'di meja marmer cafe minimalis, latar rak kopi dan mesin espresso yang blur',
+  'di meja kayu gelap cafe bergaya industrial, dinding bata dan lampu gantung temaram',
+  'di meja teras cafe outdoor dengan tanaman hijau di sekitarnya, cahaya pagi yang lembut',
+  'di counter kayu cafe, barista terlihat samar sedang bekerja di latar belakang',
+  'di meja cafe dekat jendela pada sore hari, cahaya keemasan masuk dari samping',
+];
+// sudut pengambilan foto (diacak biar tidak selalu sama)
+const ANGLE_KAMERA = [
+  'sejajar mata, kemasan tegak di tengah, latar belakang blur lembut',
+  'sedikit dari atas sekitar 30 derajat, terlihat bagian tutup',
+  'close-up dari samping, sebagian kemasan terpotong bingkai, kesan intim',
+  'agak rendah dari bawah, kemasan terlihat megah dan kokoh',
+  'diagonal 45 derajat dengan bayangan panjang ke satu sisi',
+  'agak jauh, kemasan kecil di dalam suasana ruangan yang terlihat luas',
+];
+// angle konten edukasi kemasan (untuk konten lepas jenis "kemasan")
+const ANGLE = [
+  'aspirasi: kemasan yang bikin produk UMKM terlihat naik kelas',
+  'masalah-solusi: kerugian akibat kemasan yang salah pilih',
+  'edukasi: perbandingan jenis bahan/kemasan dan kapan dipakai',
+  'tips praktis: cara memilih kemasan sesuai jenis produk',
+  'behind-the-scene: proses sablon/cetak kemasan',
+  'cerita pembeli: kemasan rapi bikin pelanggan repeat order',
+];
+// bentuk konten interaksi (diacak tiap kali)
+const BENTUK_INTERAKSI = ['kuis', 'quote', 'tips'];
+
+// gaya visual konten interaksi — sengaja lucu, bukan foto realistis
+const GAYA_LUCU = [
+  'ilustrasi 3D clay/plastisin yang menggemaskan, warna pastel cerah, bentuk membulat',
+  'ilustrasi kartun flat modern dengan garis tebal dan warna blok yang ceria',
+  'ilustrasi 3D render lucu bergaya mainan, permukaan mengilap, bayangan lembut',
+  'ilustrasi gaya kertas potong (paper cut) berlapis, warna hangat',
+  'doodle tangan yang lucu dengan warna krayon, latar polos lembut',
+];
+// gaya kalimat pembuka caption (diacak tiap konten biar tidak seragam)
+const GAYA_BUKA = [
+  'pernyataan tegas yang langsung ke inti, tanpa bertanya sama sekali',
+  'fakta atau angka konkret di kalimat pertama',
+  'cerita mini satu kalimat tentang seorang pelaku UMKM',
+  'membongkar salah kaprah yang selama ini dipercaya banyak orang',
+  'perbandingan dua kondisi yang kontras',
+  'kalimat pendek menohok maksimal 6 kata, lalu langsung dijelaskan',
+  'ajakan mengamati sesuatu yang ada di sekitar pembaca',
+];
+
+const MOMEN = [
+  { mulai: '01-01', selesai: '01-10', teks: 'awal tahun, banyak orang memulai usaha baru' },
+  { mulai: '06-15', selesai: '07-20', teks: 'libur sekolah dan tahun ajaran baru, ramai jajanan & bekal anak' },
+  { mulai: '08-01', selesai: '08-17', teks: 'menjelang HUT Kemerdekaan RI, ramai bazar dan lomba' },
+  { mulai: '08-10', selesai: '08-14', teks: 'Hari UMKM Nasional 12 Agustus' },
+  { mulai: '09-01', selesai: '09-06', teks: 'Hari Pelanggan Nasional 4 September' },
+  { mulai: '10-15', selesai: '11-30', teks: 'musim hujan mulai, kemasan tahan bocor jadi perhatian' },
+  { mulai: '11-20', selesai: '12-14', teks: 'musim belanja online akhir tahun (Harbolnas), pesanan melonjak' },
+  { mulai: '12-15', selesai: '12-31', teks: 'Natal dan tahun baru, ramai hampers dan parsel' },
+];
+
+const MOMEN_KHUSUS = [
+  { mulai: '2027-01-25', selesai: '2027-02-25', teks: 'bulan Ramadan, ramai takjil dan hampers lebaran' },
+  { mulai: '2027-02-26', selesai: '2027-03-08', teks: 'menjelang Idulfitri, puncak pesanan hampers dan parsel' },
+];
+
+function momenHariIni() {
+  const kini = new Date();
+  const penuh = kini.toISOString().slice(0, 10);
+  const pendek = penuh.slice(5);
+
+  for (let i = 0; i < MOMEN_KHUSUS.length; i++) {
+    const m = MOMEN_KHUSUS[i];
+    if (penuh >= m.mulai && penuh <= m.selesai) return m.teks;
+  }
+  for (let i = 0; i < MOMEN.length; i++) {
+    const m = MOMEN[i];
+    if (pendek >= m.mulai && pendek <= m.selesai) return m.teks;
+  }
+  return '';
+}
+
+const admin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  { auth: { persistSession: false } }
+);
+
+// ============ BANTUAN ============
+
+function buatSlug(teks) {
+  const dasar = String(teks)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+  const acak = Math.random().toString(36).slice(2, 6);
+  return dasar + '-' + acak;
+}
+
+function ambilJson(teks) {
+  let bersih = String(teks).trim();
+  bersih = bersih.replace(/```json/gi, '').replace(/```/g, '').trim();
+  const awal = bersih.indexOf('{');
+  const akhir = bersih.lastIndexOf('}');
+  if (awal !== -1 && akhir !== -1) bersih = bersih.slice(awal, akhir + 1);
+  return JSON.parse(bersih);
+}
+
+function sudahDiposting(k) {
+  if (!k) return true;
+  if (k.diposting_at) return true;
+  if (k.status && k.status !== 'draft') return true;
+  return false;
+}
+
+async function panggilTeks(prompt) {
+  let pesanTerakhir = 'Tidak ada model teks yang bisa dipakai';
+
+  for (let i = 0; i < MODEL_TEKS.length; i++) {
+    const nama = MODEL_TEKS[i];
+    const alamat =
+      'https://generativelanguage.googleapis.com/v1beta/models/' + nama + ':generateContent';
+
+    try {
+      const balasan = await fetch(alamat, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            maxOutputTokens: 4096,
+            temperature: 1,
+          },
+        }),
+      });
+
+      const data = await balasan.json();
+
+      if (!balasan.ok) {
+        pesanTerakhir = data && data.error ? data.error.message : 'Gagal (' + nama + ')';
+        continue;
+      }
+
+      const kandidat = data.candidates && data.candidates[0];
+      const bagian = kandidat && kandidat.content ? kandidat.content.parts : [];
+      let teks = '';
+      for (let j = 0; j < bagian.length; j++) {
+        if (bagian[j].text) teks += bagian[j].text;
+      }
+
+      if (!teks) {
+        pesanTerakhir = 'Model ' + nama + ' tidak mengembalikan teks';
+        continue;
+      }
+
+      return { hasil: ambilJson(teks), model: nama };
+    } catch (e) {
+      pesanTerakhir = String(e);
+    }
+  }
+
+  throw new Error(pesanTerakhir);
+}
+
+async function panggilGambar(prompt, fotoBase64, fotoMime, rasio) {
+  const alamat =
+    'https://generativelanguage.googleapis.com/v1beta/models/' + MODEL_GAMBAR + ':generateContent';
+
+  const bagian = [{ text: prompt }];
+  if (fotoBase64) {
+    bagian.push({ inline_data: { mime_type: fotoMime || 'image/jpeg', data: fotoBase64 } });
+  }
+
+  async function coba(ukuran) {
+    const balasan = await fetch(alamat, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
+      body: JSON.stringify({
+        contents: [{ parts: bagian }],
+        generationConfig: {
+          responseModalities: ['IMAGE'],
+          imageConfig: { imageSize: ukuran, aspectRatio: rasio },
+        },
+      }),
+    });
+    const data = await balasan.json();
+    return { ok: balasan.ok, data: data };
+  }
+
+ let jawab = await coba(UKURAN_GAMBAR);
+
+  // "high demand" biasanya sementara — tunggu sebentar lalu coba sekali lagi
+  const sibukSementara = function (j) {
+    const p = j.data && j.data.error ? String(j.data.error.message) : '';
+    return p.indexOf('high demand') !== -1 ||
+           p.indexOf('overloaded') !== -1 ||
+           p.indexOf('UNAVAILABLE') !== -1;
+  };
+
+  if (!jawab.ok && sibukSementara(jawab)) {
+    await new Promise(function (r) { setTimeout(r, 4000); });
+    jawab = await coba(UKURAN_GAMBAR);
+  }
+
+  if (!jawab.ok && UKURAN_GAMBAR !== '512') jawab = await coba('512');
+
+  if (!jawab.ok) {
+    const pesan = jawab.data && jawab.data.error ? jawab.data.error.message : 'Gagal memanggil AI gambar';
+    throw new Error(pesan);
+  }
+
+  const kandidat = jawab.data.candidates && jawab.data.candidates[0];
+  const isi = kandidat && kandidat.content ? kandidat.content.parts : [];
+
+  for (let i = 0; i < isi.length; i++) {
+    const inline = isi[i].inlineData || isi[i].inline_data;
+    if (inline && inline.data) {
+      return { base64: inline.data, mime: inline.mimeType || inline.mime_type || 'image/png' };
+    }
+  }
+
+  throw new Error('AI tidak mengembalikan gambar');
+}
+
+async function unggahGambar(base64, mime) {
+  const buffer = Buffer.from(base64, 'base64');
+  const ext = mime.indexOf('jpeg') !== -1 ? 'jpg' : 'png';
+  const namaFile = 'konten-' + Date.now() + '.' + ext;
+
+  const naik = await admin.storage
+    .from('konten')
+    .upload(namaFile, buffer, { contentType: mime, upsert: true });
+
+  if (naik.error) throw new Error('Gagal unggah gambar: ' + naik.error.message);
+
+  const pub = admin.storage.from('konten').getPublicUrl(namaFile);
+  return pub.data.publicUrl;
+}
+
+async function ambilFoto(url) {
+  const unduh = await fetch(url);
+  if (!unduh.ok) throw new Error('Gagal mengunduh foto produk');
+  const ab = await unduh.arrayBuffer();
+  return {
+    base64: Buffer.from(ab).toString('base64'),
+    mime: unduh.headers.get('content-type') || 'image/jpeg',
+  };
+}
+
+// ambil produk yang paling lama tidak diangkat
+async function produkGiliran() {
+  const cari = await admin
+    .from('produk')
+    .select('id, nama, kategori, volume, deskripsi, bahan, tutup, cetak, foto_url, terakhir_diposting')
+    .eq('aktif', true)
+    .not('foto_url', 'is', null)
+    .order('terakhir_diposting', { ascending: true, nullsFirst: true })
+    .limit(1);
+
+  if (cari.error) throw new Error('Gagal ambil produk: ' + cari.error.message);
+  if (!cari.data || cari.data.length === 0) throw new Error('Tidak ada produk aktif yang punya foto');
+  return cari.data[0];
+}
+
+function instruksiTahap(tahap) {
+  if (tahap === 'hook') {
+    return (
+      'TAHAP 1 dari 3 — HOOK. Tugasmu HANYA membuka masalah, belum menawarkan solusi apa pun. ' +
+      'Angkat satu keresahan nyata pelaku UMKM makanan/minuman soal kemasan ' +
+      '(mis. produk enak tapi terlihat murah, kemasan bocor saat dikirim, pembeli tidak repeat order). ' +
+      'JANGAN menyebut nama produk, jangan menawarkan barang, jangan menutup dengan ajakan beli. ' +
+      'Akhiri dengan rasa penasaran — sinyal bahwa pembahasan berlanjut besok. '
+    );
+  }
+  if (tahap === 'build_up') {
+    return (
+      'TAHAP 2 dari 3 — BUILD-UP. Kemarin masalahnya sudah dibuka, sekarang bahas SOLUSINYA secara edukatif. ' +
+      'Jelaskan apa yang sebenarnya menentukan (jenis bahan, ukuran, tutup, opsi cetak) ' +
+      'dan mulai perkenalkan produk di bawah ini sebagai contoh nyata — bukan hard selling. ' +
+      'Buka dengan menyambung apa yang dibahas kemarin. Akhiri dengan sinyal bahwa besok dibahas tuntas. '
+    );
+  }
+  return (
+    'TAHAP 3 dari 3 — CLOSING. Ini penutup alur. Rangkum singkat perjalanan dua hari sebelumnya, ' +
+    'lalu jadikan produk di bawah ini sebagai jawabannya secara meyakinkan tapi tetap sopan. ' +
+    'Boleh ajakan konsultasi lewat WhatsApp yang lebih jelas dari biasanya, tapi tetap tanpa menyebut harga. '
+  );
+}
+
+// ============ ROUTE ============
+
+export async function GET(req) {
+  try {
+    const url = new URL(req.url);
+    const kunci = url.searchParams.get('kunci');
+    const dariCron = (req.headers.get('authorization') || '') === 'Bearer ' + process.env.CRON_SECRET;
+
+    if (!dariCron && kunci !== process.env.KUNCI_KONTEN) {
+      return Response.json({ error: 'Tidak diizinkan' }, { status: 401 });
+    }
+
+    const mintaTipe = url.searchParams.get('tipe');
+    const tipe = mintaTipe === 'event' ? 'event' : mintaTipe === 'lepas' ? 'lepas' : 'arc';
+    const paksa = url.searchParams.get('paksa') === '1';
+    const mintaUkuran = url.searchParams.get('ukuran');
+    const namaUkuran = UKURAN_PILIHAN[mintaUkuran] ? mintaUkuran : 'story';
+    const hariKe = Math.floor(Date.now() / 86400000);
+    const suasana = SUASANA[hariKe % SUASANA.length];
+    const momen = momenHariIni();
+
+    let arc = null;
+    let tahap = null;
+    let produk = null;
+    let jenisLepas = null;
+    let angle = '';
+    let bentuk = '';
+    let konteksSebelumnya = '';
+
+    // ---------- KONTEN LEPAS (tombol Generate di admin) ----------
+    if (tipe === 'lepas') {
+      const minta = url.searchParams.get('jenis');
+      if (minta === 'produk' || minta === 'kemasan' || minta === 'interaksi') {
+        jenisLepas = minta;
+      } else {
+        const terakhir = await admin
+          .from('konten_harian')
+          .select('jenis')
+          .eq('tipe', 'lepas')
+          .order('dibuat_pada', { ascending: false })
+          .limit(1);
+
+        const j = terakhir.data && terakhir.data[0] ? terakhir.data[0].jenis : 'kemasan';
+        jenisLepas = j === 'produk' ? 'kemasan' : 'produk';
+      }
+
+      if (jenisLepas === 'produk') {
+        produk = await produkGiliran();
+        await admin
+          .from('produk')
+          .update({ terakhir_diposting: new Date().toISOString() })
+          .eq('id', produk.id);
+} else if (jenisLepas === 'kemasan') {
+        angle = ANGLE[Math.floor(Math.random() * ANGLE.length)];
+      } else if (jenisLepas === 'interaksi') {
+        const mintaBentuk = url.searchParams.get('bentuk');
+        bentuk = BENTUK_INTERAKSI.indexOf(mintaBentuk) !== -1
+          ? mintaBentuk
+          : BENTUK_INTERAKSI[Math.floor(Math.random() * BENTUK_INTERAKSI.length)];
+      }
+    }
+
+    // ---------- KONTEN ARC (alur 3 hari) ----------
+    if (tipe === 'arc') {
+      const cariArc = await admin
+        .from('konten_arc')
+        .select('*')
+        .eq('status', 'aktif')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (cariArc.error) throw new Error('Gagal baca arc: ' + cariArc.error.message);
+      arc = cariArc.data && cariArc.data[0] ? cariArc.data[0] : null;
+
+      if (arc) {
+        const cariKonten = await admin
+          .from('konten_harian')
+          .select('id, tahap, status, diposting_at')
+          .eq('arc_id', arc.id)
+          .order('dibuat_pada', { ascending: false })
+          .limit(1);
+
+        const kontenTerakhir = cariKonten.data && cariKonten.data[0] ? cariKonten.data[0] : null;
+
+        if (!paksa && !sudahDiposting(kontenTerakhir)) {
+          return Response.json({
+            tunda: true,
+            alasan: 'Konten tahap "' + kontenTerakhir.tahap + '" belum diposting. Alur ditahan supaya tidak putus.',
+            arc_id: arc.id,
+            konten_id: kontenTerakhir.id,
+          });
+        }
+
+        if (!kontenTerakhir) {
+          // arc terlanjur dibuat tapi kontennya gagal tersimpan -> mulai dari hook
+          tahap = 'hook';
+        } else {
+          const posisi = TAHAP_URUT.indexOf(kontenTerakhir.tahap);
+          tahap = TAHAP_URUT[posisi + 1] || null;
+        }
+
+        if (!tahap) {
+          await admin
+            .from('konten_arc')
+            .update({ status: 'selesai', updated_at: new Date().toISOString() })
+            .eq('id', arc.id);
+          arc = null;
+        }
+      }
+
+      if (arc) {
+        const cariProduk = await admin
+          .from('produk')
+          .select('id, nama, kategori, volume, deskripsi, bahan, tutup, cetak, foto_url')
+          .eq('id', arc.produk_id)
+          .single();
+
+        if (cariProduk.error) throw new Error('Produk arc tidak ditemukan: ' + cariProduk.error.message);
+        produk = cariProduk.data;
+
+        konteksSebelumnya =
+          'Tema alur ini: ' + (arc.tema || '-') + '\n' +
+          'Isi konten HOOK kemarin: ' + (arc.ringkasan_hook || '-') + '\n' +
+          (arc.ringkasan_build_up ? 'Isi konten BUILD-UP kemarin: ' + arc.ringkasan_build_up + '\n' : '');
+      } else {
+        produk = await produkGiliran();
+        tahap = 'hook';
+
+        const buatArc = await admin
+          .from('konten_arc')
+          .insert({
+            produk_id: produk.id,
+            produk_nama: produk.nama,
+            tema: produk.kategori || produk.nama,
+            tahap: 'hook',
+            status: 'aktif',
+          })
+          .select('*')
+          .single();
+
+        if (buatArc.error) throw new Error('Gagal buat arc: ' + buatArc.error.message);
+        arc = buatArc.data;
+
+        await admin
+          .from('produk')
+          .update({ terakhir_diposting: new Date().toISOString() })
+          .eq('id', produk.id);
+      }
+    }
+
+    // ---------- KONTEN EVENT ----------
+    if (tipe === 'event') {
+      if (!momen && !paksa) {
+        return Response.json({ lewat: true, alasan: 'Hari ini tidak ada momen khusus.' });
+      }
+
+      const awalHari = new Date();
+      awalHari.setHours(0, 0, 0, 0);
+
+      const sudahAda = await admin
+        .from('konten_harian')
+        .select('id')
+        .eq('tipe', 'event')
+        .gte('dibuat_pada', awalHari.toISOString())
+        .limit(1);
+
+      if (!paksa && sudahAda.data && sudahAda.data.length > 0) {
+        return Response.json({ lewat: true, alasan: 'Konten event hari ini sudah dibuat.' });
+      }
+
+      const cari = await admin
+        .from('produk')
+        .select('id, nama, kategori, volume, deskripsi, bahan, tutup, cetak, foto_url')
+        .eq('aktif', true)
+        .not('foto_url', 'is', null)
+        .limit(30);
+
+      if (!cari.data || cari.data.length === 0) throw new Error('Tidak ada produk aktif yang punya foto');
+      produk = cari.data[Math.floor(Math.random() * cari.data.length)];
+    }
+
+    // ---------- PROMPT GAMBAR ----------
+    let pakaiFotoProduk;
+    if (tipe === 'event') pakaiFotoProduk = true;
+    else if (tipe === 'lepas') pakaiFotoProduk = jenisLepas === 'produk';
+    else pakaiFotoProduk = tahap !== 'hook';
+
+    let fotoBase64 = null;
+    let fotoMime = null;
+    let promptGambar = '';
+
+    if (pakaiFotoProduk) {
+      const foto = await ambilFoto(produk.foto_url);
+      fotoBase64 = foto.base64;
+      fotoMime = foto.mime;
+
+    const kamera = ANGLE_KAMERA[Math.floor(Math.random() * ANGLE_KAMERA.length)];
+
+      promptGambar =
+        'Gunakan foto terlampir HANYA sebagai acuan bentuk fisik kemasan. Kerjakan tiga langkah berikut. ' +
+        'LANGKAH 1 — bersihkan: hapus total semua label, stiker, tulisan, angka, logo, merek, ' +
+        'dan gambar yang menempel pada kemasan maupun yang ada di latar foto acuan, ' +
+        'sampai kemasan benar-benar polos. Pertahankan hanya bentuk, proporsi, jenis bahan, ' +
+        'tingkat kebeningan, dan model tutupnya. ' +
+        'LANGKAH 2 — beri label baru: rancang label fiktif yang menarik dan modern untuk merek ' +
+        'minuman/makanan UMKM, menempel rapi di badan kemasan. Boleh memakai bidang warna, garis, ' +
+        'bentuk geometris, atau ikon sederhana, dengan warna yang selaras dengan suasana foto. ' +
+        'Label TIDAK BOLEH memuat huruf, kata, atau angka yang terbaca — cukup elemen grafis dan warna. ' +
+        'Jangan meniru merek nyata mana pun. ' +
+        'LANGKAH 3 — potret: letakkan kemasan berlabel baru itu ' + suasana + '. ' +
+        'Sudut pengambilan: ' + kamera + '. ' +
+        'Komposisi potret penuh: foto harus mengisi SELURUH bingkai tanpa area kosong, ' +
+        'tanpa bidang putih polos, tanpa border. Letakkan produk di dua pertiga bagian bawah. ' +
+        'Sepertiga bagian atas tetap berisi bagian dari pemandangan (dinding, latar blur, atau langit-langit) ' +
+        'namun dibuat sederhana dan tidak ramai. ' +
+        'Jangan menambahkan tulisan apa pun di dalam gambar.';
+
+    } else {
+      const temaGambar = jenisLepas === 'interaksi'
+       if (jenisLepas === 'interaksi') {
+        const gayaLucu = GAYA_LUCU[Math.floor(Math.random() * GAYA_LUCU.length)];
+        promptGambar =
+          'Buat ILUSTRASI, bukan foto realistis. Gaya visualnya: ' + gayaLucu + '. ' +
+          'Objeknya seputar dunia kemasan makanan & minuman UMKM — botol, gelas, papercup, ' +
+          'box makanan, toples — digambarkan lucu dan ramah, boleh diberi wajah sederhana. ' +
+          'Suasana ceria dan ringan. Komposisi potret penuh mengisi SELURUH bingkai, ' +
+          'tanpa bidang putih polos dan tanpa border. Sepertiga bagian atas dibuat lapang dan ' +
+          'sederhana karena akan ditempeli teks. ' +
+          'Jangan menambahkan tulisan, huruf, atau angka apa pun di dalam gambar.';
+      } else {
+        const temaGambar = tipe === 'lepas' && angle
+          ? 'Tema: ' + angle + '. '
+          : 'Tema: keresahan pelaku UMKM soal tampilan kemasan produknya. ';
+
+        promptGambar =
+          'Foto suasana bergaya editorial tentang dunia kemasan produk UMKM Indonesia. ' +
+          temaGambar +
+          'Contoh adegan: pelaku UMKM sedang mengemas produk, meja kerja dengan bahan kemasan, ' +
+          'atau tangan menyerahkan paket ke pembeli. Cahaya alami, warna hangat, terasa nyata. ' +
+          'Jangan menampilkan close-up satu produk kemasan tunggal seperti foto katalog. ' +
+          'Komposisi potret penuh: foto harus mengisi SELURUH bingkai tanpa area kosong, ' +
+          'tanpa bidang putih polos, tanpa border. Sepertiga bagian atas tetap berisi bagian dari pemandangan ' +
+          'namun dibuat sederhana dan tidak ramai. ' +
+          'Jangan menambahkan tulisan apa pun di dalam gambar.';
+      }
+    }
+
+    // ---------- JUDUL & PEMBUKA LAMA ----------
+    const lama = await admin
+      .from('artikel')
+      .select('judul')
+      .order('dibuat_pada', { ascending: false })
+      .limit(25);
+
+    const daftarLama = (lama.data || []).map(function (a) { return a.judul; }).join(' | ') || '(belum ada)';
+
+    const kapLama = await admin
+      .from('konten_harian')
+      .select('caption, headline_1')
+      .order('dibuat_pada', { ascending: false })
+      .limit(6);
+
+    const daftarBuka = (kapLama.data || [])
+      .map(function (k) { return String(k.caption || '').split('\n')[0].slice(0, 70); })
+      .filter(Boolean)
+      .join(' / ') || '(belum ada)';
+
+    const daftarH1 = (kapLama.data || [])
+      .map(function (k) { return k.headline_1; })
+      .filter(Boolean)
+      .join(', ') || '(belum ada)';
+
+    const gayaBuka = GAYA_BUKA[Math.floor(Math.random() * GAYA_BUKA.length)];
+
+    // ---------- PROMPT TEKS ----------
+    const identitas =
+      'Kamu penulis konten untuk "Botol Makassar", toko kemasan di Makassar ' +
+      '(botol plastik, botol kaca, gelas, papercup, box makanan, toples, plus jasa sablon & cetak kemasan). ' +
+      'Target pembaca: pelaku UMKM makanan & minuman di Indonesia. ' +
+      'Gaya: SOFT SELLING — bantu dan edukasi dulu, jualan halus di akhir. ' +
+      'Bahasa Indonesia yang santai, hangat, dan jelas. Jangan lebay, jangan pakai kata "revolusioner". ' +
+      (momen
+        ? 'Konteks waktu sekarang: ' + momen + '. ' +
+          'Kaitkan konten dengan momen ini secara wajar dan mengalir — jangan dipaksakan. ' +
+          'Kalau tidak nyambung, abaikan saja momen tersebut. '
+        : '') +
+      'JANGAN pernah mengaitkan konten dengan bencana, kecelakaan, musibah, duka, ' +
+      'politik, atau isu sensitif apa pun. Hanya momen positif. ';
+
+    const aturanJson =
+      'Balas HANYA dengan JSON valid, tanpa penjelasan dan tanpa tanda kutip markdown. Format persis: ' +
+      '{"headline_1":"","headline_2":"","label_ukuran":"","caption":"","judul":"","ringkasan":"","isi":"","angle":"","ringkasan_arc":"","adegan":""} ' +
+      'adegan = satu kalimat bahasa Indonesia yang menggambarkan ADEGAN FOTO paling pas untuk isi konten ini ' +
+      '(tempat, kegiatan, suasana, waktu). Harus benar-benar mencerminkan judul dan isi kontennya, ' +
+      'bukan deskripsi umum. Jangan menyebut tulisan, teks, atau logo apa pun di dalam adegan. ' +
+      'Aturan isi: ' +
+      'headline_1 = 1 kata pendek yang jadi kata pertama judul di gambar (maksimal 10 huruf). ' +
+      'JANGAN memakai kata yang sudah dipakai belakangan ini: ' + daftarH1 + '. ' +
+      'headline_2 = lanjutannya, maksimal 25 huruf. ' +
+      'label_ukuran = ukuran/volume singkat, atau string kosong kalau tidak relevan. ' +
+      'caption = caption Instagram dengan susunan: ' +
+      '(1) kalimat pembuka bergaya "' + gayaBuka + '" — WAJIB memakai gaya ini. ' +
+      'DILARANG membuka caption dengan frasa klise: "Pernah nggak sih", "Pernah nggak", "Siapa nih", ' +
+      '"Buat kamu yang", "Halo Sobat", "Yuk simak", "Tahukah kamu". ' +
+      'Kalimat pembuka juga tidak boleh mirip dengan pembuka caption berikut: ' + daftarBuka + '. ' +
+      '(2) penjelasan isi konten 3-5 kalimat, (3) satu ajakan halus untuk konsultasi lewat WhatsApp, ' +
+      '(4) 5-8 hashtag relevan. Pisahkan tiap bagian dengan baris baru. ' +
+      'judul = judul artikel web yang menarik dan berbeda dari daftar judul lama. ' +
+      'ringkasan = 1-2 kalimat rangkuman artikel. ' +
+      'isi = artikel 400-600 kata dalam format Markdown, pakai beberapa sub-judul "## ", ' +
+      'diakhiri ajakan halus untuk konsultasi kemasan lewat WhatsApp Botol Makassar. ' +
+      'angle = sudut pandang yang kamu pakai, singkat. ' +
+      'ringkasan_arc = 1-2 kalimat padat berisi APA YANG SUDAH DISAMPAIKAN konten ini, ' +
+      'ditulis untuk dibaca AI besok sebagai memori penyambung alur. ';
+
+    const dataProduk = produk
+      ? 'Data produk:\n' +
+        'Nama: ' + (produk.nama || '-') + '\n' +
+        'Kategori: ' + (produk.kategori || '-') + '\n' +
+        'Volume: ' + (produk.volume || '-') + '\n' +
+        'Bahan: ' + (produk.bahan || '-') + '\n' +
+        'Tutup: ' + (produk.tutup || '-') + '\n' +
+        'Bisa dicetak/sablon: ' + (produk.cetak || '-') + '\n' +
+        'Deskripsi: ' + (produk.deskripsi || '-') + '\n' +
+        'PENTING: jangan mengarang angka, ukuran, bahan, atau harga di luar data di atas. ' +
+        'Jangan menyebutkan harga sama sekali.\n'
+      : '';
+
+    let promptTeks;
+if (tipe === 'lepas' && jenisLepas === 'interaksi') {
+      let khusus;
+
+      if (bentuk === 'quote') {
+        khusus =
+          'Buat KONTEN QUOTE: satu kalimat pendek yang menyentuh dan membangkitkan semangat ' +
+          'pelaku UMKM makanan & minuman — soal ketekunan, melayani pelanggan, atau kebanggaan ' +
+          'pada produk sendiri. Harus terasa jujur dan membumi, bukan motivasi kosong. ' +
+          'headline_1 & headline_2 = quote-nya dipenggal jadi dua baris. label_ukuran kosong. ' +
+          'Susunan caption: (1) quote-nya ditulis utuh, (2) 2-4 kalimat perenungan yang mengaitkannya ' +
+          'dengan keseharian usaha kuliner, (3) ajakan berbagi pengalaman di kolom komentar, ' +
+          '(4) 5-8 hashtag. JANGAN menjual apa pun di caption ini. ';
+      } else if (bentuk === 'tips') {
+        khusus =
+          'Buat KONTEN TIPS/HACK: satu trik praktis yang bisa langsung dipakai pelaku UMKM ' +
+          'makanan & minuman hari itu juga — seputar mengemas, menyimpan, mengirim, atau ' +
+          'menampilkan produk. Harus konkret dan spesifik, bukan nasihat umum. ' +
+          'headline_1 & headline_2 = inti triknya, singkat. label_ukuran kosong. ' +
+          'Susunan caption: (1) satu kalimat masalah yang sering dialami, (2) langkah triknya dalam ' +
+          '3-4 poin bernomor pada baris terpisah, (3) ajakan mencoba dan berbagi hasilnya, ' +
+          '(4) 5-8 hashtag. ';
+      } else {
+        khusus =
+          'Buat KONTEN KUIS: satu tebak-tebakan ringan seputar kemasan untuk UMKM. ' +
+          'Pilihan A, B, dan C WAJIB berupa kategori umum yang bisa dipahami dari teksnya saja — ' +
+          'misalnya jenis bahan (PET, HDPE, PP), model tutup, bentuk badan botol, atau ukuran. ' +
+          'DILARANG KERAS menyebut nama produk atau nama model tertentu, karena kamu tidak diberi ' +
+          'data produk apa pun dan gambarnya tidak menampilkan produk spesifik. ' +
+          'headline_1 & headline_2 = PERTANYAAN kuisnya, headline_2 diakhiri tanda tanya. ' +
+          'label_ukuran kosong. ' +
+          'Susunan caption: (1) satu kalimat pembuka pemancing penasaran, (2) PERTANYAAN kuisnya ' +
+          'ditulis utuh dan diakhiri tanda tanya — WAJIB ADA, dilarang langsung melompat ke pilihan, ' +
+          '(3) tiga baris pilihan "A. ...", "B. ...", "C. ...", (4) ajakan menjawab di komentar atau DM, ' +
+          '(5) 5-8 hashtag. JANGAN membocorkan jawaban benar di caption. ' +
+          'isi (artikel) HARUS memuat jawaban benar beserta alasannya. ';
+      }
+
+      promptTeks =
+        identitas +
+        'Konten ini berdiri sendiri, tidak bersambung dengan konten hari lain.\n\n' +
+        khusus +
+        'PENTING — aturan caption pada bagian "Aturan isi" di bawah TIDAK BERLAKU untuk konten ini; ' +
+        'ikuti susunan caption yang baru saja disebutkan. ' +
+        'Field "adegan" WAJIB berupa gambaran ilustrasi lucu seputar kemasan yang nyambung dengan ' +
+        'isi kontennya, tanpa tulisan apa pun.\n' +
+        'Judul artikel lama (jangan mirip): ' + daftarLama + '\n\n' +
+        aturanJson;
+    } else if (tipe === 'lepas' && jenisLepas === 'kemasan') {
+
+      promptTeks =
+        identitas +
+        'Tulis konten edukasi tentang KEMASAN secara umum (bukan menyorot satu produk tertentu). ' +
+        'Konten ini berdiri sendiri, tidak bersambung dengan konten hari lain. ' +
+        'Sudut pandang: ' + angle + '. Pilih topik spesifik yang belum pernah dibahas.\n' +
+        'Judul artikel lama (jangan mirip): ' + daftarLama + '\n\n' +
+        'headline_1 & headline_2 adalah hook singkat (bukan nama produk), ' +
+        'dan label_ukuran diisi string kosong.\n\n' +
+        aturanJson;
+    } else if (tipe === 'lepas') {
+      promptTeks =
+        identitas +
+        'Tulis konten yang menyorot satu produk ini. ' +
+        'Konten ini berdiri sendiri, tidak bersambung dengan konten hari lain — ' +
+        'jangan menyinggung "kemarin kita bahas" atau "besok dilanjut".\n\n' +
+        dataProduk +
+        'headline_1 & headline_2 harus memakai nama produk ini. label_ukuran diambil dari Volume.\n' +
+        'Judul artikel lama (jangan mirip): ' + daftarLama + '\n\n' +
+        aturanJson;
+    } else if (tipe === 'event') {
+      promptTeks =
+        identitas +
+        'Buat konten PERAYAAN untuk momen: ' + (momen || 'perayaan usaha UMKM') + '. ' +
+        'Nuansanya hangat dan merayakan, dengan produk di bawah ini sebagai tema visual pendukung. ' +
+        'Konten ini berdiri sendiri, bukan bagian dari alur bersambung.\n\n' +
+        dataProduk +
+        'headline_1 & headline_2 bernuansa perayaan momen tersebut. ' +
+        'label_ukuran diambil dari Volume.\n' +
+        'Judul artikel lama (jangan mirip): ' + daftarLama + '\n\n' +
+        aturanJson;
+    } else {
+      promptTeks =
+        identitas +
+        'Konten ini bagian dari satu alur cerita 3 hari yang bersambung. ' +
+        instruksiTahap(tahap) + '\n\n' +
+        (konteksSebelumnya ? 'MEMORI ALUR SEBELUMNYA:\n' + konteksSebelumnya + '\n' : '') +
+        dataProduk +
+        (tahap === 'hook'
+          ? 'Untuk tahap hook: headline_1 & headline_2 adalah hook masalah (BUKAN nama produk), ' +
+            'dan label_ukuran diisi string kosong.\n'
+          : 'headline_1 & headline_2 harus memakai nama produk ini. label_ukuran diambil dari Volume.\n') +
+        'Judul artikel lama (jangan mirip): ' + daftarLama + '\n\n' +
+        aturanJson;
+    }
+
+    /// ---------- JALANKAN ----------
+    const teks = await panggilTeks(promptTeks);
+    const t = teks.hasil;
+
+    // sambungkan gambar dengan isi kontennya
+    if (t.adegan) {
+      promptGambar +=
+       ' Adegan yang harus tergambar (sesuaikan isinya dengan ini, tapi TETAP pertahankan gaya visual ' +
+        'yang sudah diminta di atas): ' +
+        t.adegan + '.';
+    }
+
+    const gambar = await panggilGambar(
+      promptGambar, fotoBase64, fotoMime, UKURAN_PILIHAN[namaUkuran].rasio
+    );
+    const urlGambar = await unggahGambar(gambar.base64, gambar.mime);
+
+    const jenis = pakaiFotoProduk ? 'produk' : 'kemasan';
+
+    // ---------- SIMPAN ----------
+ const simpanArtikel = await admin
+      .from('artikel')
+      .insert({
+        judul: t.judul,
+        slug: buatSlug(t.judul),
+        isi: t.isi,
+        ringkasan: t.ringkasan,
+        gambar: urlGambar,
+        jenis: jenis,
+        produk_id: produk ? produk.id : null,
+        angle: t.angle,
+        tanggal: new Date().toISOString().slice(0, 10),
+      })
+      .select('id, slug')
+      .single();
+
+    if (simpanArtikel.error) throw new Error('Gagal simpan artikel: ' + simpanArtikel.error.message);
+
+    const simpanKonten = await admin
+      .from('konten_harian')
+      .insert({
+        artikel_id: simpanArtikel.data.id,
+        produk_id: produk ? produk.id : null,
+        jenis: jenis,
+        tipe: tipe,
+        arc_id: tipe === 'arc' ? arc.id : null,
+        tahap: tipe === 'arc' ? tahap : null,
+        format: tipe === 'lepas' ? jenisLepas : null,
+        rasio: namaUkuran,
+        gambar_url: urlGambar,
+        headline_1: t.headline_1,
+        headline_2: t.headline_2,
+        label_ukuran: t.label_ukuran || null,
+        caption: t.caption,
+        layout: hariKe % 2 === 0 ? 'top' : 'center',
+        status: 'draft',
+      })
+      .select('id')
+      .single();
+
+    if (simpanKonten.error) throw new Error('Gagal simpan konten: ' + simpanKonten.error.message);
+
+    // ---------- SIMPAN MEMORI ALUR ----------
+    if (tipe === 'arc') {
+      const kolom = {
+        hook: 'ringkasan_hook',
+        build_up: 'ringkasan_build_up',
+        closing: 'ringkasan_closing',
+      }[tahap];
+
+      const ubah = { tahap: tahap, updated_at: new Date().toISOString() };
+      ubah[kolom] = t.ringkasan_arc || t.ringkasan;
+
+      await admin.from('konten_arc').update(ubah).eq('id', arc.id);
+    }
+
+    return Response.json({
+      sukses: true,
+      tipe: tipe,
+      tahap: tahap,
+      arc_id: tipe === 'arc' ? arc.id : null,
+      jenis: jenis,
+      rasio: namaUkuran,
+      model_teks: teks.model,
+      produk: produk ? produk.nama : null,
+      judul: t.judul,
+      slug: simpanArtikel.data.slug,
+      gambar: urlGambar,
+      konten_id: simpanKonten.data.id,
+    });
+  } catch (err) {
+    return Response.json({ error: String(err.message || err) }, { status: 500 });
+  }
+}

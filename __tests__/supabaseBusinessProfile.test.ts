@@ -31,9 +31,10 @@ const profile: BusinessProfile = {
     selectedPlatformIds: ["instagram"],
   },
   story: "Berdiri sejak 2021...",
+  logo: null,
 };
 
-const row: BusinessProfileRow = {
+const writeRow = {
   business_id: DEV_BUSINESS_ID,
   business_name: "Klinik Sehat",
   industry: "Klinik",
@@ -52,26 +53,51 @@ const row: BusinessProfileRow = {
   story: "Berdiri sejak 2021...",
   social_entries: [{ platformId: "instagram", value: "@klinik" }],
   selected_social_platform_ids: ["instagram"],
-  logo_storage_path: null,
 };
 
-describe("businessProfileToRow / rowToBusinessProfile", () => {
-  it("maps every field from BusinessProfile into the DB row shape", () => {
-    expect(businessProfileToRow(profile, DEV_BUSINESS_ID)).toEqual(row);
-  });
-
-  it("maps a DB row back into the exact BusinessProfile shape", () => {
-    expect(rowToBusinessProfile(row)).toEqual(profile);
-  });
-
-  it("round-trips without losing data", () => {
-    expect(rowToBusinessProfile(businessProfileToRow(profile, DEV_BUSINESS_ID))).toEqual(profile);
-  });
-});
+const row: BusinessProfileRow = {
+  ...writeRow,
+  logo_storage_path: null,
+  logo_position: "top-left",
+};
 
 function mockClient(chain: Record<string, unknown>): SupabaseClient {
   return { from: vi.fn().mockReturnValue(chain) } as unknown as SupabaseClient;
 }
+
+function mockClientWithStorage(chain: Record<string, unknown>, publicUrl: string): SupabaseClient {
+  return {
+    from: vi.fn().mockReturnValue(chain),
+    storage: { from: vi.fn().mockReturnValue({ getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl } }) }) },
+  } as unknown as SupabaseClient;
+}
+
+describe("businessProfileToRow / rowToBusinessProfile", () => {
+  it("maps every field from BusinessProfile into the DB write row shape (logo columns excluded)", () => {
+    expect(businessProfileToRow(profile, DEV_BUSINESS_ID)).toEqual(writeRow);
+  });
+
+  it("maps a DB row with no logo back into the exact BusinessProfile shape", () => {
+    const client = mockClientWithStorage({}, "unused");
+    expect(rowToBusinessProfile(row, client)).toEqual(profile);
+  });
+
+  it("maps a DB row with a logo into a BusinessProfile with a public logo URL", () => {
+    const rowWithLogo: BusinessProfileRow = {
+      ...row,
+      logo_storage_path: `${DEV_BUSINESS_ID}/logo/abc.png`,
+      logo_position: "bottom-right",
+    };
+    const client = mockClientWithStorage({}, "https://cdn.example.com/user-images/.../abc.png");
+
+    const result = rowToBusinessProfile(rowWithLogo, client);
+
+    expect(result.logo).toEqual({
+      url: "https://cdn.example.com/user-images/.../abc.png",
+      position: "bottom-right",
+    });
+  });
+});
 
 describe("saveBusinessProfile", () => {
   it("upserts on conflict business_id and reports success", async () => {

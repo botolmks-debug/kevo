@@ -39,6 +39,15 @@ describe("buildBusinessProfile", () => {
     expect(profile.story).toBe(draft.story);
   });
 
+  it("defaults logo to null — it's set separately via /api/business-logo, not the onboarding form", () => {
+    const profile = buildBusinessProfile({
+      ...draft,
+      positioning: { ...draft.positioning, contentGoals: [...draft.positioning.contentGoals] },
+    });
+
+    expect(profile.logo).toBeNull();
+  });
+
   it("drops social entries left empty by the user", () => {
     const profile = buildBusinessProfile({
       ...draft,

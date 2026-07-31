@@ -20,6 +20,7 @@ const profile: BusinessProfile = {
   },
   socials: { entries: [], selectedPlatformIds: [] },
   story: "",
+  logo: null,
 };
 
 describe("buildScenePrompt", () => {
@@ -48,5 +49,33 @@ describe("buildScenePrompt", () => {
 
     expect(prompt.toLowerCase()).not.toContain("cafe scene");
     expect(prompt).toMatch(/do not default to a generic cafe/i);
+  });
+
+  it("asks for brighter, more realistic lighting", () => {
+    const prompt = buildScenePrompt(profile);
+
+    expect(prompt).toMatch(/bright, natural, well-balanced lighting/i);
+    expect(prompt).toMatch(/avoid dim, flat, or muddy lighting/i);
+  });
+
+  it("asks for an authentic, realistic location", () => {
+    const prompt = buildScenePrompt(profile);
+
+    expect(prompt).toMatch(/authentic and true-to-life/i);
+    expect(prompt).toMatch(/avoid anything that looks generic, staged, or artificial/i);
+  });
+
+  it("asks for natural human interaction in the scene", () => {
+    const prompt = buildScenePrompt(profile);
+
+    expect(prompt).toMatch(/natural human interaction/i);
+    expect(prompt).not.toMatch(/do not add extra people/i);
+  });
+
+  it("asks for the product to stay the clear main subject, spotlighted over the background", () => {
+    const prompt = buildScenePrompt(profile);
+
+    expect(prompt).toMatch(/clear, unmistakable main subject/i);
+    expect(prompt).toMatch(/spotlight it/i);
   });
 });

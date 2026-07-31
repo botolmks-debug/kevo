@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["satori", "@resvg/resvg-js"],
+  // Nama file middleware baru di Next.js 16
+  serverExternalPackages: ["satori", "@resvg/resvg-js", "sharp"],
 };
 
 export default nextConfig;

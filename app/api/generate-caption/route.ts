@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildCaptionPrompt } from "@/lib/ai/captionPrompt";
 import { generateCaption } from "@/lib/ai/gemini";
+import { createClient } from "@/lib/supabase/server";
+import { consumeToken } from "@/lib/supabase/tokens";
 import type { BusinessProfile } from "@/lib/onboarding/businessProfile";
 
 export const runtime = "nodejs";
@@ -38,6 +40,15 @@ export async function POST(request: NextRequest) {
       { status: 400 },
     );
   }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Belum login." }, { status: 401 });
+
+  const token = await consumeToken(supabase, user.id, user.email);
+  if (!token.ok) return NextResponse.json({ error: token.error }, { status: 402 });
 
   const prompt = buildCaptionPrompt(body.profile, {
     templateName: body.templateName,

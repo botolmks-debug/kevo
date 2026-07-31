@@ -36,7 +36,14 @@ export async function GET() {
   }
 
   const supabase = await createClient();
-  const result = await loadBusinessProfile(supabase);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Belum login." }, { status: 401 });
+  }
+
+  const result = await loadBusinessProfile(supabase, user.id);
 
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 502 });
@@ -62,7 +69,14 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = await createClient();
-  const result = await saveBusinessProfile(supabase, body);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Belum login." }, { status: 401 });
+  }
+
+  const result = await saveBusinessProfile(supabase, body, user.id);
 
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 502 });

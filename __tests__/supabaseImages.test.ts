@@ -8,17 +8,17 @@ describe("buildImageRow", () => {
     const row = buildImageRow({
       businessId: DEV_BUSINESS_ID,
       storagePath: `${DEV_BUSINESS_ID}/abc.jpg`,
-      description: "Logo klinik warna biru",
-      category: "Logo",
+      description: "Ayam geprek best seller",
+      category: "Produk",
       usage: "apa_adanya",
     });
 
     expect(row).toEqual({
       business_id: DEV_BUSINESS_ID,
       storage_path: `${DEV_BUSINESS_ID}/abc.jpg`,
-      description: "Logo klinik warna biru",
-      category: "Logo",
-      type: "logo",
+      description: "Ayam geprek best seller",
+      category: "Produk",
+      type: "produk",
       usage: "apa_adanya",
     });
   });
