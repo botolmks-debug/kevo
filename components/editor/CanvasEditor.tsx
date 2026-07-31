@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Stage, Layer, Text as KonvaText, Image as KonvaImage, Group, Rect } from "react-konva";
 import type Konva from "konva";
 import { FONT_OPTIONS } from "@/lib/templates/fonts";
@@ -81,7 +81,19 @@ export function CanvasEditor({
   footerPreviewText, socials, businessName, logoUrl,
   logoVariant = "light", canToggleLogo = false, onLogoVariantChange,
 }: CanvasEditorProps) {
-  const scale = PREVIEW_WIDTH / layout.canvas.width;
+  // Lebar preview mengikuti lebar container (maks 340) supaya muat di HP.
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [previewWidth, setPreviewWidth] = useState(PREVIEW_WIDTH);
+  useEffect(() => {
+    function measure() {
+      const w = wrapRef.current?.clientWidth ?? PREVIEW_WIDTH;
+      setPreviewWidth(Math.max(200, Math.min(PREVIEW_WIDTH, w)));
+    }
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+  const scale = previewWidth / layout.canvas.width;
   const previewHeight = Math.round(layout.canvas.height * scale);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -190,10 +202,10 @@ export function CanvasEditor({
   const hasFrontScrim = (layout.decorations ?? []).some((d) => (d.layer ?? "back") === "front");
 
   return (
-    <div className="flex flex-col gap-3">
+    <div ref={wrapRef} className="flex w-full max-w-full flex-col gap-3">
       {/* Container preview */}
       <div className="relative overflow-hidden rounded-2xl border border-slate-200"
-        style={{ width: PREVIEW_WIDTH, height: previewHeight, background: "#1e293b" }}>
+        style={{ width: previewWidth, height: previewHeight, background: "#1e293b" }}>
 
         {/* ① Foto latar — HTML img tag, bebas masalah CORS/Konva */}
         {photoSrc ? (
@@ -217,7 +229,7 @@ export function CanvasEditor({
         ) : null}
 
         {/* ③ Konva: teks, logo, sosmed — di atas foto */}
-        <Stage width={PREVIEW_WIDTH} height={previewHeight}
+        <Stage width={previewWidth} height={previewHeight}
           style={{ position: "relative", zIndex: 2 }}
           onMouseDown={(e) => { if (e.target === e.target.getStage()) setSelectedId(null); }}>
           <Layer>
