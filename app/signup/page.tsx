@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { AuthBackground } from "@/components/ui/AuthBackground";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -55,12 +56,17 @@ export default function SignupPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-6 py-12">
-      <Card className="w-full max-w-sm">
-        <div className="mb-6 text-center">
-          <span className="text-sm font-semibold text-accent">Kevo</span>
-          <h1 className="mt-1 text-2xl font-bold text-navy">Buat akun</h1>
-          <p className="mt-1 text-sm text-navy/60">Mulai bikin konten harianmu ✨</p>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 py-12">
+      <AuthBackground />
+      <Card className="relative z-10 w-full max-w-sm">
+        <div className="mb-6 flex flex-col items-center gap-2">
+          {/* Logo Kevo */}
+          <div className="flex items-center gap-2">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-lg font-bold text-white">K</span>
+            <span className="text-xl font-bold text-navy">Kevo</span>
+          </div>
+          <h1 className="text-2xl font-bold text-navy">Buat akun</h1>
+          <p className="text-sm text-navy/60">Mulai bikin konten harianmu ✨</p>
         </div>
         <form
           onSubmit={(e) => {
