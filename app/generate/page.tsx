@@ -11,6 +11,7 @@ import { withFooterOverride } from "@/app/generate/withFooterOverride";
 import { withLogoOverride } from "@/app/generate/withLogoOverride";
 import { buildRenderInput } from "@/app/generate/buildRenderInput";
 import { saveManualContent } from "@/lib/content/saveContent";
+import { HelpTip } from "@/components/ui/HelpTip";
 import { createProdukLatarTemplate } from "@/lib/templates/model-produk-latar";
 import { StandarContent } from "@/components/generate/StandarContent";
 import type { BusinessProfile } from "@/lib/onboarding/businessProfile";
@@ -327,7 +328,21 @@ export default function GeneratePage() {
         <Header />
         <main className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-10">
           <div>
-            <h1 className="text-2xl font-bold text-navy">Pilih Model Konten</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-navy">Pilih Model Konten</h1>
+              <HelpTip
+                title="Panduan & saran"
+                align="left"
+                text={
+                  <span className="flex flex-col gap-1.5">
+                    <span><b>Produk + Latar Warna</b> — untuk 1 produk jelas dengan latar sederhana (mis. botol di meja polos). AI memotong produk lalu menaruhnya di latar warna pilihanmu.</span>
+                    <span><b>Konten Standar</b> — paling fleksibel: isi judul & deskripsi, pilih gambar (bisa diolah AI atau dipakai apa adanya). Cocok untuk hampir semua foto.</span>
+                    <span><b>Otomatis</b> — AI membuat gambar + caption otomatis dari data bisnismu.</span>
+                    <span className="mt-1 rounded-lg bg-amber-50 p-2 text-amber-800">💡 <b>Saran:</b> kalau fotomu ramai / banyak objek / produk kecil, jangan pakai "Produk + Latar Warna" — hasil potongnya kurang rapi. Pakai <b>Konten Standar</b> (Generate AI) atau opsi "Pakai Gambar Asli".</span>
+                  </span>
+                }
+              />
+            </div>
             <p className="mt-1 text-navy/60">Pilih tampilan yang ingin kamu buat.</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

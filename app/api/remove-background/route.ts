@@ -51,12 +51,16 @@ export async function POST(request: NextRequest) {
   // mudah di-key-out. Fokus ke PRODUK DOMINAN, bukan sekadar hapus putih.
   const prompt = `You are an expert product-cutout tool. Isolate the MAIN PRODUCT/SUBJECT in this photo from EVERYTHING else.
 
+CRITICAL - PRESERVE FRAMING EXACTLY (most important rule):
+Output MUST have the EXACT SAME dimensions, aspect ratio, zoom level, and product position as the INPUT image. Do NOT crop, zoom in, zoom out, rotate, re-center, resize, or reframe. The product must stay in the IDENTICAL position and at the IDENTICAL size within the frame as in the original photo — pixel-for-pixel the same placement. ONLY the background pixels change to magenta; the product does not move or change size at all.
+
 KEEP EXACTLY (do not alter): the single main product/subject (usually centered). Preserve its shape, proportions, colors, transparency, and any text/label PHYSICALLY PRINTED on it.
 
 REPLACE WITH SOLID MAGENTA (#FF00FF): the ENTIRE rest of the image — background, floor, walls, tables, the hand/fingers holding the product, other objects, people, clutter, and original shadows. No matter how busy or colorful the background is, ALL of it becomes flat pure magenta #FF00FF.
 
 RULES:
 - The product must be the ONLY non-magenta thing in the output.
+- Keep the product's position and size identical to the input (see CRITICAL rule above).
 - Fill the whole frame with magenta around the product, edge to edge.
 - Pure flat magenta #FF00FF only — no gradient, texture, shadow, or tint.
 - Do NOT add any new text, logos, reflections, or effects.
