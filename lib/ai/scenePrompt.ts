@@ -21,7 +21,11 @@ function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-export function buildScenePrompt(profile: BusinessProfile): string {
+export function buildScenePrompt(profile: BusinessProfile, sizeHint?: string): string {
+  const sizeNote =
+    sizeHint && sizeHint.trim()
+      ? `\n\nPRODUCT SIZE (critical for scale): product is approximately "${sizeHint.trim()}". Render it at its REAL size relative to the scene. If LARGE (machine, fridge, furniture, vending machine): show it standing on the FLOOR as a big, dominant object in a real room; do NOT shrink it or place it like a small item on a table. If SMALL (packaging, bottle, food): a close-up on a table/surface is fine.`
+      : "";
   return `You are a world-class commercial product photographer. Create an award-winning advertising image.
 
 STEP 1 - PRODUCT PRESERVATION:
@@ -59,5 +63,5 @@ STEP 5 - FRAMING (fill the whole frame):
 - The scene MUST fill the ENTIRE frame edge-to-edge. NO empty margins, NO blank/plain areas, NO black or white bars, NO border/padding.
 - The bottom ~third will be covered later by a thin dark layer with text, so keep it a bit calmer - but it must STILL contain the scene/background, never left blank.
 
-Do NOT add any new text, logos, watermarks, or branding to the scene. Product is the HERO.`;
+Do NOT add any new text, logos, watermarks, or branding to the scene. Product is the HERO.${sizeNote}`;
 }

@@ -95,6 +95,11 @@ export function CanvasEditor({
   }, []);
   const scale = previewWidth / layout.canvas.width;
   const previewHeight = Math.round(layout.canvas.height * scale);
+  // Batasi drag: titik pegang elemen tak boleh keluar kanvas (biar tak hilang).
+  const clampDrag = (pos: { x: number; y: number }) => ({
+    x: Math.max(0, Math.min(pos.x, previewWidth - 16)),
+    y: Math.max(0, Math.min(pos.y, previewHeight - 16)),
+  });
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
@@ -250,7 +255,7 @@ export function CanvasEditor({
                   fontFamily={eff.fontFamily} fontSize={eff.fontSize * scale}
                   fontStyle={eff.fontWeight >= 600 ? "bold" : "normal"}
                   fill={eff.color} align={eff.align} {...outline} {...shadow}
-                  draggable
+                  draggable dragBoundFunc={clampDrag}
                   onClick={() => setSelectedId(slot.id)} onTap={() => setSelectedId(slot.id)}
                   onDragEnd={(e) => { const n = e.target; updateSlotBox(slot.id, n.x(), n.y(), eff.box.width, eff.box.height); }}
                   onDblClick={(e) => openEdit(slot.id, e.target as Konva.Text)}
@@ -259,7 +264,7 @@ export function CanvasEditor({
             })}
 
             {/* Footer sosmed */}
-            <Group x={footerX} y={footerY} draggable
+            <Group x={footerX} y={footerY} draggable dragBoundFunc={clampDrag}
               onClick={() => setSelectedId("__footer__")} onTap={() => setSelectedId("__footer__")}
               onDragEnd={(e) => { const n = e.target; updateFooter({ x: n.x() / scale, y: n.y() / scale }); }}>
               <Rect x={-8} y={-8} width={(footerW + 16) * scale} height={(footerH + 16) * scale} fill="transparent" />
@@ -292,7 +297,7 @@ export function CanvasEditor({
 
             {/* Logo */}
             {logoImg ? (
-              <Group x={logoPos.x * scale} y={logoPos.y * scale} draggable
+              <Group x={logoPos.x * scale} y={logoPos.y * scale} draggable dragBoundFunc={clampDrag}
                 onClick={() => setSelectedId("__logo__")} onTap={() => setSelectedId("__logo__")}
                 onDblClick={toggleLogoVariant} onDblTap={toggleLogoVariant}
                 onDragEnd={(e) => { const n = e.target; updateLogo({ x: n.x() / scale, y: n.y() / scale }); }}>

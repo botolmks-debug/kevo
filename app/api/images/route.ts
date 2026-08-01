@@ -38,6 +38,7 @@ export async function GET() {
 
   const images = result.images.map((image) => ({
     ...image,
+    sizeHint: image.size_hint ?? null,
     publicUrl: publicImageUrl(supabase, image.storage_path),
   }));
 
@@ -85,6 +86,7 @@ export async function POST(request: NextRequest) {
     description: typeof description === "string" ? description : "",
     category,
     usage: usage as ImageUsage,
+    sizeHint: typeof formData.get("sizeHint") === "string" ? (formData.get("sizeHint") as string) : "",
     businessId: user.id,
   });
 

@@ -26,6 +26,7 @@ export function ImageLibrary() {
 
   const [file, setFile] = useState<File | null>(null);
   const [description, setDescription] = useState("");
+  const [sizeHint, setSizeHint] = useState("");
   const [category, setCategory] = useState(DEFAULT_IMAGE_CATEGORY);
   const [usage, setUsage] = useState<ImageUsage>("apa_adanya");
   const [uploadStatus, setUploadStatus] = useState<Status>("idle");
@@ -87,6 +88,7 @@ export function ImageLibrary() {
       formData.append("description", description);
       formData.append("category", category);
       formData.append("usage", usage);
+      formData.append("sizeHint", sizeHint);
 
       const res = await fetch("/api/images", { method: "POST", body: formData });
       const data = await res.json().catch(() => null);
@@ -96,6 +98,7 @@ export function ImageLibrary() {
 
       setFile(null);
       setDescription("");
+      setSizeHint("");
       setUploadStatus("success");
       await loadImages();
     } catch (error) {
@@ -153,6 +156,19 @@ export function ImageLibrary() {
         onChange={(e) => setDescription(e.target.value)}
         placeholder="mis. Logo klinik warna biru, dipakai di semua konten"
       />
+
+      <label className="flex flex-col gap-1.5">
+        <span className="text-sm font-medium text-navy">
+          Estimasi ukuran produk <span className="font-normal text-navy/50">(opsional)</span>
+        </span>
+        <input
+          value={sizeHint}
+          onChange={(e) => setSizeHint(e.target.value)}
+          placeholder="mis. tinggi produk 10 cm  : isi dengan akurat : untuk meningkatkan keakuratan produk "
+          className="rounded-card border border-slate-200 bg-white px-4 py-2.5 text-sm text-navy focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+        <span className="text-xs text-navy/50">Membantu AI menjaga skala produk (mis. produk besar tidak dikecilkan).</span>
+      </label>
 
       <label className="flex flex-col gap-1.5">
         <span className="text-sm font-medium text-navy">Kategori</span>

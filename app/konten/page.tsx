@@ -16,6 +16,7 @@ import { interaksiTemplate } from "@/lib/templates/interaksi";
 import { createProdukLatarTemplate } from "@/lib/templates/model-produk-latar";
 import { createStandarTemplate } from "@/lib/templates/model-standar";
 import type { ContentLayoutState } from "@/lib/content/saveContent";
+import { shareContent } from "@/lib/share";
 import { FONT_OPTIONS } from "@/lib/templates/fonts";
 import type { BusinessProfile } from "@/lib/onboarding/businessProfile";
 import type { GeneratedContentJenis } from "@/lib/supabase/generatedContent";
@@ -156,6 +157,15 @@ export default function KontenPage() {
     }
   }
 
+  async function handleShare(imageUrl: string, caption: string, filename: string) {
+    const r = await shareContent(imageUrl, caption, filename);
+    if (r === "fallback") {
+      window.alert("Gambar diunduh & caption disalin. Buka Instagram → buat post baru → pilih gambarnya → tempel caption.");
+    } else if (r === "error") {
+      window.alert("Gagal membagikan. Coba lagi.");
+    }
+  }
+
   async function handleCopy(id: string, caption: string) {
     try {
       await navigator.clipboard.writeText(caption);
@@ -261,6 +271,9 @@ export default function KontenPage() {
               <Button type="button" variant="secondary" onClick={() => handleCopy("edit", selected.caption)}>
                 {copiedId === "edit" ? "Tersalin!" : "Salin Caption"}
               </Button>
+              <Button type="button" variant="secondary" onClick={() => handleShare(selected.imageUrl, selected.caption, `kevo-${selected.jenis}-${selected.id}.png`)}>
+                Bagikan ke IG
+              </Button>
               {saveStatus === "saved" ? <span className="text-sm font-medium text-primary">PNG Terunduh ✓</span> : null}
             </div>
             {saveError ? <p className="text-sm text-red-600">{saveError}</p> : null}
@@ -298,6 +311,8 @@ export default function KontenPage() {
                       className="text-xs font-medium text-primary hover:underline">
                       {copiedId === item.id ? "Tersalin!" : "Salin Caption"}
                     </button>
+                    <button type="button" onClick={(e) => { e.stopPropagation(); handleShare(item.imageUrl, item.caption, `kevo-${item.jenis}-${item.id}.png`); }}
+                      className="text-xs font-medium text-primary hover:underline">Bagikan</button>
                     <button type="button" disabled={deletingId === item.id}
                       onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
                       className="text-xs font-medium text-red-500 hover:underline disabled:opacity-50">

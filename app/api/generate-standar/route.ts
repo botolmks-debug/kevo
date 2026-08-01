@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
   const token = await consumeToken(supabase, user.id, user.email);
   if (!token.ok) return NextResponse.json({ error: token.error }, { status: 402 });
 
-  let body: { imageUrl?: string; judul?: string; descriptions?: string[]; ratio?: AspectRatio };
+  let body: { imageUrl?: string; judul?: string; descriptions?: string[]; ratio?: AspectRatio; sizeHint?: string };
   try {
     body = await request.json();
   } catch {
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       imageBase64,
       mimeType,
       aspectRatio: ratio,
-      prompt: buildStandarImagePrompt(judul, descriptions),
+      prompt: buildStandarImagePrompt(judul, descriptions, body.sizeHint),
     });
   } catch (e) {
     console.error(`generate-standar editImage threw: ${e instanceof Error ? e.message : e}`);

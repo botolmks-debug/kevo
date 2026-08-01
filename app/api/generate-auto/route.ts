@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
     } catch {
       return NextResponse.json({ error: "Gagal mengambil gambar produk." }, { status: 502 });
     }
-    const result = await editImage({ imageBase64, mimeType, aspectRatio: body.ratio, prompt: buildScenePrompt(profile) });
+    const result = await editImage({ imageBase64, mimeType, aspectRatio: body.ratio, prompt: buildScenePrompt(profile, sourceImage.size_hint ?? undefined) });
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 502 });
     imageDataUri = result.dataUri;
   } else {

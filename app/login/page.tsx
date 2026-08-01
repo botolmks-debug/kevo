@@ -41,6 +41,7 @@ export default function LoginPage() {
             <span className="text-xl font-bold text-navy">Kevo</span>
           </div>
           <h1 className="text-2xl font-bold text-navy">Masuk</h1>
+          <p className="text-sm font-medium text-navy/50">Setiap Produk Punya Cerita</p>
         </div>
         <form
           onSubmit={(e) => {

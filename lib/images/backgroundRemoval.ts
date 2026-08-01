@@ -91,3 +91,31 @@ export async function removeSolidBackground(input: Buffer): Promise<Buffer> {
 
   return sharp(data, { raw: { width, height, channels: 4 } }).png().toBuffer();
 }
+
+/**
+ * Chroma-key untuk background MAGENTA (dipakai setelah Gemini mengganti seluruh
+ * latar dengan magenta solid). Lebih tahan gradasi/noise daripada
+ * removeSolidBackground: sebuah piksel dianggap MAGENTA bila kanal HIJAU jauh
+ * di bawah MERAH dan BIRU. Penghapusan bersifat global (bukan flood-fill dari
+ * tepi) sehingga magenta yang menembus produk transparan pun ikut hilang.
+ * Sekaligus de-spill: menetralkan semburat magenta tipis di tepi produk.
+ */
+export async function removeChromaBackground(input: Buffer): Promise<Buffer> {
+  const { data, info } = await sharp(input).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const KEY = 45; // G + KEY < R && G + KEY < B → magenta penuh → transparan
+  const SPILL = 14; // ambang lebih longgar untuk membersihkan semburat tepi
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    if (g + KEY < r && g + KEY < b && r > 70 && b > 70) {
+      data[i + 3] = 0; // magenta → transparan
+    } else if (g + SPILL < r && g + SPILL < b) {
+      // Tepi keunguan: turunkan R & B mendekati G agar semburat magenta hilang.
+      const cap = g + SPILL;
+      if (data[i] > cap) data[i] = cap;
+      if (data[i + 2] > cap) data[i + 2] = cap;
+    }
+  }
+  return sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } }).png().toBuffer();
+}

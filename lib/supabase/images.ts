@@ -14,6 +14,7 @@ export type ImageRow = {
   category: string;
   type: string;
   usage: ImageUsage;
+  size_hint?: string | null;
   created_at: string;
 };
 
@@ -23,7 +24,8 @@ export function buildImageRow(input: {
   description: string;
   category: string;
   usage: ImageUsage;
-}): Pick<ImageRow, "business_id" | "storage_path" | "description" | "category" | "type" | "usage"> {
+  sizeHint?: string;
+}): Pick<ImageRow, "business_id" | "storage_path" | "description" | "category" | "type" | "usage" | "size_hint"> {
   return {
     business_id: input.businessId,
     storage_path: input.storagePath,
@@ -31,6 +33,7 @@ export function buildImageRow(input: {
     category: input.category,
     type: categoryToType(input.category),
     usage: input.usage,
+    size_hint: input.sizeHint?.trim() || null,
   };
 }
 
@@ -44,6 +47,7 @@ export type UploadImageInput = {
   description: string;
   category: string;
   usage: ImageUsage;
+  sizeHint?: string;
   businessId?: string;
 };
 
@@ -68,6 +72,7 @@ export async function uploadImage(
     description: input.description,
     category: input.category,
     usage: input.usage,
+    sizeHint: input.sizeHint,
   });
 
   const { data, error } = await client.from("images").insert(row).select().single();

@@ -3,8 +3,12 @@
  * berdasarkan JUDUL + DESKRIPSI yang ditulis user (bukan caption otomatis).
  * Dipakai hanya bila gambar ber-usage "olah_ai".
  */
-export function buildStandarImagePrompt(judul: string, descriptions: string[]): string {
+export function buildStandarImagePrompt(judul: string, descriptions: string[], sizeHint?: string): string {
   const desc = descriptions.map((d) => d.trim()).filter(Boolean).join(" ");
+  const sizeNote =
+    sizeHint && sizeHint.trim()
+      ? `\n\nPRODUCT SIZE (critical for scale): product is approximately "${sizeHint.trim()}". Keep it at its REAL size in the scene. If LARGE (machine, fridge, furniture, vending machine): show it standing on the FLOOR as a big, dominant object; do NOT shrink it to look like small packaging on a table. If SMALL (packaging, bottle, food): close-up on a surface is fine.`
+      : "";
 
   return `You are a world-class commercial photographer and designer editing an uploaded image.
 
@@ -23,5 +27,5 @@ Use realistic, professional, warm indoor lighting with soft depth of field unles
 STEP 4 - INTEGRATION & FRAMING:
 Relight the subject to match the new scene, add a natural contact shadow and ambient occlusion, and blend the edges (no cut-out outline/halo). The scene MUST fill the ENTIRE frame edge-to-edge - no empty margins, no black/white bars, no border. Keep the lower third a bit calmer for text, but it must still contain scene/background, never left blank.
 
-Do NOT add any new text, letters, numbers, logos, or watermarks to the image.`;
+Do NOT add any new text, letters, numbers, logos, or watermarks to the image.${sizeNote}`;
 }

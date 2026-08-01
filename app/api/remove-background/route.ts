@@ -6,7 +6,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { removeSolidBackground } from "@/lib/images/backgroundRemoval";
+import { removeChromaBackground } from "@/lib/images/backgroundRemoval";
 import { consumeToken } from "@/lib/supabase/tokens";
 
 export const runtime = "nodejs";
@@ -46,13 +46,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Gagal mengambil gambar." }, { status: 502 });
   }
 
-  // Langkah 1: Gemini pisahkan produk dari background
-  const prompt = `Remove the background from this photo completely. 
-Keep the main product/object EXACTLY as it is.
-Replace the background with solid WHITE (#FFFFFF).
-The product should be cleanly separated from everything else.
-Do not add shadows, reflections, or effects.
-Return the product on a clean white background.`;
+  // Langkah 1: Gemini ISOLASI produk utama — apa pun di belakang/sekitar
+  // (latar rame, tangan, clutter) diganti warna solid mencolok (magenta) yang
+  // mudah di-key-out. Fokus ke PRODUK DOMINAN, bukan sekadar hapus putih.
+  const prompt = `You are an expert product-cutout tool. Isolate the MAIN PRODUCT/SUBJECT in this photo from EVERYTHING else.
+
+KEEP EXACTLY (do not alter): the single main product/subject (usually centered). Preserve its shape, proportions, colors, transparency, and any text/label PHYSICALLY PRINTED on it.
+
+REPLACE WITH SOLID MAGENTA (#FF00FF): the ENTIRE rest of the image — background, floor, walls, tables, the hand/fingers holding the product, other objects, people, clutter, and original shadows. No matter how busy or colorful the background is, ALL of it becomes flat pure magenta #FF00FF.
+
+RULES:
+- The product must be the ONLY non-magenta thing in the output.
+- Fill the whole frame with magenta around the product, edge to edge.
+- Pure flat magenta #FF00FF only — no gradient, texture, shadow, or tint.
+- Do NOT add any new text, logos, reflections, or effects.
+- If the product is transparent/see-through (glass, clear plastic), let the magenta show through it (so it stays see-through) but keep the product's own outline/rim clearly visible.`;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 110_000);
@@ -106,7 +114,7 @@ Return the product on a clean white background.`;
   let transparentBuffer: Buffer;
   try {
     const geminiBuffer = Buffer.from(imgPart.inlineData.data, "base64");
-    transparentBuffer = await removeSolidBackground(geminiBuffer);
+    transparentBuffer = await removeChromaBackground(geminiBuffer);
   } catch {
     // Kalau gagal, kembalikan gambar Gemini apa adanya
     const fallbackUri = `data:${imgPart.inlineData.mimeType ?? "image/png"};base64,${imgPart.inlineData.data}`;

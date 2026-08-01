@@ -17,6 +17,7 @@ import { polosTemplate } from "@/lib/templates/polos";
 import { interaksiTemplate } from "@/lib/templates/interaksi";
 import type { AspectRatio } from "@/lib/templates/types";
 import { FONT_OPTIONS } from "@/lib/templates/fonts";
+import { shareContent } from "@/lib/share";
 
 type PickableImage = {
   id: string;
@@ -69,6 +70,7 @@ export function AutoGenerate() {
   const [history, setHistory] = useState<GeneratedItem[]>([]);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
@@ -239,6 +241,30 @@ export function AutoGenerate() {
   );
   const editTemplate = result ? applyEditorOverrides(editTemplateBase, result.ratio, editorOverrides) : null;
 
+  async function handleShareIg() {
+    if (!result || !editTemplate || sharing) return;
+    setSharing(true);
+    try {
+      const res = await fetch("/api/render", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildRenderInput(editTemplate, editValues, result.ratio)),
+      });
+      if (!res.ok) throw new Error("render gagal");
+      const blob = await res.blob();
+      const r = await shareContent(blob, result.caption, `kevo-${result.jenis}-${result.id}.png`);
+      if (r === "fallback") {
+        window.alert("Gambar diunduh & caption disalin. Buka Instagram → post baru → pilih gambar → tempel caption.");
+      } else if (r === "error") {
+        window.alert("Gagal membagikan. Coba lagi.");
+      }
+    } catch {
+      window.alert("Gagal menyiapkan gambar untuk dibagikan.");
+    } finally {
+      setSharing(false);
+    }
+  }
+
   async function handleSimpanPng() {
     if (!result || !editTemplate) return;
     setSaveStatus("loading");
@@ -390,7 +416,10 @@ export function AutoGenerate() {
             <Button type="button" variant="secondary" onClick={() => handleCopyCaption("result", result.caption)}>
               {copiedId === "result" ? "Tersalin!" : "Salin Caption"}
             </Button>
-            {saveStatus === "success" ? <span className="text-sm font-medium text-primary">Tersimpan ke Riwayat âœ“</span> : null}
+            <Button type="button" variant="secondary" onClick={handleShareIg} disabled={sharing}>
+              {sharing ? "Menyiapkan..." : "Bagikan ke IG"}
+            </Button>
+            {saveStatus === "success" ? <span className="text-sm font-medium text-primary">Tersimpan ke Riwayat ✓</span> : null}
           </div>
           {saveError ? <p className="text-sm text-red-600">{saveError}</p> : null}
         </div>
@@ -448,4 +477,3 @@ export function AutoGenerate() {
     </Card>
   );
 }
-

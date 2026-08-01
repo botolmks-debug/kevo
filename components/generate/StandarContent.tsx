@@ -15,7 +15,7 @@ import type { BusinessProfile } from "@/lib/onboarding/businessProfile";
 import type { AspectRatio } from "@/lib/templates/types";
 
 type Status = "idle" | "loading" | "success" | "error";
-type PickableImage = { id: string; description: string; category: string; usage: string; publicUrl: string };
+type PickableImage = { id: string; description: string; category: string; usage: string; publicUrl: string; sizeHint?: string | null };
 
 const RATIO_OPTIONS: { value: AspectRatio; label: string }[] = [
   { value: "4:5", label: "Feed (4:5)" },
@@ -97,7 +97,7 @@ export function StandarContent({
       const res = await fetch("/api/generate-standar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageUrl: selectedImage.publicUrl, judul, descriptions, ratio }),
+        body: JSON.stringify({ imageUrl: selectedImage.publicUrl, judul, descriptions, ratio, sizeHint: selectedImage.sizeHint ?? "" }),
       });
       const d = await res.json().catch(() => null);
       if (!res.ok) throw new Error(d?.error ?? `Gagal generate gambar (status ${res.status}).`);
