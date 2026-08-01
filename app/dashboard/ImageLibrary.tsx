@@ -166,7 +166,7 @@ export function ImageLibrary() {
         <input
           value={sizeHint}
           onChange={(e) => setSizeHint(e.target.value)}
-          placeholder={category === "Suasana/Fasilitas" ? "mis. ruang tamu ± 4x5 m / kantor kecil" : "mis. tinggi 1,8 m (vending machine) / botol 250 ml"}
+          placeholder={category === "Suasana/Fasilitas" ? "mis. ruang tamu ± 4x5 m / kantor kecil" : "mis. tinggi 15 cm untuk botol 250 ml"}
           className="rounded-card border border-slate-200 bg-white px-4 py-2.5 text-sm text-navy focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
         <span className="text-xs text-navy/50">
