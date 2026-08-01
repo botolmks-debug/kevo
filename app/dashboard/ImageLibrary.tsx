@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { FileButton } from "@/components/ui/FileButton";
 import { Card } from "@/components/ui/Card";
 import { Textarea } from "@/components/ui/Input";
+import { HelpTip } from "@/components/ui/HelpTip";
 import { DEFAULT_IMAGE_CATEGORY, IMAGE_CATEGORIES, type ImageUsage } from "@/lib/images/categories";
 
 type UploadedImage = {
@@ -164,14 +165,17 @@ export function ImageLibrary() {
         <input
           value={sizeHint}
           onChange={(e) => setSizeHint(e.target.value)}
-          placeholder="mis. tinggi produk 10 cm  : isi dengan akurat : untuk meningkatkan keakuratan produk "
+          placeholder="mis. tinggi 1,8 m (vending machine) / botol 250 ml"
           className="rounded-card border border-slate-200 bg-white px-4 py-2.5 text-sm text-navy focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
         <span className="text-xs text-navy/50">Membantu AI menjaga skala produk (mis. produk besar tidak dikecilkan).</span>
       </label>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-navy">Kategori</span>
+        <span className="flex items-center gap-1.5 text-sm font-medium text-navy">
+          Kategori
+          <HelpTip title="Kategori gambar" align="left" text="Mengelompokkan gambar sesuai fungsinya: Logo, Produk, Suasana, dll. Nanti saat generate konten, sistem memilih gambar dari kategori yang sesuai. Pilih 'Produk' untuk foto produk, 'Logo' untuk logo bisnismu." />
+        </span>
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
@@ -186,7 +190,15 @@ export function ImageLibrary() {
       </label>
 
       <div className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-navy">Perlakuan gambar</span>
+        <span className="flex items-center gap-1.5 text-sm font-medium text-navy">
+          Perlakuan gambar
+          <HelpTip title="Perlakuan gambar" align="left" text={
+            <span className="flex flex-col gap-1.5">
+              <span><b>Apa adanya</b> — gambar dipakai persis seperti aslinya (mis. logo, foto yang sudah bagus). AI tidak mengubahnya.</span>
+              <span><b>Boleh diolah AI</b> — AI boleh memotong background / membuat suasana baru dari foto ini (mis. foto produk mentah).</span>
+            </span>
+          } />
+        </span>
         <div className="flex gap-4 text-sm text-navy">
           <label className="flex items-center gap-1.5">
             <input

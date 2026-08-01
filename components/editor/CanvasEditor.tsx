@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Stage, Layer, Text as KonvaText, Image as KonvaImage, Group, Rect } from "react-konva";
+import { HelpTip } from "@/components/ui/HelpTip";
 import type Konva from "konva";
 import { FONT_OPTIONS } from "@/lib/templates/fonts";
 import type { ImageSlot, TemplateLayout, TextSlot } from "@/lib/templates/types";
@@ -333,6 +334,13 @@ export function CanvasEditor({
       {selectedId === "__logo__" && logoImg ? (
         <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-white p-3 text-xs">
           <span className="font-semibold text-navy">Logo</span>
+          <HelpTip title="Atur logo" align="left" text={
+            <span className="flex flex-col gap-1.5">
+              <span>Geser logo untuk memindahkan posisinya.</span>
+              <span><b>Dobel-klik logo</b> untuk ganti versi <b>terang/gelap</b> (biar kontras dengan latar).</span>
+              <span>Atur besar-kecilnya dengan slider <b>Ukuran</b>.</span>
+            </span>
+          } />
           <label className="flex items-center gap-2">
             <span className="text-navy/60">Ukuran</span>
             <input type="range" min={Math.round(layout.canvas.width * 0.05)} max={Math.round(layout.canvas.width * 0.45)}
@@ -355,6 +363,13 @@ export function CanvasEditor({
       {selectedId === "__footer__" ? (
         <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-white p-3 text-xs">
           <span className="font-semibold text-navy">Sosmed</span>
+          <HelpTip title="Atur sosmed" align="left" text={
+            <span className="flex flex-col gap-1.5">
+              <span>Baris akun sosial media (Instagram, WhatsApp, dll) di bawah gambar.</span>
+              <span>Geser untuk memindahkan; atur <b>Arah</b> (mendatar/menurun) serta ukuran <b>Ikon</b> & <b>Teks</b>.</span>
+              <span>Isi akun sosmednya di menu <b>Dashboard → Sosial Media</b>.</span>
+            </span>
+          } />
           <div className="flex items-center gap-1">
             <span className="text-navy/60">Arah</span>
             <button type="button" onClick={() => updateFooter({ direction: "row" })}
@@ -379,6 +394,14 @@ export function CanvasEditor({
       {captionSlot && captionEff ? (
         <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-white p-3 text-xs">
           <span className="font-semibold text-navy">Teks{captionSlot.label ? `: ${captionSlot.label}` : ""}</span>
+          <HelpTip title="Atur teks" align="left" text={
+            <span className="flex flex-col gap-1.5">
+              <span>Geser teks langsung di gambar untuk memindahkannya.</span>
+              <span><b>Dobel-klik</b> teks untuk mengubah isinya.</span>
+              <span>Atur <b>Font</b>, <b>Ukuran</b>, <b>Rata</b> (kiri/tengah/kanan), dan warna.</span>
+              <span><b>Shadow</b> = bayangan, <b>Outline</b> = garis tepi. Aktifkan biar teks tetap terbaca di atas gambar terang/ramai.</span>
+            </span>
+          } />
           <label className="flex items-center gap-1.5">
             <span className="text-navy/60">Font</span>
             <select value={captionEff.fontFamily} onChange={(e) => updateSlot(captionSlot.id, { fontFamily: e.target.value })}
