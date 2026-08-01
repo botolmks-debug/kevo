@@ -71,6 +71,7 @@ export function AutoGenerate() {
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
+  const [sharedBlob, setSharedBlob] = useState<Blob | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
@@ -163,6 +164,7 @@ export function AutoGenerate() {
 
       const item: GeneratedItem = data.item;
       setResult(item);
+      setSharedBlob(null);
       // Editor pakai gambar BERSIH (backgroundDataUri) supaya tidak dobel overlay.
       setEditValues({ photo: item.backgroundDataUri ?? item.imageUrl, caption: item.onImageText });
       const fontId = (data.item as any).fontId;
@@ -242,24 +244,19 @@ export function AutoGenerate() {
   const editTemplate = result ? applyEditorOverrides(editTemplateBase, result.ratio, editorOverrides) : null;
 
   async function handleShareIg() {
-    if (!result || !editTemplate || sharing) return;
+    if (sharing || !result) return;
+    if (!sharedBlob) {
+      window.alert("Tekan 'Simpan PNG' dulu, lalu 'Bagikan ke IG'.");
+      return;
+    }
     setSharing(true);
     try {
-      const res = await fetch("/api/render", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildRenderInput(editTemplate, editValues, result.ratio)),
-      });
-      if (!res.ok) throw new Error("render gagal");
-      const blob = await res.blob();
-      const r = await shareContent(blob, result.caption, `kevo-${result.jenis}-${result.id}.png`);
+      const r = await shareContent(sharedBlob, result.caption, `kevo-${result.jenis}-${result.id}.png`);
       if (r === "fallback") {
         window.alert("Gambar diunduh & caption disalin. Buka Instagram → post baru → pilih gambar → tempel caption.");
       } else if (r === "error") {
         window.alert("Gagal membagikan. Coba lagi.");
       }
-    } catch {
-      window.alert("Gagal menyiapkan gambar untuk dibagikan.");
     } finally {
       setSharing(false);
     }
@@ -282,6 +279,7 @@ export function AutoGenerate() {
       const blob = await res.blob();
 
       downloadBlob(blob, `kevo-${result.jenis}-${result.id}.png`);
+      setSharedBlob(blob);
 
       // Simpan juga ke Riwayat (update baris yang sama).
       const formData = new FormData();
