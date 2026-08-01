@@ -65,3 +65,48 @@ STEP 5 - FRAMING (fill the whole frame):
 
 Do NOT add any new text, logos, watermarks, or branding to the scene. Product is the HERO.${sizeNote}`;
 }
+
+/**
+ * Untuk kategori RUANGAN / Suasana / Fasilitas. Ruangan adalah TEMPAT, bukan
+ * produk: jangan menambah/mengurangi/memindahkan apa pun — hanya percantik
+ * cahaya & realisme.
+ */
+export function buildRuanganPrompt(profile: BusinessProfile, sizeHint?: string): string {
+  const sizeNote = sizeHint && sizeHint.trim() ? `\nApproximate room size: "${sizeHint.trim()}" — keep proportions realistic.` : "";
+  return `This image is a PLACE / room / facility — NOT a product. Enhance it as a professional interior/real-estate photographer would.
+
+CRITICAL - PRESERVE THE ROOM EXACTLY:
+- Do NOT add, remove, move, replace, or invent ANY object, furniture, wall, window, door, plant, or element.
+- Keep the EXACT same layout, contents, geometry, and composition as the original photo. Same room, same things, same positions.
+
+ONLY IMPROVE (do not change content):
+- Lighting: make it warm, natural, balanced, and inviting. Fix dull/dark/flat or harsh lighting; recover shadows and highlights.
+- Realism & clarity: clean, sharp, photorealistic result — as if professionally reshot. Natural, appealing colors and white balance.
+- Remove ONLY phone watermarks / date stamps / added overlay text if present (e.g. "REDMI Note 13", date/time). Do NOT remove real objects.
+
+Business context (for mood only, do NOT add objects): Industry ${profile.business.industry || "-"}, Location ${profile.business.location || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.${sizeNote}
+
+Photorealistic (NOT illustration/cartoon). Do NOT add any text, logos, or watermarks. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.`;
+}
+
+/**
+ * Untuk kategori WAJAH / ORANG. Orang tidak diperlakukan seperti produk yang
+ * ditempel di meja — tapi menyatu dengan lingkungan target market, DAN menjadi
+ * pusat perhatian.
+ */
+export function buildOrangPrompt(profile: BusinessProfile): string {
+  return `The main subject is a PERSON. Do NOT treat them like a product placed or stuck on a table.
+
+CRITICAL - PRESERVE THE PERSON:
+- Keep the person's face, features, expression, hair, body, and clothing EXACTLY as in the original. Do NOT change their identity, look, or proportions. ALL text physically printed on their clothes stays as-is.
+
+INTEGRATE NATURALLY:
+- Place/blend the person into a real, believable environment that fits the business target market (see context) — as if genuinely photographed there. Match lighting direction, color temperature, perspective, and shadows so they truly belong. NO cut-out outline, NO halo, NO pasted look.
+
+PERSON IS THE HERO (center of attention):
+- The person is clearly the focus: well-lit, sharp, in the foreground. The environment is a supportive background with shallow depth of field (soft bokeh). The eye should go to the person first.
+
+Business context: Industry ${profile.business.industry || "-"}, Location ${profile.business.location || "-"}, Differentiator ${profile.positioning.differentiator || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.
+
+Photorealistic, warm professional lighting. Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.`;
+}

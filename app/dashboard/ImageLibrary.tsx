@@ -160,15 +160,20 @@ export function ImageLibrary() {
 
       <label className="flex flex-col gap-1.5">
         <span className="text-sm font-medium text-navy">
-          Estimasi ukuran produk <span className="font-normal text-navy/50">(opsional)</span>
+          {category === "Suasana/Fasilitas" ? "Estimasi ukuran ruangan" : "Estimasi ukuran produk"}{" "}
+          <span className="font-normal text-navy/50">(opsional)</span>
         </span>
         <input
           value={sizeHint}
           onChange={(e) => setSizeHint(e.target.value)}
-          placeholder="mis. tinggi 1,8 m (vending machine) / botol 250 ml"
+          placeholder={category === "Suasana/Fasilitas" ? "mis. ruang tamu ± 4x5 m / kantor kecil" : "mis. tinggi 1,8 m (vending machine) / botol 250 ml"}
           className="rounded-card border border-slate-200 bg-white px-4 py-2.5 text-sm text-navy focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
-        <span className="text-xs text-navy/50">Membantu AI menjaga skala produk (mis. produk besar tidak dikecilkan).</span>
+        <span className="text-xs text-navy/50">
+          {category === "Suasana/Fasilitas"
+            ? "Membantu AI menjaga proporsi ruangan tetap realistis."
+            : "Membantu AI menjaga skala produk (mis. produk besar tidak dikecilkan)."}
+        </span>
       </label>
 
       <label className="flex flex-col gap-1.5">

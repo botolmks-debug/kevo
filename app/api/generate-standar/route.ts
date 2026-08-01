@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "GEMINI_API_KEY belum diisi." }, { status: 503 });
   }
 
-  const token = await consumeToken(supabase, user.id, user.email);
+  const token = await consumeToken(supabase, user.id, user.email, "Konten Standar");
   if (!token.ok) return NextResponse.json({ error: token.error }, { status: 402 });
 
   let body: { imageUrl?: string; judul?: string; descriptions?: string[]; ratio?: AspectRatio; sizeHint?: string };

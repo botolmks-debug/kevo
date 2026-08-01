@@ -42,7 +42,7 @@ type GeneratedItem = {
 type Status = "idle" | "loading" | "error" | "success";
 
 const JENIS_OPTIONS: { value: GeneratedContentJenis; label: string; description: string }[] = [
-  { value: "produk", label: "Produk", description: "Pakai foto produk yang sudah diupload, AI ubah latarnya." },
+  { value: "produk", label: "Dari Foto", description: "Pakai foto (produk, ruangan, atau orang) yang sudah diupload. AI mempercantik sesuai kategori." },
   { value: "general", label: "General", description: "AI generate gambar & isi konten dari nol." },
   { value: "interaksi", label: "Interaksi", description: "AI tentukan sendiri isi konten (kuis/quote/tips)." },
 ];
@@ -97,7 +97,7 @@ export function AutoGenerate() {
       .then((res) => res.json())
       .then((data: { images?: PickableImage[] }) => {
         if (cancelled) return;
-        setImages((data?.images ?? []).filter((image) => image.category === "Produk" && image.usage === "olah_ai"));
+        setImages((data?.images ?? []).filter((image) => image.usage === "olah_ai" && ["Produk", "Wajah/Orang", "Suasana/Fasilitas"].includes(image.category)));
       })
       .catch(() => {});
     return () => {
@@ -142,7 +142,7 @@ export function AutoGenerate() {
   async function handleGenerate() {
     if (jenis === "produk" && !selectedImageId) {
       setGenerateStatus("error");
-      setGenerateError("Pilih gambar produk dulu.");
+      setGenerateError("Pilih foto dulu.");
       return;
     }
     setGenerateStatus("loading");
@@ -334,7 +334,7 @@ export function AutoGenerate() {
 
       {jenis === "produk" ? (
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-navy">Gambar produk</span>
+          <span className="text-sm font-medium text-navy">Pilih foto (produk / ruangan / orang)</span>
           <select
             value={selectedImageId}
             onChange={(e) => setSelectedImageId(e.target.value)}
@@ -343,13 +343,13 @@ export function AutoGenerate() {
             <option value="">Pilih gambar...</option>
             {images.map((image) => (
               <option key={image.id} value={image.id}>
-                {image.description || "(tanpa deskripsi)"}
+                {(image.description || "(tanpa deskripsi)")} — {image.category}
               </option>
             ))}
           </select>
           {images.length === 0 ? (
             <p className="text-xs text-navy/50">
-              Belum ada gambar kategori Produk yang boleh diolah AI. Unggah dulu di Database Gambar.
+              Belum ada foto (produk/ruangan/orang) yang boleh diolah AI. Unggah dulu di Database Gambar (pilih "Boleh diolah AI").
             </p>
           ) : null}
         </label>

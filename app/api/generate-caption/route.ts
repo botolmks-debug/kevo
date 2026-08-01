@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum login." }, { status: 401 });
 
-  const token = await consumeToken(supabase, user.id, user.email);
+  const token = await consumeToken(supabase, user.id, user.email, "Caption");
   if (!token.ok) return NextResponse.json({ error: token.error }, { status: 402 });
 
   const prompt = buildCaptionPrompt(body.profile, {

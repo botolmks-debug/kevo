@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { isAdmin } from "@/lib/supabase/tokens";
 
 const navLinks = [
   { href: "/dashboard", label: "Dashboard" },
@@ -17,6 +18,16 @@ export function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [isAdminUser, setIsAdminUser] = useState(false);
+
+  useEffect(() => {
+    createClient()
+      .auth.getUser()
+      .then(({ data }) => setIsAdminUser(isAdmin(data.user?.email)))
+      .catch(() => {});
+  }, []);
+
+  const links = isAdminUser ? [...navLinks, { href: "/admin", label: "Admin" }] : navLinks;
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -43,7 +54,7 @@ export function Header() {
         {/* Menu desktop */}
         <div className="hidden items-center gap-1 md:flex">
           <nav className="flex items-center gap-1">
-            {navLinks.map((link) => (
+            {links.map((link) => (
               <Link key={link.href} href={link.href} className={linkClass(link.href)}>
                 {link.label}
               </Link>
@@ -85,7 +96,7 @@ export function Header() {
       {/* Dropdown menu (HP) */}
       {open ? (
         <div className="flex flex-col gap-1 border-t border-line bg-surface px-5 py-2 md:hidden">
-          {navLinks.map((link) => (
+          {links.map((link) => (
             <Link key={link.href} href={link.href} className={linkClass(link.href)} onClick={() => setOpen(false)}>
               {link.label}
             </Link>

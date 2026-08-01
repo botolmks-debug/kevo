@@ -9,6 +9,12 @@ export function isUnlimited(email?: string | null): boolean {
   return !!email && UNLIMITED_EMAILS.has(email.trim().toLowerCase());
 }
 
+/** Email yang boleh membuka menu Admin. */
+const ADMIN_EMAILS = new Set(["botolmks@gmail.com"]);
+export function isAdmin(email?: string | null): boolean {
+  return !!email && ADMIN_EMAILS.has(email.trim().toLowerCase());
+}
+
 export type TokenState = { unlimited: boolean; tokens: number | null };
 
 /** Baca sisa token (untuk ditampilkan). unlimited → tokens null. */
@@ -40,8 +46,21 @@ export async function consumeToken(
   client: SupabaseClient,
   businessId: string,
   email?: string | null,
+  action?: string,
 ): Promise<ConsumeResult> {
-  if (isUnlimited(email)) return { ok: true, unlimited: true, remaining: null };
+  // Catat waktu pemakaian (untuk menu Admin). Diabaikan kalau tabel belum ada.
+  const logUsage = async () => {
+    try {
+      await client.from("token_usage").insert({ business_id: businessId, action: action ?? null });
+    } catch {
+      // best-effort — jangan gagalkan aksi kalau logging error
+    }
+  };
+
+  if (isUnlimited(email)) {
+    await logUsage();
+    return { ok: true, unlimited: true, remaining: null };
+  }
 
   const { data, error } = await client.rpc("consume_token", { p_business_id: businessId });
   if (error) {
@@ -52,5 +71,6 @@ export async function consumeToken(
   if (remaining < 0) {
     return { ok: false, error: "Token AI habis. Fitur AI tidak bisa dipakai sampai token diisi ulang." };
   }
+  await logUsage();
   return { ok: true, unlimited: false, remaining };
 }

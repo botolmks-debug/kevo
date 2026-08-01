@@ -16,7 +16,7 @@ import { withLogoOverride } from "@/app/generate/withLogoOverride";
 import { polosTemplate } from "@/lib/templates/polos";
 import { interaksiTemplate } from "@/lib/templates/interaksi";
 import { renderTemplate } from "@/lib/render/renderTemplate";
-import { buildScenePrompt } from "@/lib/ai/scenePrompt";
+import { buildScenePrompt, buildRuanganPrompt, buildOrangPrompt } from "@/lib/ai/scenePrompt";
 import { editImage, generateImage } from "@/lib/ai/geminiImage";
 import { generateJsonContent } from "@/lib/ai/geminiJson";
 import {
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum login." }, { status: 401 });
 
-  const token = await consumeToken(supabase, user.id, user.email);
+  const token = await consumeToken(supabase, user.id, user.email, "Otomatis");
   if (!token.ok) return NextResponse.json({ error: token.error }, { status: 402 });
 
   const profileResult = await loadBusinessProfile(supabase, user.id);
@@ -142,9 +142,10 @@ export async function POST(request: NextRequest) {
     const imagesResult = await listImages(supabase, user.id);
     if (!imagesResult.ok) return NextResponse.json({ error: imagesResult.error }, { status: 502 });
     const image = imagesResult.images.find((img) => img.id === body.imageId) ?? null;
-    if (!image || image.category !== "Produk" || image.usage !== "olah_ai") {
+    const allowed = image && ["Produk", "Wajah/Orang", "Suasana/Fasilitas"].includes(image.category);
+    if (!image || !allowed || image.usage !== "olah_ai") {
       return NextResponse.json(
-        { error: "Gambar tidak ditemukan atau bukan gambar produk yang boleh diolah AI." },
+        { error: "Gambar tidak ditemukan atau bukan gambar yang boleh diolah AI." },
         { status: 400 },
       );
     }
@@ -180,7 +181,11 @@ export async function POST(request: NextRequest) {
     } catch {
       return NextResponse.json({ error: "Gagal mengambil gambar produk." }, { status: 502 });
     }
-    const result = await editImage({ imageBase64, mimeType, aspectRatio: body.ratio, prompt: buildScenePrompt(profile, sourceImage.size_hint ?? undefined) });
+    const prompt =
+      sourceImage.type === "suasana" ? buildRuanganPrompt(profile, sourceImage.size_hint ?? undefined)
+      : sourceImage.type === "wajah" ? buildOrangPrompt(profile)
+      : buildScenePrompt(profile, sourceImage.size_hint ?? undefined);
+    const result = await editImage({ imageBase64, mimeType, aspectRatio: body.ratio, prompt });
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 502 });
     imageDataUri = result.dataUri;
   } else {
