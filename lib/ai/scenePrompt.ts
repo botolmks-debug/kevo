@@ -164,3 +164,25 @@ Business context: Industry ${profile.business.industry || "-"}, Target customers
 
 Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding to the scene. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.`;
 }
+
+/**
+ * Untuk kategori MAKANAN / MINUMAN. Gaya food photography yang menggugah selera.
+ * Dipakai HANYA di Otomatis (di manual, makanan = produk biasa).
+ */
+export function buildFoodPrompt(profile: BusinessProfile, description?: string): string {
+  const desc = (description ?? "").trim();
+  const dishNote = desc ? `\n\nThe user described this as: "${desc}". Keep it that exact dish/drink.` : "";
+  return `This image is FOOD or a DRINK. Create a mouth-watering, professional FOOD PHOTOGRAPHY image that makes people crave it and want to order.
+
+FOOD PRESERVATION: keep the actual food/drink EXACTLY as photographed — same dish, same ingredients, same colors and portions. Do NOT invent a different food or add/remove ingredients that aren't there. Preserve any packaging/label text.
+
+STYLE (appetizing food photography):
+- Close-up, appetizing angle (about 45 degrees, or top-down if it suits the dish). Sharp focus on the food with shallow depth of field (soft background).
+- Fresh, irresistible cues ONLY where natural: gentle steam for hot food, condensation / water droplets for cold drinks, glossy sauce sheen, fresh garnish. Subtle and realistic — never overdone.
+- Clean, tasteful plating in a warm, inviting setting (rustic wood, marble, or soft neutral surface). Natural warm lighting, cozy cafe/restaurant mood.
+- Rich, vibrant, freshly-served colors.
+
+Business context: Industry ${profile.business.industry || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.${dishNote}
+
+Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding to the scene. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.`;
+}

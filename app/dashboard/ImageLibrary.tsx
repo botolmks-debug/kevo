@@ -157,10 +157,12 @@ export function ImageLibrary() {
         onChange={(e) => setDescription(e.target.value)}
         placeholder={category === "Kecantikan/Skincare"
           ? "mis. serum wajah untuk kulit kering — dipakai di wajah pagi & malam, kandungan vitamin C"
-          : "mis. Logo klinik warna biru, dipakai di semua konten"}
+          : category === "Makanan/Minuman"
+            ? "mis. es kopi susu gula aren, dingin & segar / ayam geprek sambal matah, pedas"
+            : "mis. Logo klinik warna biru, dipakai di semua konten"}
       />
 
-      {category === "Software/Website" ? (
+      {category === "Makanan/Minuman" ? null : category === "Software/Website" ? (
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-navy">Tampilan perangkat</span>
           <select

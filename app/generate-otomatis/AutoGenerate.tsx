@@ -97,7 +97,7 @@ export function AutoGenerate() {
       .then((res) => res.json())
       .then((data: { images?: PickableImage[] }) => {
         if (cancelled) return;
-        setImages((data?.images ?? []).filter((image) => image.usage === "olah_ai" && ["Produk", "Kecantikan/Skincare", "Software/Website", "Wajah/Orang", "Suasana/Fasilitas"].includes(image.category)));
+        setImages((data?.images ?? []).filter((image) => image.usage === "olah_ai" && ["Produk", "Makanan/Minuman", "Kecantikan/Skincare", "Software/Website", "Wajah/Orang", "Suasana/Fasilitas"].includes(image.category)));
       })
       .catch(() => {});
     return () => {
