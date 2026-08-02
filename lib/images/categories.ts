@@ -1,4 +1,4 @@
-export type ImageType = "logo" | "produk" | "wajah" | "suasana" | "lain";
+export type ImageType = "logo" | "produk" | "skincare" | "wajah" | "suasana" | "software" | "lain";
 export type ImageUsage = "apa_adanya" | "olah_ai";
 
 export type ImageCategoryDef = { category: string; type: ImageType; label: string };
@@ -11,6 +11,8 @@ export type ImageCategoryDef = { category: string; type: ImageType; label: strin
 // /api/business-logo), bukan lagi salah satu kategori Database Gambar.
 export const IMAGE_CATEGORIES: ImageCategoryDef[] = [
   { category: "Produk", type: "produk", label: "Produk" },
+  { category: "Kecantikan/Skincare", type: "skincare", label: "Kecantikan / Skincare" },
+  { category: "Software/Website", type: "software", label: "Software / Website" },
   { category: "Wajah/Orang", type: "wajah", label: "Wajah / Orang" },
   { category: "Suasana/Fasilitas", type: "suasana", label: "Suasana / Fasilitas" },
   { category: "Lain-lain", type: "lain", label: "Lain-lain" },

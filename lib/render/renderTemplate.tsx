@@ -333,7 +333,6 @@ export async function renderTemplate(input: RenderInput): Promise<Buffer> {
 
       {textSlotElements}
 
-      <div style={footerNameStyle}>{template.brand.footer.text}</div>
       {renderFooterSocials(template.brand.footer.socials, footerLayout)}
 
       {logoDataUri ? (

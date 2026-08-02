@@ -5,8 +5,9 @@
  */
 export function buildStandarImagePrompt(judul: string, descriptions: string[], sizeHint?: string): string {
   const desc = descriptions.map((d) => d.trim()).filter(Boolean).join(" ");
+  const isDevice = ["desktop", "smartphone"].includes((sizeHint ?? "").trim().toLowerCase());
   const sizeNote =
-    sizeHint && sizeHint.trim()
+    sizeHint && sizeHint.trim() && !isDevice
       ? `\n\nPRODUCT SIZE (critical for scale): product is approximately "${sizeHint.trim()}". Keep it at its REAL size in the scene. If LARGE (machine, fridge, furniture, vending machine): show it standing on the FLOOR as a big, dominant object; do NOT shrink it to look like small packaging on a table. If SMALL (packaging, bottle, food): close-up on a surface is fine.`
       : "";
 

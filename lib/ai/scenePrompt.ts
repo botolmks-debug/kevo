@@ -110,3 +110,57 @@ Business context: Industry ${profile.business.industry || "-"}, Location ${profi
 
 Photorealistic, warm professional lighting. Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.`;
 }
+
+/**
+ * Untuk kategori SOFTWARE / WEBSITE. Gambar yang diupload = SCREENSHOT UI.
+ * AI membuat adegan orang (target market) memakai/menunjukkan software itu di
+ * layar desktop/smartphone. `display` = "desktop" | "smartphone".
+ */
+export function buildSoftwarePrompt(profile: BusinessProfile, display?: string): string {
+  const device =
+    display === "desktop"
+      ? "a laptop or desktop monitor on a desk"
+      : "a smartphone held in the hand";
+  return `This image is a SCREENSHOT of a software / app / website user interface — NOT a physical product. Create a photorealistic lifestyle advertising scene.
+
+GOAL: a real PERSON who fits the business's target customers is SHOWING this software to the viewer on ${device}, with the screen facing the camera.
+
+SCREEN (most important):
+- The device screen MUST face the CAMERA / viewer directly, so the screenshot is fully visible, UPRIGHT, and readable to us. NEVER mirror, flip, reverse, or rotate the screenshot. NEVER show the screen from the back or angled away from the viewer.
+- The person holds/tilts the device so its screen points TOWARD the camera (like showing it to us) — do NOT show them looking at a screen that faces away from us.
+- Display the given screenshot EXACTLY as-is on the screen — undistorted, sharp, correctly oriented (never backwards/mirrored), with correct perspective and a subtle screen glow/reflection.
+- Do NOT redraw, restyle, crop, mirror, or add/remove any text or element inside the screenshot UI. Keep the interface identical and readable.
+
+PERSON & SCENE:
+- The person interacts naturally (looking at, pointing to, or holding the device), engaged and positive — like a happy user.
+- Person + device are the clear focus. Environment fits the target market (office, cafe, or home per context), warm professional lighting, shallow depth of field (soft background).
+- Remove any phone watermarks / date stamps / added overlay text if present.
+
+Business context: Industry ${profile.business.industry || "-"}, Location ${profile.business.location || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.
+
+Do NOT add any new text, logos, or branding to the scene. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.`;
+}
+
+/**
+ * Untuk kategori KECANTIKAN / SKINCARE. Gaya bersih & premium. Kalau deskripsi
+ * user menyebut BAGIAN TUBUH tempat produk dipakai (wajah, tangan, bibir,
+ * rambut, kulit, dll), AI menampilkan produk seolah sedang DIPAKAI di bagian
+ * itu. Dipakai HANYA di Otomatis (di manual, skincare = produk biasa).
+ */
+export function buildSkincarePrompt(profile: BusinessProfile, description?: string): string {
+  const desc = (description ?? "").trim();
+  const usageNote = desc
+    ? `\n\nUSAGE — the user described this product as: "${desc}".
+- If this mentions WHERE it is used (face, cheeks, hands, lips, hair, under-eyes, neck, body, skin, etc.), show the product being USED / APPLIED on THAT body part naturally and tastefully — e.g. a hand smoothing cream on skin, a serum drop on a fingertip near the face, product held beside glowing skin. Realistic, elegant, never clinical or awkward.
+- The PRODUCT itself stays the clear hero: sharp, well-lit, label readable.`
+    : "\n\nNo usage described: present the product elegantly on a clean premium surface (soft marble, silk, or with subtle botanicals/water droplets).";
+  return `This image is a BEAUTY / SKINCARE / cosmetic product. Create a clean, PREMIUM, high-end beauty advertising image.
+
+PRODUCT PRESERVATION: keep the product EXACTLY as photographed — its shape, colors, and every text/label printed on it. Do NOT redraw or restyle it.
+
+STYLE: clean, minimal, premium, spa-like and hygienic. Soft diffused lighting, elegant neutral or soft pastel tones, gentle reflections, dewy fresh feel, shallow depth of field. Looks like a luxury cosmetic commercial.${usageNote}
+
+Business context: Industry ${profile.business.industry || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.
+
+Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding to the scene. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.`;
+}

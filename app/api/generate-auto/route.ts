@@ -16,7 +16,7 @@ import { withLogoOverride } from "@/app/generate/withLogoOverride";
 import { polosTemplate } from "@/lib/templates/polos";
 import { interaksiTemplate } from "@/lib/templates/interaksi";
 import { renderTemplate } from "@/lib/render/renderTemplate";
-import { buildScenePrompt, buildRuanganPrompt, buildOrangPrompt } from "@/lib/ai/scenePrompt";
+import { buildScenePrompt, buildRuanganPrompt, buildOrangPrompt, buildSoftwarePrompt, buildSkincarePrompt } from "@/lib/ai/scenePrompt";
 import { editImage, generateImage } from "@/lib/ai/geminiImage";
 import { generateJsonContent } from "@/lib/ai/geminiJson";
 import {
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
     const imagesResult = await listImages(supabase, user.id);
     if (!imagesResult.ok) return NextResponse.json({ error: imagesResult.error }, { status: 502 });
     const image = imagesResult.images.find((img) => img.id === body.imageId) ?? null;
-    const allowed = image && ["Produk", "Wajah/Orang", "Suasana/Fasilitas"].includes(image.category);
+    const allowed = image && ["Produk", "Kecantikan/Skincare", "Software/Website", "Wajah/Orang", "Suasana/Fasilitas"].includes(image.category);
     if (!image || !allowed || image.usage !== "olah_ai") {
       return NextResponse.json(
         { error: "Gambar tidak ditemukan atau bukan gambar yang boleh diolah AI." },
@@ -182,7 +182,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Gagal mengambil gambar produk." }, { status: 502 });
     }
     const prompt =
-      sourceImage.type === "suasana" ? buildRuanganPrompt(profile, sourceImage.size_hint ?? undefined)
+      sourceImage.type === "skincare" ? buildSkincarePrompt(profile, sourceImage.description ?? undefined)
+      : sourceImage.type === "software" ? buildSoftwarePrompt(profile, sourceImage.size_hint ?? undefined)
+      : sourceImage.type === "suasana" ? buildRuanganPrompt(profile, sourceImage.size_hint ?? undefined)
       : sourceImage.type === "wajah" ? buildOrangPrompt(profile)
       : buildScenePrompt(profile, sourceImage.size_hint ?? undefined);
     const result = await editImage({ imageBase64, mimeType, aspectRatio: body.ratio, prompt });

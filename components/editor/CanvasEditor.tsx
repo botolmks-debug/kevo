@@ -277,11 +277,6 @@ export function CanvasEditor({
                 </>
               ) : (
                 <>
-                  {businessName && !isColumn ? (
-                    <KonvaText text={businessName} x={0} y={-(footerIconSize + 4) * scale}
-                      fontSize={(footerTextSize - 2) * scale} fontStyle="bold"
-                      fill={fl.nameColor ?? "#fff"} listening={false} />
-                  ) : null}
                   {selectedId === "__footer__" ? (
                     <Rect x={-4} y={-4} width={(footerW + 8) * scale} height={(footerH + 8) * scale}
                       stroke="#0FB6A6" strokeWidth={2} dash={[4, 3]} listening={false} />

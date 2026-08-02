@@ -35,7 +35,10 @@ const FONT_LIST = FONT_OPTIONS.map((f) => `${f.id} (${f.style})`).join(", ");
 
 const PERSONA =
   "Kamu adalah gabungan ahli desain visual, ahli komunikasi marketing, dan content strategist untuk UMKM. " +
-  "Rangkai data profil menjadi konten SPESIFIK, relevan, dan sesuai gaya brand.";
+  "Rangkai data profil menjadi konten SPESIFIK, relevan, dan sesuai gaya brand. " +
+  "TERPENTING: tulislah seolah KAMU sendiri adalah target pasarnya — kamu tahu persis apa yang mereka rasakan, " +
+  "keluhkan, takutkan, dan impikan setiap hari. Bangun empati yang tulus sampai pembaca merasa \"ini gue banget\" / " +
+  "\"kok ngerti banget sih\". Menulislah dari DALAM perasaan mereka, bukan dari luar sebagai penjual.";
 
 const CAPTION_RULES =
   "caption = caption Instagram yang HIDUP dan berempati, dalam Bahasa Indonesia:\n" +
@@ -46,7 +49,23 @@ const CAPTION_RULES =
   "- Isi 2-4 kalimat, satu CTA halus, 3-6 hashtag. Patuhi nada brand & hindari topik terlarang.";
 
 const ONIMAGE_RULE =
-  "onImageText = teks pendek DI ATAS gambar (maks 8 kata): headline menarik, segar, tidak klise.";
+  "onImageText = teks pendek DI ATAS gambar (maks 8 kata): headline menarik, segar, tidak klise. " +
+  "VARIASIKAN gaya & pilihan kata SETIAP kali — JANGAN mengulang frasa/judul yang sama atau mirip yang sudah umum dipakai.";
+
+// Sudut headline yang diacak tiap generate supaya judul tidak monoton/berulang.
+const HEADLINE_ANGLES = [
+  "sudut MANFAAT utama (apa untungnya buat pembeli)",
+  "sudut PERTANYAAN yang bikin penasaran",
+  "sudut ANGKA / hasil konkret",
+  "sudut MASALAH yang dirasakan lalu solusinya",
+  "sudut EMOSI / momen relatable keseharian",
+  "sudut AJAKAN atau urgensi yang halus",
+  "sudut KEUNIKAN / hal yang beda dari produk ini",
+];
+
+function pickHeadlineAngle(): string {
+  return HEADLINE_ANGLES[Math.floor(Math.random() * HEADLINE_ANGLES.length)];
+}
 
 // Khusus jenis INTERAKSI — memaksa caption benar-benar memancing interaksi,
 // bukan promosi satu arah.
@@ -81,6 +100,8 @@ ${profileBlock(profile)}
 
 Produk: ${productDescription || "(tidak ada deskripsi)"}
 
+Untuk JUDUL (onImageText) kali ini, pakai ${pickHeadlineAngle()}. Buat frasa BARU yang segar; jangan mengulang judul yang biasa dipakai.
+
 Format JSON: {"onImageText": "...", "caption": "...", "fontId": "..."}
 ${ONIMAGE_RULE}
 ${CAPTION_RULES}
@@ -94,6 +115,8 @@ Buat SATU konten umum (BUKAN promosi produk spesifik) yang menjelaskan/mengangka
 
 ${profileBlock(profile)}
 
+Untuk JUDUL (onImageText) kali ini, pakai ${pickHeadlineAngle()}. Buat frasa BARU yang segar; jangan mengulang judul yang biasa dipakai.
+
 Format JSON: {"onImageText": "...", "caption": "...", "imageScene": "...", "fontId": "..."}
 ${ONIMAGE_RULE}
 ${CAPTION_RULES}
@@ -104,14 +127,22 @@ ${JSON_TAIL}`;
 
 export function buildInteraksiContentPrompt(profile: BusinessProfile): string {
   return `${PERSONA}
-Buat SATU konten INTERAKTIF, dalam Bahasa Indonesia. Tujuan UTAMA = memancing INTERAKSI (komentar/simpan/vote/tag), BUKAN jualan. Boleh berupa pertanyaan, kuis/poll, "pilih A atau B", atau tips singkat yang DIAKHIRI pertanyaan. Angkat keseharian/perasaan pembaca, jangan menjelaskan produk satu arah.
+Buat SATU konten INTERAKTIF, dalam Bahasa Indonesia. Tujuan UTAMA = memancing INTERAKSI (komentar/simpan/vote/tag), BUKAN jualan.
 
 ${profileBlock(profile)}
+
+PILIH SATU format interaktif secara ACAK & BERVARIASI (jangan selalu format yang sama), lalu rancang onImageText, caption, DAN imageScene agar KOMPAK sesuai format itu:
+1. "Pilih A atau B" (this-or-that) — dua opsi relatable. imageScene: komposisi SPLIT kiri-kanan menampilkan dua situasi/opsi yang dibandingkan.
+2. Kuis / Tebak — pertanyaan menebak. imageScene: adegan yang memberi PETUNJUK visual (tanpa membocorkan jawaban).
+3. Isi titik-titik — kalimat yang dilanjutkan pembaca (mis. "Paling semangat kerja kalau udah ___"). imageScene: adegan keseharian yang mendukung.
+4. Situasi relatable ("ini gue banget") — potret momen sehari-hari target pasar. imageScene: adegan sehari-hari yang membuat pembaca merasa terwakili.
+5. Tips + pertanyaan — satu tips singkat lalu tanya pengalaman pembaca. imageScene: adegan hangat yang mengilustrasikan tips.
+6. Rating/skala ("dari 1-10, seberapa...") — imageScene: adegan yang mewakili tema/perasaan itu.
 
 Format JSON: {"onImageText": "...", "caption": "...", "imageScene": "...", "fontId": "..."}
 ${ONIMAGE_RULE_INTERAKSI}
 ${INTERAKSI_CAPTION_RULES}
-imageScene = satu kalimat Bahasa Indonesia, ilustrasi/adegan interaksi bisnis & pelanggan. Boleh kartun/animasi/realistis. Tanpa teks/logo.
+imageScene = 1-2 kalimat Bahasa Indonesia mendeskripsikan visual yang SESUAI format terpilih (boleh split kiri-kanan, ilustrasi, kartun, atau semi-realistis). Spesifik & relatable ke target pasar, bukan generik. TANPA teks/logo di dalam adegan.
 ${FONT_RULE}
 ${JSON_TAIL}`;
 }

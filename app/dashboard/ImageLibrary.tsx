@@ -155,26 +155,43 @@ export function ImageLibrary() {
         label="Deskripsi"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        placeholder="mis. Logo klinik warna biru, dipakai di semua konten"
+        placeholder={category === "Kecantikan/Skincare"
+          ? "mis. serum wajah untuk kulit kering — dipakai di wajah pagi & malam, kandungan vitamin C"
+          : "mis. Logo klinik warna biru, dipakai di semua konten"}
       />
 
-      <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-navy">
-          {category === "Suasana/Fasilitas" ? "Estimasi ukuran ruangan" : "Estimasi ukuran produk"}{" "}
-          <span className="font-normal text-navy/50">(opsional)</span>
-        </span>
-        <input
-          value={sizeHint}
-          onChange={(e) => setSizeHint(e.target.value)}
-          placeholder={category === "Suasana/Fasilitas" ? "mis. ruang tamu ± 4x5 m / kantor kecil" : "mis. tinggi 15 cm untuk botol 250 ml"}
-          className="rounded-card border border-slate-200 bg-white px-4 py-2.5 text-sm text-navy focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-        />
-        <span className="text-xs text-navy/50">
-          {category === "Suasana/Fasilitas"
-            ? "Membantu AI menjaga proporsi ruangan tetap realistis."
-            : "Membantu AI menjaga skala produk (mis. produk besar tidak dikecilkan)."}
-        </span>
-      </label>
+      {category === "Software/Website" ? (
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-navy">Tampilan perangkat</span>
+          <select
+            value={sizeHint === "desktop" ? "desktop" : "smartphone"}
+            onChange={(e) => setSizeHint(e.target.value)}
+            className="rounded-card border border-slate-200 bg-white px-4 py-2.5 text-sm text-navy focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="smartphone">Smartphone</option>
+            <option value="desktop">Desktop / Laptop</option>
+          </select>
+          <span className="text-xs text-navy/50">AI akan membuat adegan orang memakai software ini di layar {sizeHint === "desktop" ? "desktop/laptop" : "smartphone"}.</span>
+        </label>
+      ) : (
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-navy">
+            {category === "Suasana/Fasilitas" ? "Estimasi ukuran ruangan" : "Estimasi ukuran produk"}{" "}
+            <span className="font-normal text-navy/50">(opsional)</span>
+          </span>
+          <input
+            value={sizeHint}
+            onChange={(e) => setSizeHint(e.target.value)}
+            placeholder={category === "Suasana/Fasilitas" ? "mis. ruang tamu ± 4x5 m / kantor kecil" : "mis. tinggi 1,8 m (vending machine) / botol 250 ml"}
+            className="rounded-card border border-slate-200 bg-white px-4 py-2.5 text-sm text-navy focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+          <span className="text-xs text-navy/50">
+            {category === "Suasana/Fasilitas"
+              ? "Membantu AI menjaga proporsi ruangan tetap realistis."
+              : "Membantu AI menjaga skala produk (mis. produk besar tidak dikecilkan)."}
+          </span>
+        </label>
+      )}
 
       <label className="flex flex-col gap-1.5">
         <span className="flex items-center gap-1.5 text-sm font-medium text-navy">
