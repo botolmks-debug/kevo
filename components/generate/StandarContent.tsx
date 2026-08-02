@@ -1,5 +1,6 @@
 "use client";
 
+import { getLang } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -121,6 +122,7 @@ export function StandarContent({
           templateName: "Konten Standar",
           values: { Judul: judul, Deskripsi: descriptions.filter((d) => d.trim()).join(" ") },
           businessProfile,
+          language: getLang(),
         }),
       });
       const d = await res.json().catch(() => null);

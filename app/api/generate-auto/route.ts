@@ -79,7 +79,7 @@ export async function GET() {
   return NextResponse.json({ items });
 }
 
-type RequestBody = { jenis: GeneratedContentJenis; ratio: AspectRatio; imageId?: string };
+type RequestBody = { jenis: GeneratedContentJenis; ratio: AspectRatio; imageId?: string; language?: "id" | "en" };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -154,9 +154,9 @@ export async function POST(request: NextRequest) {
 
   // ── Generate teks (headline + caption + fontId) ──────────────────────────
   const contentPrompt =
-    body.jenis === "produk" ? buildProdukContentPrompt(profile, sourceImage?.description ?? "")
-    : body.jenis === "general" ? buildGeneralContentPrompt(profile)
-    : buildInteraksiContentPrompt(profile);
+    body.jenis === "produk" ? buildProdukContentPrompt(profile, sourceImage?.description ?? "", body.language)
+    : body.jenis === "general" ? buildGeneralContentPrompt(profile, body.language)
+    : buildInteraksiContentPrompt(profile, body.language);
 
   const contentResult = await generateJsonContent(contentPrompt);
   if (!contentResult.ok) return NextResponse.json({ error: contentResult.error }, { status: 502 });

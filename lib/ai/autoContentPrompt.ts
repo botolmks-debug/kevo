@@ -1,3 +1,4 @@
+import { outputLangDirective, type Lang } from "@/lib/ai/lang";
 import type { BusinessProfile, ContentGoal } from "@/lib/onboarding/businessProfile";
 import { FONT_OPTIONS } from "@/lib/templates/fonts";
 
@@ -92,8 +93,9 @@ const FONT_RULE =
 
 const JSON_TAIL = "Balas HANYA dengan JSON valid, tanpa penjelasan dan tanpa pembungkus markdown.";
 
-export function buildProdukContentPrompt(profile: BusinessProfile, productDescription: string): string {
+export function buildProdukContentPrompt(profile: BusinessProfile, productDescription: string, lang?: Lang): string {
   return `${PERSONA}
+${outputLangDirective(lang)}
 Buat konten promosi SATU produk, dalam Bahasa Indonesia. Produk = BINTANG UTAMA.
 
 ${profileBlock(profile)}
@@ -109,8 +111,9 @@ ${FONT_RULE}
 ${JSON_TAIL}`;
 }
 
-export function buildGeneralContentPrompt(profile: BusinessProfile): string {
+export function buildGeneralContentPrompt(profile: BusinessProfile, lang?: Lang): string {
   return `${PERSONA}
+${outputLangDirective(lang)}
 Buat SATU konten umum (BUKAN promosi produk spesifik) yang menjelaskan/mengangkat usaha ini, dalam Bahasa Indonesia — edukasi, manfaat, cerita brand, atau momen berkaitan. Tetap pada topik usaha.
 
 ${profileBlock(profile)}
@@ -125,8 +128,9 @@ ${FONT_RULE}
 ${JSON_TAIL}`;
 }
 
-export function buildInteraksiContentPrompt(profile: BusinessProfile): string {
+export function buildInteraksiContentPrompt(profile: BusinessProfile, lang?: Lang): string {
   return `${PERSONA}
+${outputLangDirective(lang)}
 Buat SATU konten INTERAKTIF, dalam Bahasa Indonesia. Tujuan UTAMA = memancing INTERAKSI (komentar/simpan/vote/tag), BUKAN jualan.
 
 ${profileBlock(profile)}

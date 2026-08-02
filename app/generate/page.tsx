@@ -1,5 +1,6 @@
 "use client";
 
+import { getLang } from "@/lib/i18n";
 import { useRef, useEffect, useState } from "react";
 import { Header } from "@/components/ui/Header";
 import { Card } from "@/components/ui/Card";
@@ -310,6 +311,7 @@ export default function GeneratePage() {
           templateName: "Produk + Latar Warna",
           values: { Judul: values.title ?? "", Deskripsi: values.subtitle ?? "" },
           businessProfile,
+          language: getLang(),
         }),
       });
       const d = await res.json().catch(() => null);

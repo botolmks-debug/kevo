@@ -7,6 +7,7 @@ import { SocialLinks } from "@/components/dashboard/SocialLinks";
 import { ContentReminderBell } from "@/components/dashboard/ContentReminderBell";
 import { LogoSettings } from "./LogoSettings";
 import { ImageLibrary } from "./ImageLibrary";
+import { LanguageToggle } from "@/components/ui/LanguageToggle";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -35,6 +36,8 @@ export default async function DashboardPage() {
         </header>
 
         <TokenSlot />
+
+        <LanguageToggle />
 
         <section className="flex flex-col gap-3">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-navy/50">Logo Bisnis</h2>

@@ -5,13 +5,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { isAdmin } from "@/lib/supabase/tokens";
+import { getLang, t, type Lang } from "@/lib/i18n";
 
 const navLinks = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/generate", label: "Buat Konten" },
-  { href: "/generate-otomatis", label: "Otomatis" },
-  { href: "/konten", label: "Edit Konten" },
-  { href: "/jadwal", label: "Jadwal" },
+  { href: "/dashboard", key: "nav.dashboard" },
+  { href: "/generate", key: "nav.buatKonten" },
+  { href: "/generate-otomatis", key: "nav.otomatis" },
+  { href: "/konten", key: "nav.editKonten" },
+  { href: "/jadwal", key: "nav.jadwal" },
 ];
 
 export function Header() {
@@ -19,15 +20,17 @@ export function Header() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isAdminUser, setIsAdminUser] = useState(false);
+  const [lang, setLangState] = useState<Lang>("id");
 
   useEffect(() => {
+    setLangState(getLang());
     createClient()
       .auth.getUser()
       .then(({ data }) => setIsAdminUser(isAdmin(data.user?.email)))
       .catch(() => {});
   }, []);
 
-  const links = isAdminUser ? [...navLinks, { href: "/admin", label: "Admin" }] : navLinks;
+  const links = isAdminUser ? [...navLinks, { href: "/admin", key: "nav.admin" }] : navLinks;
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -56,7 +59,7 @@ export function Header() {
           <nav className="flex items-center gap-1">
             {links.map((link) => (
               <Link key={link.href} href={link.href} className={linkClass(link.href)}>
-                {link.label}
+                {t(link.key, lang)}
               </Link>
             ))}
           </nav>
@@ -64,7 +67,7 @@ export function Header() {
             onClick={handleSignOut}
             className="ml-2 rounded-full px-3.5 py-1.5 text-sm font-medium text-navy/60 transition-colors hover:bg-navy/5 hover:text-navy"
           >
-            Keluar
+            {t("nav.keluar", lang)}
           </button>
         </div>
 
@@ -98,14 +101,14 @@ export function Header() {
         <div className="flex flex-col gap-1 border-t border-line bg-surface px-5 py-2 md:hidden">
           {links.map((link) => (
             <Link key={link.href} href={link.href} className={linkClass(link.href)} onClick={() => setOpen(false)}>
-              {link.label}
+              {t(link.key, lang)}
             </Link>
           ))}
           <button
             onClick={() => { setOpen(false); handleSignOut(); }}
             className="rounded-full px-3.5 py-1.5 text-left text-sm font-medium text-navy/60 hover:bg-navy/5 hover:text-navy"
           >
-            Keluar
+            {t("nav.keluar", lang)}
           </button>
         </div>
       ) : null}

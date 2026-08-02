@@ -9,6 +9,7 @@ export const runtime = "nodejs";
 
 type RequestBody = {
   profile: BusinessProfile;
+  language?: "id" | "en";
   templateName: string;
   values: Record<string, string>;
 };
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
   const prompt = buildCaptionPrompt(body.profile, {
     templateName: body.templateName,
     values: body.values,
-  });
+  }, body.language);
 
   const result = await generateCaption(prompt);
 

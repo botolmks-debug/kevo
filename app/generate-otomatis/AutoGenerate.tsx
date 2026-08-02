@@ -1,5 +1,6 @@
 "use client";
 
+import { getLang } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -157,6 +158,7 @@ export function AutoGenerate() {
           jenis,
           ratio,
           imageId: jenis === "produk" ? selectedImageId : undefined,
+          language: getLang(),
         }),
       });
       const data = await res.json().catch(() => null);

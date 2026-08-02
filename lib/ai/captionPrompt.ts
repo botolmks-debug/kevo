@@ -1,3 +1,4 @@
+import { outputLangDirective, type Lang } from "@/lib/ai/lang";
 import type { BusinessProfile, ContentGoal } from "@/lib/onboarding/businessProfile";
 
 export type CaptionContent = {
@@ -13,7 +14,7 @@ const CONTENT_GOAL_LABELS: Record<ContentGoal, string> = {
   loyalitas_pelanggan: "loyalitas pelanggan",
 };
 
-export function buildCaptionPrompt(profile: BusinessProfile, content: CaptionContent): string {
+export function buildCaptionPrompt(profile: BusinessProfile, content: CaptionContent, lang?: Lang): string {
   const goals =
     profile.positioning.contentGoals.map((goal) => CONTENT_GOAL_LABELS[goal] ?? goal).join(", ") || "-";
 
@@ -23,7 +24,8 @@ export function buildCaptionPrompt(profile: BusinessProfile, content: CaptionCon
       .map(([label, value]) => `- ${label}: ${value}`)
       .join("\n") || "(tidak ada isi tambahan)";
 
-  return `Kamu adalah ahli komunikasi marketing. Tulis SATU caption media sosial dalam Bahasa Indonesia untuk bisnis berikut.
+  return `${outputLangDirective(lang)}
+Kamu adalah ahli komunikasi marketing. Tulis SATU caption media sosial untuk bisnis berikut (ikuti OUTPUT LANGUAGE di atas).
 
 Profil bisnis:
 - Nama: ${profile.business.name || "-"}
