@@ -93,7 +93,7 @@ function isValidBody(body: unknown): body is RequestBody {
   return true;
 }
 
-type AutoContent = { onImageText: string; caption: string; imageScene?: string; fontId?: string };
+type AutoContent = { onImageText: string; caption: string; imageScene?: string; fontId?: string; jawaban?: string };
 
 function isAutoContent(data: Record<string, unknown>, requireScene: boolean): data is AutoContent {
   if (typeof data.onImageText !== "string" || data.onImageText.trim().length === 0) return false;
@@ -264,6 +264,7 @@ export async function POST(request: NextRequest) {
       status: row.status,
       createdAt: row.created_at,
       fontId: fontOption?.id ?? null,
+      jawaban: content.jawaban ?? null,
     },
   });
 }

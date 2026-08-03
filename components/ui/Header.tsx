@@ -15,6 +15,12 @@ const navLinks = [
   { href: "/jadwal", key: "nav.jadwal" },
 ];
 
+// Menu khusus admin (botolmakassar).
+const adminLinks = [
+  { href: "/video", key: "nav.video" },
+  { href: "/admin", key: "nav.admin" },
+];
+
 export function Header() {
   const pathname = usePathname();
   const router = useRouter();
@@ -30,7 +36,7 @@ export function Header() {
       .catch(() => {});
   }, []);
 
-  const links = isAdminUser ? [...navLinks, { href: "/admin", key: "nav.admin" }] : navLinks;
+  const links = isAdminUser ? [...navLinks, ...adminLinks] : navLinks;
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -49,9 +55,9 @@ export function Header() {
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-surface/80 backdrop-blur">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-5 py-3.5 sm:px-6">
-        <Link href="/dashboard" className="flex items-center gap-2 text-lg font-bold text-navy" onClick={() => setOpen(false)}>
-          <span className="grid h-8 w-8 place-items-center rounded-xl bg-primary text-white">K</span>
-          Kevo
+        <Link href="/dashboard" className="flex items-center" onClick={() => setOpen(false)}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/keposty-logo.png" alt="Keposty" className="h-7 w-auto" />
         </Link>
 
         {/* Menu desktop */}

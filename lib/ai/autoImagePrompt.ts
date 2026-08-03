@@ -19,6 +19,6 @@ ${FILL_NO_TEXT} ${BOTTOM_CALM_FOR_TEXT}`;
 export function buildInteraksiImagePrompt(scene: string): string {
   return `Gambar bertema INTERAKSI/kehangatan komunitas antara bisnis dan pelanggannya. Boleh bergaya ilustrasi ceria, kartun modern, animasi, atau semi-realistis. Warna cerah, bentuk ramah, terasa hidup dan mengundang.
 Adegan: ${scene}
-PENTING: JANGAN menambahkan teks, huruf, angka, logo, atau branding apa pun pada objek dalam gambar (gelas, baju, tas, dinding, papan, dll). Semua objek harus BERSIH tanpa tulisan. JANGAN membuat logo atau inisial brand. Isi seluruh bingkai dengan adegan interaksi - JANGAN sisakan area bawah kosong/polos.
+PENTING: JANGAN menambahkan teks, huruf, angka, logo, atau branding apa pun pada objek dalam gambar (gelas, baju, tas, dinding, papan, dll). Semua objek harus BERSIH tanpa tulisan. JANGAN membuat logo atau inisial brand. Isi SELURUH bingkai dengan adegan dari ATAS sampai BAWAH dan dari kiri ke kanan - JANGAN sisakan area kosong/polos di bagian ATAS, bawah, maupun samping. Subjek dan latar harus tersebar memenuhi seluruh tinggi frame vertikal (9:16), bukan cuma menumpuk di tengah/bawah.
 ${FILL_NO_TEXT}`;
 }

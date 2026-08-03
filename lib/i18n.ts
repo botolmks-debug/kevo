@@ -16,6 +16,7 @@ const DICT: Record<string, { id: string; en: string }> = {
   "nav.otomatis": { id: "Otomatis", en: "Auto" },
   "nav.editKonten": { id: "Edit Konten", en: "Edit" },
   "nav.jadwal": { id: "Jadwal", en: "Schedule" },
+  "nav.video": { id: "Video", en: "Video" },
   "nav.admin": { id: "Admin", en: "Admin" },
   "nav.keluar": { id: "Keluar", en: "Log out" },
   "lang.title": { id: "Bahasa", en: "Language" },

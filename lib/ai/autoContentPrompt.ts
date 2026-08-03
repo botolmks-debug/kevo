@@ -71,11 +71,13 @@ function pickHeadlineAngle(): string {
 // Khusus jenis INTERAKSI — memaksa caption benar-benar memancing interaksi,
 // bukan promosi satu arah.
 const ONIMAGE_RULE_INTERAKSI =
-  "onImageText = teks pendek DI ATAS gambar (maks 8 kata): berupa PERTANYAAN atau hook yang " +
-  'memancing rasa penasaran/keterlibatan (mis. "Kamu tim yang mana?", "Tebak, apa hayo?").';
+  "onImageText = teks pendek DI ATAS gambar (maks 8 kata): PERTANYAAN atau hook yang memancing " +
+  "keterlibatan, SESUAIKAN dengan format terpilih " +
+  '(mis. kuis: "Tebak isinya apa?"; edukasi: "Tahukah kamu ini?"; tips: "Sering keliru soal ini?"; pilih A/B: "Kamu tim yang mana?").';
 
 const INTERAKSI_CAPTION_RULES =
   "caption = caption Instagram yang MEMANCING INTERAKSI (BUKAN jualan/penjelasan searah), Bahasa Indonesia:\n" +
+  "- Pakai bahasa sehari-hari yang SEDERHANA & gampang dimengerti: kalimat pendek, kata umum, hindari istilah rumit/kaku/berbunga-bunga. Bayangkan ngobrol santai dengan teman.\n" +
   "- WAJIB berisi, berurutan: (1) hook relatable dari keseharian pembaca di kalimat pertama; " +
   "(2) SATU pertanyaan langsung ke pembaca; (3) ajakan berinteraksi yang JELAS — mis. 'komen di bawah', " +
   "'tulis pendapatmu', 'tag temanmu', 'simpan dulu', atau 'pilih A atau B'.\n" +
@@ -84,8 +86,9 @@ const INTERAKSI_CAPTION_RULES =
   "- Nada ngobrol & hangat, boleh sedikit emoji. Variasikan pembuka SETIAP kali; HINDARI klise " +
   '("Pernah nggak sih", "Tenang saja", "Dijamin", "bosku", "gaskeun").\n' +
   "- 2-4 kalimat, DIAKHIRI ajakan interaksi + 3-6 hashtag relevan. Patuhi nada brand & hindari topik terlarang.\n" +
-  'CONTOH GAYA (jangan disalin persis): "Ngaku, siapa di sini yang paling nggak sabaran kalau lagi antre? 🙋 ' +
-  'Kira-kira, lebih enak beli cepat lewat mesin atau tetap dilayani orang? Komen pilihanmu di bawah ya! #..."';
+  'CONTOH GAYA (jangan disalin persis; SESUAIKAN dengan format terpilih): ' +
+  '(kuis) "Coba tebak, menu andalan kami pakai bahan rahasia apa? 🤔 Tulis tebakanmu di komen ya! #..." | ' +
+  '(tips) "Simpan dulu: 1 trik biar produkmu awet. Kamu biasanya gimana? Cerita dong 👇 #..."';
 
 const FONT_RULE =
   `fontId = pilih SATU font ID dari daftar berikut yang PALING COCOK dengan suasana dan gaya konten ini (pertimbangkan industri, nada brand, dan target pelanggan): ${FONT_LIST}. ` +
@@ -128,25 +131,82 @@ ${FONT_RULE}
 ${JSON_TAIL}`;
 }
 
+// ── Jenis INTERAKSI: format diacak DI KODE (bukan diserahkan ke AI) supaya
+//    BENAR-BENAR bervariasi. Sebelumnya AI disuruh "pilih acak" sendiri, tapi
+//    model hampir selalu jatuh ke format perbandingan/split. Sekarang kita
+//    pilih satu format via Math.random lalu suntik hanya format itu.
+type InteraksiFormat = { label: string; brief: string; scene: string };
+
+const INTERAKSI_FORMATS: InteraksiFormat[] = [
+  {
+    label: "KUIS / TEBAK-TEBAKAN",
+    brief:
+      "buat pertanyaan tebak-tebakan ringan seputar produk, bahan, proses, atau kebiasaan target pasar. " +
+      "JANGAN bocorkan jawabannya — minta pembaca menebak di komentar.",
+    scene:
+      "SATU adegan utuh (BUKAN split kiri-kanan) yang memberi PETUNJUK visual terhadap tebakan tanpa membocorkan jawaban.",
+  },
+  {
+    label: "EDUKASI / TAHUKAH KAMU",
+    brief:
+      "bagikan SATU fakta atau insight menarik & benar seputar produk/industri bisnis ini (gaya 'Tahukah kamu...'), " +
+      "lalu tetap interaktif dengan menanyakan pendapat atau pengalaman pembaca.",
+    scene:
+      "SATU adegan tunggal (BUKAN split kiri-kanan) yang mengilustrasikan fakta/topik itu dengan jelas.",
+  },
+  {
+    label: "TIPS PRAKTIS",
+    brief:
+      "beri SATU tips singkat & bisa langsung dipakai, relevan dengan produk & target pasar, " +
+      "lalu ajak pembaca berbagi tips atau pengalaman mereka.",
+    scene:
+      "SATU adegan (BUKAN split kiri-kanan) yang menunjukkan tips itu sedang dipraktikkan.",
+  },
+  {
+    label: "PILIH A ATAU B (this-or-that / perbandingan)",
+    brief:
+      "tawarkan DUA opsi relatable yang bikin pembaca memilih salah satu (mis. 'Tim A atau Tim B?').",
+    scene:
+      "komposisi SPLIT kiri-kanan menampilkan dua opsi yang dibandingkan; " +
+      "PENTING kedua sisi HARUS mengisi penuh tinggi bingkai dari ATAS sampai BAWAH — jangan sisakan ruang kosong di bagian atas.",
+  },
+  {
+    label: "ISI TITIK-TITIK",
+    brief:
+      "buat kalimat yang harus dilanjutkan pembaca (mis. 'Hari paling semangat kalau udah ___'), ajak mereka melengkapinya di komentar.",
+    scene:
+      "SATU adegan keseharian target pasar (BUKAN split kiri-kanan) yang mendukung kalimat itu.",
+  },
+  {
+    label: "RATING / SKALA",
+    brief:
+      "minta pembaca memberi skala atas sesuatu (mis. 'Dari 1-10, seberapa...').",
+    scene:
+      "SATU adegan (BUKAN split kiri-kanan) yang mewakili tema atau perasaan itu.",
+  },
+];
+
+function pickInteraksiFormat(): InteraksiFormat {
+  return INTERAKSI_FORMATS[Math.floor(Math.random() * INTERAKSI_FORMATS.length)];
+}
+
 export function buildInteraksiContentPrompt(profile: BusinessProfile, lang?: Lang): string {
+  const format = pickInteraksiFormat();
   return `${PERSONA}
 ${outputLangDirective(lang)}
 Buat SATU konten INTERAKTIF, dalam Bahasa Indonesia. Tujuan UTAMA = memancing INTERAKSI (komentar/simpan/vote/tag), BUKAN jualan.
 
 ${profileBlock(profile)}
 
-PILIH SATU format interaktif secara ACAK & BERVARIASI (jangan selalu format yang sama), lalu rancang onImageText, caption, DAN imageScene agar KOMPAK sesuai format itu:
-1. "Pilih A atau B" (this-or-that) — dua opsi relatable. imageScene: komposisi SPLIT kiri-kanan menampilkan dua situasi/opsi yang dibandingkan.
-2. Kuis / Tebak — pertanyaan menebak. imageScene: adegan yang memberi PETUNJUK visual (tanpa membocorkan jawaban).
-3. Isi titik-titik — kalimat yang dilanjutkan pembaca (mis. "Paling semangat kerja kalau udah ___"). imageScene: adegan keseharian yang mendukung.
-4. Situasi relatable ("ini gue banget") — potret momen sehari-hari target pasar. imageScene: adegan sehari-hari yang membuat pembaca merasa terwakili.
-5. Tips + pertanyaan — satu tips singkat lalu tanya pengalaman pembaca. imageScene: adegan hangat yang mengilustrasikan tips.
-6. Rating/skala ("dari 1-10, seberapa...") — imageScene: adegan yang mewakili tema/perasaan itu.
+FORMAT KONTEN KALI INI (WAJIB pakai ini, JANGAN diganti ke format lain): ${format.label}.
+Instruksi format: ${format.brief}
+Rancang onImageText, caption, DAN imageScene agar KOMPAK & konsisten dengan format di atas, serta benar-benar relevan dengan bisnis dan target pasarnya.
 
-Format JSON: {"onImageText": "...", "caption": "...", "imageScene": "...", "fontId": "..."}
+Format JSON: {"onImageText": "...", "caption": "...", "jawaban": "...", "imageScene": "...", "fontId": "..."}
 ${ONIMAGE_RULE_INTERAKSI}
 ${INTERAKSI_CAPTION_RULES}
-imageScene = 1-2 kalimat Bahasa Indonesia mendeskripsikan visual yang SESUAI format terpilih (boleh split kiri-kanan, ilustrasi, kartun, atau semi-realistis). Spesifik & relatable ke target pasar, bukan generik. TANPA teks/logo di dalam adegan.
+jawaban = penjelasan SINGKAT khusus untuk PEMILIK BISNIS (TIDAK ikut diposting ke pelanggan): jelaskan jawaban/maksud konten ini dan poin yang dibahas, supaya kamu paham isinya & siap membalas komentar. Untuk KUIS/TEBAK: tulis jawaban benarnya dengan jelas. Maksimal 1-2 kalimat, bahasa gampang.
+imageScene = 1-2 kalimat Bahasa Indonesia. ${format.scene} Adegan WAJIB mengisi PENUH seluruh bingkai dari atas sampai bawah (tanpa area kosong/polos). Boleh gaya ilustrasi, kartun, atau semi-realistis. Spesifik & relatable ke target pasar, bukan generik. TANPA teks/huruf/angka/logo di dalam adegan.
 ${FONT_RULE}
 ${JSON_TAIL}`;
 }

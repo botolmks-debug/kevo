@@ -35,11 +35,9 @@ export default function LoginPage() {
       <AuthBackground />
       <Card className="relative z-10 w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center gap-2">
-          {/* Logo Kevo */}
-          <div className="flex items-center gap-2">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-lg font-bold text-white">K</span>
-            <span className="text-xl font-bold text-navy">Kevo</span>
-          </div>
+          {/* Logo Keposty */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/keposty-logo.png" alt="Keposty" className="h-10 w-auto" />
           <h1 className="text-2xl font-bold text-navy">Masuk</h1>
           <p className="text-sm font-medium text-navy/50">Setiap Produk Punya Cerita</p>
         </div>

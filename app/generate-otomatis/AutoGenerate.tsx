@@ -35,6 +35,7 @@ type GeneratedItem = {
   backgroundDataUri?: string;
   onImageText: string;
   caption: string;
+  jawaban?: string;
   ratio: AspectRatio;
   status: string;
   createdAt: string;
@@ -408,6 +409,13 @@ export function AutoGenerate() {
           </div>
 
           <Textarea label="Caption (bisa disalin)" value={result.caption} readOnly />
+
+          {result.jawaban ? (
+            <div className="mt-3 rounded-xl border border-primary/25 bg-primary/5 p-3 text-sm text-navy/80">
+              <p className="mb-1 font-semibold text-primary">💡 Jawaban / Pembahasan (buat kamu — tidak ikut diposting)</p>
+              <p>{result.jawaban}</p>
+            </div>
+          ) : null}
 
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" onClick={handleSimpanPng} disabled={isSaving}>

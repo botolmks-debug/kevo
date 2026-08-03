@@ -9,7 +9,7 @@ function svgToDataUri(svg: string): string {
 
 const logoSvg = `
 <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
-  <circle cx="60" cy="60" r="58" fill="#2563EB" />
+  <circle cx="60" cy="60" r="58" fill="#00B9AC" />
   <text x="60" y="78" font-family="sans-serif" font-size="56" font-weight="700"
         fill="#ffffff" text-anchor="middle">K</text>
 </svg>
@@ -23,11 +23,11 @@ const logoSvg = `
 export const defaultBrand: Pick<Template["brand"], "logoUrl" | "footer"> = {
   logoUrl: svgToDataUri(logoSvg),
   footer: {
-    text: "Kevo Demo Instansi",
+    text: "Keposty Demo Instansi",
     socials: [
-      { platformId: "instagram", value: "@kevo.demo" },
+      { platformId: "instagram", value: "@keposty.demo" },
       { platformId: "whatsapp", value: "+62 812-0000-0000" },
-      { platformId: "website", value: "kevo.demo" },
+      { platformId: "website", value: "keposty.demo" },
     ],
   },
 };

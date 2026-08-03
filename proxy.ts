@@ -1,9 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isAdmin } from "@/lib/supabase/tokens";
 
 const PUBLIC_PATHS = ["/login", "/signup", "/auth"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -43,6 +44,13 @@ export async function middleware(request: NextRequest) {
 
   // Sudah login tapi buka /login atau /signup -> lempar ke /dashboard
   if (user && (path === "/login" || path === "/signup")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
+  }
+
+  // Fitur Video masih khusus admin (sementara) -> non-admin dilempar ke /dashboard
+  if (path.startsWith("/video") && !isAdmin(user?.email)) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);

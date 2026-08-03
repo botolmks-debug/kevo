@@ -8,8 +8,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Kevo",
+  title: "Keposty",
   description: "Generate konten sosial media dari template brand",
+  icons: { icon: "/favicon.ico" },
 };
 
 export default function RootLayout({
