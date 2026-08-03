@@ -1,4 +1,4 @@
-import type { AspectRatio, Box, LogoLayout, Template } from "@/lib/templates/types";
+import type { AspectRatio, Box, DeliveryBadges, LogoLayout, Template } from "@/lib/templates/types";
 
 export type TextSlotOverride = {
   box?: Box;
@@ -18,6 +18,7 @@ export type FooterOverride = {
   direction?: "row" | "column";
   iconSize?: number;
   textSize?: number;
+  gap?: number;
 };
 
 export type EditorOverrides = {
@@ -26,6 +27,8 @@ export type EditorOverrides = {
   logo?: LogoLayout;
   /** Versi logo yang dipakai di konten: "light" (default) atau "dark". */
   logoVariant?: "dark" | "light";
+  /** Badge pesan-antar (ShopeeFood/GoFood/GrabFood) — di luar sosmed. */
+  delivery?: DeliveryBadges;
 };
 
 export function applyEditorOverrides(
@@ -62,6 +65,7 @@ export function applyEditorOverrides(
         ...(overrides.footer.direction ? { direction: overrides.footer.direction } : {}),
         ...(overrides.footer.iconSize ? { iconSize: overrides.footer.iconSize } : {}),
         ...(overrides.footer.textSize ? { textSize: overrides.footer.textSize } : {}),
+        ...(overrides.footer.gap !== undefined ? { gap: overrides.footer.gap } : {}),
       }
     : layout.footerLayout;
 
@@ -71,7 +75,13 @@ export function applyEditorOverrides(
     ...template,
     layouts: {
       ...template.layouts,
-      [ratio]: { ...layout, slots, footerLayout, logo },
+      [ratio]: {
+        ...layout,
+        slots,
+        footerLayout,
+        logo,
+        ...(overrides.delivery ? { deliveryBadges: overrides.delivery } : {}),
+      },
     },
   };
 }

@@ -7,6 +7,7 @@ import type Konva from "konva";
 import { FONT_OPTIONS } from "@/lib/templates/fonts";
 import type { ImageSlot, TemplateLayout, TextSlot } from "@/lib/templates/types";
 import type { EditorOverrides, TextSlotOverride, FooterOverride } from "@/lib/editor/layoutOverrides";
+import { DELIVERY_PLATFORMS, DELIVERY_MAP } from "@/lib/social/delivery";
 import { useKonvaImage } from "./useKonvaImage";
 
 const PREVIEW_WIDTH = 340;
@@ -59,6 +60,22 @@ function FooterSocialItem({ platformId, value, offsetX, offsetY, iconSize, textS
       <SocialIconKonva platformId={platformId} size={iconSize} scale={scale} />
       <KonvaText text={value} x={(iconSize + 10) * scale} y={iconSize * 0.18 * scale}
         fontSize={textSize * scale} fontStyle="bold" fill={textColor} listening={false} />
+    </Group>
+  );
+}
+
+function DeliveryChipKonva({ id, w, h, scale }: { id: string; w: number; h: number; scale: number }) {
+  const img = useKonvaImage(`/delivery/${id}.png`);
+  const pw = w * scale;
+  const ph = h * scale;
+  if (img) return <KonvaImage image={img} width={pw} height={ph} listening={false} />;
+  // Fallback (gambar belum termuat): kartu putih + label warna brand.
+  const p = DELIVERY_MAP[id];
+  return (
+    <Group listening={false}>
+      <Rect width={pw} height={ph} fill="#ffffff" cornerRadius={ph * 0.18} />
+      <KonvaText text={p?.label ?? id} width={pw} height={ph} align="center" verticalAlign="middle"
+        fontSize={ph * 0.22} fontStyle="bold" fill={p?.color ?? "#333"} listening={false} />
     </Group>
   );
 }
@@ -155,6 +172,7 @@ export function CanvasEditor({
   const footerDir = overrides.footer?.direction ?? fl.direction ?? "row";
   const footerIconSize = overrides.footer?.iconSize ?? fl.iconSize;
   const footerTextSize = overrides.footer?.textSize ?? fl.textSize;
+  const footerGap = overrides.footer?.gap ?? fl.gap;
   const isColumn = footerDir === "column";
   const footerX = (overrides.footer?.x ?? fl.x) * scale;
   const footerY = (overrides.footer?.y ?? fl.y) * scale;
@@ -177,14 +195,67 @@ export function CanvasEditor({
   const footerSocials = (socials ?? []).slice(0, 3);
   let cursorRow = 0; let cursorCol = 0;
   const socialItems = footerSocials.map((s) => {
-    const textW = s.value.length * footerTextSize * 0.55;
-    const itemW = footerIconSize + 10 + textW + fl.gap;
+    const textW = s.value.length * footerTextSize * 0.62;
+    const itemW = footerIconSize + 10 + textW + footerGap;
     const item = { ...s, offsetX: cursorRow, offsetY: cursorCol };
     cursorRow += itemW; cursorCol += footerIconSize + 8;
     return item;
   });
   const footerW = Math.max(isColumn ? 250 : cursorRow, 140);
   const footerH = isColumn ? cursorCol + 20 : footerIconSize + 20;
+
+  // ── Badge pesan-antar (logo ShopeeFood/GoFood/GrabFood) — di luar sosmed ──
+  const dScale = overrides.delivery?.scale ?? 1;
+  const dAlign = overrides.delivery?.align ?? "left";
+  const CHIP_H = 76 * dScale;
+  const CHIP_W = Math.round(((76 * 130) / 104) * dScale); // chip PNG rasio 1.25:1
+  const DELIVERY_GAP = 14 * dScale;
+  const DELIVERY_HEADING_H = 34 * dScale;
+  const DELIVERY_HEADING_FONT = 28 * dScale;
+  const deliveryIds = (overrides.delivery?.ids ?? []).filter((id) => DELIVERY_MAP[id]);
+  const deliveryLabel = overrides.delivery?.label ?? "Available on";
+  const deliveryDefaultY = Math.round(layout.canvas.height * 0.75);
+  const deliveryX = (overrides.delivery?.x ?? 60) * scale;
+  const deliveryY = (overrides.delivery?.y ?? deliveryDefaultY) * scale;
+  const deliveryItems = deliveryIds.map((id, i) => ({ id, offsetX: i * (CHIP_W + DELIVERY_GAP) }));
+  const deliveryW = deliveryIds.length > 0 ? deliveryIds.length * CHIP_W + (deliveryIds.length - 1) * DELIVERY_GAP : 0;
+  const deliveryH = DELIVERY_HEADING_H + CHIP_H;
+
+  function toggleDelivery(id: string) {
+    const cur = overrides.delivery;
+    const ids = cur?.ids ?? [];
+    const nextIds = ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
+    if (nextIds.length === 0) {
+      const next = { ...overrides };
+      delete next.delivery;
+      onOverridesChange(next);
+      return;
+    }
+    onOverridesChange({
+      ...overrides,
+      delivery: { ids: nextIds, x: cur?.x ?? 60, y: cur?.y ?? deliveryDefaultY, label: cur?.label ?? "Available on", scale: cur?.scale, align: cur?.align },
+    });
+  }
+
+  function updateDelivery(p: { x: number; y: number }) {
+    if (!overrides.delivery) return;
+    onOverridesChange({ ...overrides, delivery: { ...overrides.delivery, x: p.x, y: p.y } });
+  }
+
+  function setDeliveryLabel(label: string) {
+    if (!overrides.delivery) return;
+    onOverridesChange({ ...overrides, delivery: { ...overrides.delivery, label } });
+  }
+
+  function setDeliveryScale(s: number) {
+    if (!overrides.delivery) return;
+    onOverridesChange({ ...overrides, delivery: { ...overrides.delivery, scale: s } });
+  }
+
+  function setDeliveryAlign(a: "left" | "center" | "right") {
+    if (!overrides.delivery) return;
+    onOverridesChange({ ...overrides, delivery: { ...overrides.delivery, align: a } });
+  }
 
   // Panel teks mengikuti slot teks yang SEDANG dipilih (klik teksnya dulu),
   // fallback ke slot teks pertama. Ini yang membuat tiap deskripsi bisa diatur
@@ -291,6 +362,30 @@ export function CanvasEditor({
               )}
             </Group>
 
+            {/* Badge pesan-antar (logo + heading) */}
+            {deliveryIds.length > 0 ? (
+              <Group x={deliveryX} y={deliveryY} draggable dragBoundFunc={clampDrag}
+                onClick={() => setSelectedId("__delivery__")} onTap={() => setSelectedId("__delivery__")}
+                onDragEnd={(e) => { const n = e.target; updateDelivery({ x: n.x() / scale, y: n.y() / scale }); }}>
+                <Rect x={-8} y={-8} width={(deliveryW + 16) * scale} height={(deliveryH + 16) * scale} fill="transparent" />
+                {selectedId === "__delivery__" ? (
+                  <Rect x={-4} y={-4} width={(deliveryW + 8) * scale} height={(deliveryH + 8) * scale}
+                    stroke="#0FB6A6" strokeWidth={2} dash={[4, 3]} listening={false} />
+                ) : null}
+                {deliveryLabel ? (
+                  <KonvaText text={deliveryLabel} x={0} y={0} width={deliveryW * scale} align={dAlign}
+                    fontSize={DELIVERY_HEADING_FONT * scale}
+                    fontStyle="bold" fill="#ffffff" shadowColor="#000" shadowBlur={4 * scale}
+                    shadowOpacity={0.5} listening={false} />
+                ) : null}
+                {deliveryItems.map((it) => (
+                  <Group key={it.id} x={it.offsetX * scale} y={DELIVERY_HEADING_H * scale} listening={false}>
+                    <DeliveryChipKonva id={it.id} w={CHIP_W} h={CHIP_H} scale={scale} />
+                  </Group>
+                ))}
+              </Group>
+            ) : null}
+
             {/* Logo */}
             {logoImg ? (
               <Group x={logoPos.x * scale} y={logoPos.y * scale} draggable dragBoundFunc={clampDrag}
@@ -324,6 +419,68 @@ export function CanvasEditor({
       </div>
 
       <p className="text-xs text-navy/50">Geser teks, sosmed, atau logo. Klik logo/sosmed untuk atur. Dobel-klik teks untuk edit isi{canToggleLogo ? ", dobel-klik logo untuk ganti versi terang/gelap" : ""}.</p>
+
+      {/* Panel pesan-antar (untuk konten makanan/minuman) */}
+      <div className="flex flex-col gap-2 rounded-2xl border border-line bg-white p-3 text-xs">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-medium text-navy">Lampirkan pesan-antar:</span>
+          {DELIVERY_PLATFORMS.map((p) => {
+            const on = deliveryIds.includes(p.id);
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => toggleDelivery(p.id)}
+                className={`rounded-full border px-3 py-1 font-medium transition ${on ? "text-white" : "border-line text-navy/60 hover:bg-navy/5"}`}
+                style={on ? { backgroundColor: p.color, borderColor: p.color } : undefined}
+              >
+                {p.label}
+              </button>
+            );
+          })}
+        </div>
+        {deliveryIds.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            <label className="flex items-center gap-2">
+              <span className="text-navy/60">Teks di atas:</span>
+              <input
+                type="text"
+                value={deliveryLabel}
+                onChange={(e) => setDeliveryLabel(e.target.value)}
+                placeholder="Available on"
+                className="w-40 rounded-lg border border-line px-2 py-1 text-navy focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              <span className="text-navy/40">(kosongkan untuk hilangkan)</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <span className="text-navy/60">Ukuran:</span>
+              <input
+                type="range"
+                min={0.5}
+                max={2}
+                step={0.1}
+                value={dScale}
+                onChange={(e) => setDeliveryScale(Number(e.target.value))}
+                className="w-40 accent-primary"
+              />
+              <span className="w-10 text-navy/60">{Math.round(dScale * 100)}%</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="text-navy/60">Posisi teks:</span>
+              {(["left", "center", "right"] as const).map((a) => (
+                <button
+                  key={a}
+                  type="button"
+                  onClick={() => setDeliveryAlign(a)}
+                  className={`rounded-full border px-3 py-1 ${dAlign === a ? "border-primary bg-primary/10 text-primary" : "border-line text-navy/60 hover:bg-navy/5"}`}
+                >
+                  {a === "left" ? "Kiri" : a === "center" ? "Tengah" : "Kanan"}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
 
       {/* Panel Logo */}
       {selectedId === "__logo__" && logoImg ? (
@@ -381,6 +538,11 @@ export function CanvasEditor({
             <span className="text-navy/60">Teks</span>
             <input type="range" min={14} max={50} value={footerTextSize} onChange={(e) => updateFooter({ textSize: Number(e.target.value) })} />
             <span className="tabular-nums text-navy/60">{footerTextSize}px</span>
+          </label>
+          <label className="flex items-center gap-2">
+            <span className="text-navy/60">Jarak</span>
+            <input type="range" min={0} max={90} value={footerGap} onChange={(e) => updateFooter({ gap: Number(e.target.value) })} />
+            <span className="tabular-nums text-navy/60">{footerGap}px</span>
           </label>
         </div>
       ) : null}

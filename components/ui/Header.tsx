@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { isAdmin } from "@/lib/supabase/tokens";
 import { getLang, t, type Lang } from "@/lib/i18n";
+import { PanduanWizard } from "./PanduanWizard";
 
 const navLinks = [
   { href: "/dashboard", key: "nav.dashboard" },
@@ -27,6 +28,7 @@ export function Header() {
   const [open, setOpen] = useState(false);
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [lang, setLangState] = useState<Lang>("id");
+  const [panduanOpen, setPanduanOpen] = useState(false);
 
   useEffect(() => {
     setLangState(getLang());
@@ -34,6 +36,13 @@ export function Header() {
       .auth.getUser()
       .then(({ data }) => setIsAdminUser(isAdmin(data.user?.email)))
       .catch(() => {});
+    // Panduan muncul OTOMATIS sekali untuk user baru (per-browser), lalu tidak lagi.
+    try {
+      if (!localStorage.getItem("keposty_panduan_v1")) {
+        localStorage.setItem("keposty_panduan_v1", "1");
+        setPanduanOpen(true);
+      }
+    } catch {}
   }, []);
 
   const links = isAdminUser ? [...navLinks, ...adminLinks] : navLinks;
@@ -69,6 +78,12 @@ export function Header() {
               </Link>
             ))}
           </nav>
+          <button
+            onClick={() => setPanduanOpen(true)}
+            className="ml-1 rounded-full px-3.5 py-1.5 text-sm font-medium text-navy/60 transition-colors hover:bg-navy/5 hover:text-navy"
+          >
+            Panduan
+          </button>
           <button
             onClick={handleSignOut}
             className="ml-2 rounded-full px-3.5 py-1.5 text-sm font-medium text-navy/60 transition-colors hover:bg-navy/5 hover:text-navy"
@@ -111,6 +126,12 @@ export function Header() {
             </Link>
           ))}
           <button
+            onClick={() => { setOpen(false); setPanduanOpen(true); }}
+            className="rounded-full px-3.5 py-1.5 text-left text-sm font-medium text-navy/60 hover:bg-navy/5 hover:text-navy"
+          >
+            Panduan
+          </button>
+          <button
             onClick={() => { setOpen(false); handleSignOut(); }}
             className="rounded-full px-3.5 py-1.5 text-left text-sm font-medium text-navy/60 hover:bg-navy/5 hover:text-navy"
           >
@@ -118,6 +139,8 @@ export function Header() {
           </button>
         </div>
       ) : null}
+
+      <PanduanWizard open={panduanOpen} onClose={() => setPanduanOpen(false)} />
     </header>
   );
 }

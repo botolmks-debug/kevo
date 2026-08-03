@@ -47,7 +47,7 @@ const CAPTION_RULES =
   "- Gunakan perumpamaan/analogi yang relevan.\n" +
   "- Sentuh PERASAAN pembaca: tunjukkan empati terhadap apa yang mereka rasakan, khawatirkan, atau impikan.\n" +
   "- Boleh dari sudut pandang pembaca (\"aku/kita\"), menyuarakan keseharian mereka.\n" +
-  "- Isi 2-4 kalimat, satu CTA halus, 3-6 hashtag. Patuhi nada brand & hindari topik terlarang.";
+  "- Isi 2-4 kalimat, satu CTA halus, lalu WAJIB diakhiri 3-6 hashtag relevan (format #katakunci tanpa spasi di dalam tag). JANGAN PERNAH mengosongkan hashtag. Patuhi nada brand & hindari topik terlarang.";
 
 const ONIMAGE_RULE =
   "onImageText = teks pendek DI ATAS gambar (maks 8 kata): headline menarik, segar, tidak klise. " +
@@ -85,7 +85,7 @@ const INTERAKSI_CAPTION_RULES =
   "- Kalau formatnya kuis/poll: sertakan pilihan (mis. A/B atau opsi) dan JANGAN bocorkan jawaban.\n" +
   "- Nada ngobrol & hangat, boleh sedikit emoji. Variasikan pembuka SETIAP kali; HINDARI klise " +
   '("Pernah nggak sih", "Tenang saja", "Dijamin", "bosku", "gaskeun").\n' +
-  "- 2-4 kalimat, DIAKHIRI ajakan interaksi + 3-6 hashtag relevan. Patuhi nada brand & hindari topik terlarang.\n" +
+  "- 2-4 kalimat, DIAKHIRI ajakan interaksi lalu WAJIB 3-6 hashtag relevan (format #katakunci). JANGAN PERNAH mengosongkan hashtag. Patuhi nada brand & hindari topik terlarang.\n" +
   'CONTOH GAYA (jangan disalin persis; SESUAIKAN dengan format terpilih): ' +
   '(kuis) "Coba tebak, menu andalan kami pakai bahan rahasia apa? 🤔 Tulis tebakanmu di komen ya! #..." | ' +
   '(tips) "Simpan dulu: 1 trik biar produkmu awet. Kamu biasanya gimana? Cerita dong 👇 #..."';

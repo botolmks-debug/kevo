@@ -141,7 +141,7 @@ export function AutoGenerate() {
     };
   }, []);
 
-  async function handleGenerate() {
+  async function handleGenerate(ratioArg?: AspectRatio) {
     if (jenis === "produk" && !selectedImageId) {
       setGenerateStatus("error");
       setGenerateError("Pilih foto dulu.");
@@ -157,7 +157,7 @@ export function AutoGenerate() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           jenis,
-          ratio,
+          ratio: ratioArg ?? ratio,
           imageId: jenis === "produk" ? selectedImageId : undefined,
           language: getLang(),
         }),
@@ -367,8 +367,9 @@ export function AutoGenerate() {
               <button
                 key={opt.value}
                 type="button"
-                onClick={() => setRatio(opt.value)}
-                className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                disabled={isGenerating}
+                onClick={() => { setRatio(opt.value); if (result && !isGenerating) handleGenerate(opt.value); }}
+                className={`rounded-full border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${
                   active ? "border-primary bg-primary/10 text-primary" : "border-line text-navy hover:bg-navy/5"
                 }`}
               >
@@ -377,6 +378,9 @@ export function AutoGenerate() {
             );
           })}
         </div>
+        {result ? (
+          <span className="text-xs text-navy/50">Ganti ukuran akan membuat ulang konten (1 token) agar gambar pas penuh di ukuran itu.</span>
+        ) : null}
       </div>
 
       <Button type="button" variant="cta" onClick={handleGenerate} disabled={isGenerating} className="w-fit">
