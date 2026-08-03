@@ -157,7 +157,7 @@ export function AutoGenerate() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           jenis,
-          ratio: ratioArg ?? ratio,
+          ratio: ratioArg && RATIO_OPTIONS.some((o) => o.value === ratioArg) ? ratioArg : ratio,
           imageId: jenis === "produk" ? selectedImageId : undefined,
           language: getLang(),
         }),
@@ -383,7 +383,7 @@ export function AutoGenerate() {
         ) : null}
       </div>
 
-      <Button type="button" variant="cta" onClick={handleGenerate} disabled={isGenerating} className="w-fit">
+      <Button type="button" variant="cta" onClick={() => handleGenerate()} disabled={isGenerating} className="w-fit">
         {isGenerating ? "Sedang membuat..." : "Generate Otomatis"}
       </Button>
 
