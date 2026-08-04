@@ -1,3 +1,5 @@
+import { generateOpenAIText } from "./openaiText";
+
 export type GeminiResult = { ok: true; text: string } | { ok: false; error: string };
 
 export const GEMINI_TEXT_MODEL = process.env.GEMINI_TEXT_MODEL || "gemini-flash-lite-latest";
@@ -30,7 +32,7 @@ async function callGemini(prompt: string, apiKey: string, model: string): Promis
   }
 }
 
-export async function generateCaption(prompt: string): Promise<GeminiResult> {
+async function generateCaptionGemini(prompt: string): Promise<GeminiResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return { ok: false, error: "Fitur AI belum aktif: GEMINI_API_KEY belum diisi di server." };
@@ -82,4 +84,16 @@ export async function generateCaption(prompt: string): Promise<GeminiResult> {
   }
 
   return { ok: false, error: "Layanan AI sedang sibuk, coba lagi beberapa saat lagi." };
+}
+
+/**
+ * Titik masuk publik: coba Gemini dulu; kalau gagal total DAN
+ * OPENAI_API_KEY tersedia, otomatis dialihkan ke OpenAI sebagai cadangan.
+ */
+export async function generateCaption(prompt: string): Promise<GeminiResult> {
+  const result = await generateCaptionGemini(prompt);
+  if (result.ok) return result;
+  if (!process.env.OPENAI_API_KEY) return result;
+  console.warn("Gemini gagal (" + result.error + "), mencoba fallback OpenAI...");
+  return generateOpenAIText(prompt);
 }

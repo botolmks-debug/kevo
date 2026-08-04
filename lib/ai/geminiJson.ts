@@ -1,4 +1,5 @@
 import { GEMINI_TEXT_MODEL } from "./gemini";
+import { generateOpenAIJson } from "./openaiText";
 
 export type GeminiJsonResult = { ok: true; data: Record<string, unknown> } | { ok: false; error: string };
 
@@ -58,7 +59,7 @@ function parseJsonText(text: string): Record<string, unknown> | null {
  * Otomatis untuk dapat headline+caption+deskripsi scene sekaligus dalam satu
  * panggilan (lihat lib/ai/autoContentPrompt.ts untuk bentuk prompt & JSON-nya).
  */
-export async function generateJsonContent(prompt: string): Promise<GeminiJsonResult> {
+async function generateJsonContentGemini(prompt: string): Promise<GeminiJsonResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return { ok: false, error: "Fitur AI belum aktif: GEMINI_API_KEY belum diisi di server." };
@@ -115,4 +116,17 @@ export async function generateJsonContent(prompt: string): Promise<GeminiJsonRes
   }
 
   return { ok: false, error: "Layanan AI sedang sibuk, coba lagi beberapa saat lagi." };
+}
+
+/**
+ * Titik masuk publik: coba Gemini dulu; kalau gagal total DAN
+ * OPENAI_API_KEY tersedia, otomatis dialihkan ke OpenAI sebagai cadangan.
+ * Dipakai tab Generate Otomatis (headline+caption+scene sekaligus).
+ */
+export async function generateJsonContent(prompt: string): Promise<GeminiJsonResult> {
+  const result = await generateJsonContentGemini(prompt);
+  if (result.ok) return result;
+  if (!process.env.OPENAI_API_KEY) return result;
+  console.warn("Gemini gagal (" + result.error + "), mencoba fallback OpenAI...");
+  return generateOpenAIJson(prompt);
 }
