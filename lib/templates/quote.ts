@@ -41,7 +41,7 @@ const layout45: TemplateLayout = {
       color: "#facc15",
       fontWeight: 600,
       label: "Sumber / Nama",
-      placeholder: "— Tim Keposty",
+      placeholder: "— Tim Keposting",
     },
   ],
 };

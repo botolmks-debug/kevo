@@ -8,7 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Keposty",
+  title: "Keposting",
   description: "Generate konten sosial media dari template brand",
   icons: { icon: "/favicon.ico" },
 };

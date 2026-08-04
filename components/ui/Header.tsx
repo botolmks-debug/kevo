@@ -64,16 +64,17 @@ export function Header() {
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-surface/80 backdrop-blur">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-5 py-3.5 sm:px-6">
-        <Link href="/dashboard" className="flex items-center" onClick={() => setOpen(false)}>
+        <Link href="/dashboard" className="flex items-center gap-2" onClick={() => setOpen(false)}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/keposty-logo.png" alt="Keposty" className="h-7 w-auto" />
+          <img src="/keposty-icon.png" alt="Keposting" className="h-8 w-8" />
+          <span className="text-lg font-bold text-navy">Keposting</span>
         </Link>
 
         {/* Menu desktop */}
         <div className="hidden items-center gap-1 md:flex">
           <nav className="flex items-center gap-1">
             {links.map((link) => (
-              <Link key={link.href} href={link.href} className={linkClass(link.href)}>
+              <Link key={link.href} href={link.href} data-tour={link.href} className={linkClass(link.href)}>
                 {t(link.key, lang)}
               </Link>
             ))}
@@ -82,7 +83,7 @@ export function Header() {
             onClick={() => setPanduanOpen(true)}
             className="ml-1 rounded-full px-3.5 py-1.5 text-sm font-medium text-navy/60 transition-colors hover:bg-navy/5 hover:text-navy"
           >
-            Panduan
+            {t("nav.panduan", lang)}
           </button>
           <button
             onClick={handleSignOut}
@@ -129,7 +130,7 @@ export function Header() {
             onClick={() => { setOpen(false); setPanduanOpen(true); }}
             className="rounded-full px-3.5 py-1.5 text-left text-sm font-medium text-navy/60 hover:bg-navy/5 hover:text-navy"
           >
-            Panduan
+            {t("nav.panduan", lang)}
           </button>
           <button
             onClick={() => { setOpen(false); handleSignOut(); }}
@@ -140,7 +141,7 @@ export function Header() {
         </div>
       ) : null}
 
-      <PanduanWizard open={panduanOpen} onClose={() => setPanduanOpen(false)} />
+      <PanduanWizard open={panduanOpen} onClose={() => setPanduanOpen(false)} lang={lang} />
     </header>
   );
 }

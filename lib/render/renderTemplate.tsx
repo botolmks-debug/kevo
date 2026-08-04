@@ -202,6 +202,35 @@ async function renderSlotElement(slot: Slot, values: Record<string, string>) {
     );
   }
 
+  // Foto latar utama: zoom ~4% (overscan) supaya tepi kosong/margin dari AI
+  // terdorong keluar bingkai — hasil PNG penuh & sama seperti preview editor.
+  if (slot.id === "photo" && slot.fit === "cover") {
+    const zx = slot.box.width * 0.04;
+    const zy = slot.box.height * 0.04;
+    return (
+      <div
+        key={slot.id}
+        style={{ ...boxStyle, overflow: "hidden", borderRadius: slot.borderRadius ?? 0 }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- node JSX untuk satori */}
+        <img
+          src={dataUri}
+          alt=""
+          width={slot.box.width + zx * 2}
+          height={slot.box.height + zy * 2}
+          style={{
+            position: "absolute",
+            left: -zx,
+            top: -zy,
+            width: slot.box.width + zx * 2,
+            height: slot.box.height + zy * 2,
+            objectFit: "cover",
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     // eslint-disable-next-line @next/next/no-img-element -- node JSX untuk satori, bukan DOM browser; next/image tidak berlaku di sini
     <img

@@ -310,7 +310,7 @@ export default function GeneratePage() {
         body: JSON.stringify({
           templateName: "Produk + Latar Warna",
           values: { Judul: values.title ?? "", Deskripsi: values.subtitle ?? "" },
-          businessProfile,
+          profile: businessProfile,
           language: getLang(),
         }),
       });

@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { FileButton } from "@/components/ui/FileButton";
 import { Card } from "@/components/ui/Card";
 import { Input, Textarea } from "@/components/ui/Input";
 import {
@@ -14,7 +13,21 @@ import {
 } from "@/lib/onboarding/businessProfile";
 import { MAX_SELECTED_SOCIALS, SOCIAL_PLATFORMS } from "@/lib/social/platforms";
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 5;
+
+const INDUSTRIES = [
+  "Makanan & Minuman (F&B)",
+  "Fashion",
+  "Kecantikan / Skincare",
+  "Jasa",
+  "Retail / Toko",
+  "Kesehatan",
+  "Pendidikan",
+  "Otomotif",
+  "Properti",
+  "Teknologi / Software",
+  "Kerajinan / Handmade",
+];
 
 const CONTENT_GOALS: { id: ContentGoal; label: string }[] = [
   { id: "jualan", label: "Jualan" },
@@ -31,12 +44,14 @@ const TONES: { id: ToneOfVoice; label: string }[] = [
   { id: "formal", label: "Formal" },
 ];
 
-/** Validasi per step — kembalikan pesan error atau null kalau valid */
+const SELECT_CLASS =
+  "rounded-card border border-slate-200 bg-white px-4 py-2.5 text-sm text-navy focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
+
 function validateStep(
   step: number,
-  business: { name: string; industry: string; age: string; location: string },
-  offering: { mainProducts: string; flagshipProduct: string; targetCustomer: string; customerProblem: string; priceRange: string },
-  positioning: { differentiator: string; contentGoals: ContentGoal[]; tone: ToneOfVoice | ""; cta: string; avoid: string },
+  business: { name: string; industry: string; location: string },
+  offering: { mainProducts: string; targetCustomer: string; customerProblem: string },
+  positioning: { differentiator: string; contentGoals: ContentGoal[]; tone: ToneOfVoice | ""; cta: string },
   socialValues: Record<string, string>,
   selectedSocialIds: string[],
   story: string,
@@ -65,9 +80,6 @@ function validateStep(
       return null;
     }
     case 5:
-      // Foto opsional — tidak wajib
-      return null;
-    case 6:
       if (!story.trim()) return "Cerita usaha wajib diisi — ini membantu AI membuat konten yang lebih personal.";
       return null;
     default:
@@ -80,7 +92,10 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  // age & priceRange & flagshipProduct dihapus dari form; disimpan kosong agar
+  // struktur profil tetap valid (BusinessProfile mensyaratkan field-nya ada).
   const [business, setBusiness] = useState({ name: "", industry: "", age: "", location: "" });
+  const [industryOther, setIndustryOther] = useState(false);
   const [offering, setOffering] = useState({
     mainProducts: "",
     flagshipProduct: "",
@@ -95,32 +110,48 @@ export default function OnboardingPage() {
     cta: "",
     avoid: "",
   });
+  const [avoidInput, setAvoidInput] = useState("");
   const [socialValues, setSocialValues] = useState<Record<string, string>>({});
   const [selectedSocialIds, setSelectedSocialIds] = useState<string[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
   const [story, setStory] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  useEffect(() => {
-    return () => { previews.forEach((url) => URL.revokeObjectURL(url)); };
-  }, [previews]);
+  function onIndustrySelect(v: string) {
+    if (v === "__other__") {
+      setIndustryOther(true);
+      setBusiness((b) => ({ ...b, industry: "" }));
+    } else {
+      setIndustryOther(false);
+      setBusiness((b) => ({ ...b, industry: v }));
+    }
+  }
+  const industrySelectValue = industryOther ? "__other__" : INDUSTRIES.includes(business.industry) ? business.industry : "";
 
-  // Reset error validasi tiap kali step berubah
-  useEffect(() => { setValidationError(null); }, [step]);
-
-  function handleFilesChange(files: FileList | null) {
-    if (!files) return;
-    previews.forEach((url) => URL.revokeObjectURL(url));
-    setPreviews(Array.from(files).map((file) => URL.createObjectURL(file)));
+  // Hal yang dihindari sebagai chip/tag (pisah dengan Enter atau koma).
+  const avoidTags = positioning.avoid ? positioning.avoid.split(",").map((s) => s.trim()).filter(Boolean) : [];
+  function addAvoid(raw: string) {
+    const val = raw.trim();
+    setAvoidInput("");
+    if (!val || avoidTags.includes(val)) return;
+    setPositioning((p) => ({ ...p, avoid: [...avoidTags, val].join(", ") }));
+  }
+  function removeAvoid(idx: number) {
+    setPositioning((p) => ({ ...p, avoid: avoidTags.filter((_, i) => i !== idx).join(", ") }));
+  }
+  function onAvoidKey(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      addAvoid(avoidInput);
+    } else if (e.key === "Backspace" && avoidInput === "" && avoidTags.length > 0) {
+      removeAvoid(avoidTags.length - 1);
+    }
   }
 
   function toggleContentGoal(goal: ContentGoal) {
     setPositioning((p) => ({
       ...p,
-      contentGoals: p.contentGoals.includes(goal)
-        ? p.contentGoals.filter((g) => g !== goal)
-        : [...p.contentGoals, goal],
+      contentGoals: p.contentGoals.includes(goal) ? p.contentGoals.filter((g) => g !== goal) : [...p.contentGoals, goal],
     }));
   }
 
@@ -129,20 +160,12 @@ export default function OnboardingPage() {
   }
 
   async function handleNext() {
-    // Validasi step saat ini sebelum lanjut
     const error = validateStep(step, business, offering, positioning, socialValues, selectedSocialIds, story);
-    if (error) {
-      setValidationError(error);
-      return;
-    }
+    if (error) { setValidationError(error); return; }
     setValidationError(null);
 
-    if (step < TOTAL_STEPS) {
-      setStep((s) => s + 1);
-      return;
-    }
+    if (step < TOTAL_STEPS) { setStep((s) => s + 1); return; }
 
-    // Step terakhir — simpan
     const profile = buildBusinessProfile({
       business,
       offering,
@@ -185,12 +208,21 @@ export default function OnboardingPage() {
             <Input label="Nama bisnis *" value={business.name}
               onChange={(e) => setBusiness((b) => ({ ...b, name: e.target.value }))}
               placeholder="mis. Klinik Sehat Sentosa" />
-            <Input label="Jenis usaha / industri *" value={business.industry}
-              onChange={(e) => setBusiness((b) => ({ ...b, industry: e.target.value }))}
-              placeholder="mis. Klinik, kuliner, fashion, jasa" />
-            <Input label="Sudah berjalan berapa lama" value={business.age}
-              onChange={(e) => setBusiness((b) => ({ ...b, age: e.target.value }))}
-              placeholder="mis. 3 tahun, atau: usaha baru" />
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium text-navy">Jenis usaha / industri *</span>
+              <select value={industrySelectValue} onChange={(e) => onIndustrySelect(e.target.value)} className={SELECT_CLASS}>
+                <option value="" disabled>Pilih jenis usaha</option>
+                {INDUSTRIES.map((i) => (
+                  <option key={i} value={i}>{i}</option>
+                ))}
+                <option value="__other__">Lainnya (isi sendiri)</option>
+              </select>
+            </label>
+            {industryOther ? (
+              <Input label="Sebutkan jenis usaha *" value={business.industry}
+                onChange={(e) => setBusiness((b) => ({ ...b, industry: e.target.value }))}
+                placeholder="mis. Event organizer, laundry" />
+            ) : null}
             <Input label="Lokasi / area layanan *" value={business.location}
               onChange={(e) => setBusiness((b) => ({ ...b, location: e.target.value }))}
               placeholder="mis. Bandung dan sekitarnya" />
@@ -203,12 +235,6 @@ export default function OnboardingPage() {
             <Input label="Produk/jasa utama *" value={offering.mainProducts}
               onChange={(e) => setOffering((o) => ({ ...o, mainProducts: e.target.value }))}
               placeholder="mis. Konsultasi umum, medical check-up" />
-            <Input label="Produk/jasa unggulan" value={offering.flagshipProduct}
-              onChange={(e) => setOffering((o) => ({ ...o, flagshipProduct: e.target.value }))}
-              placeholder="mis. Paket vaksinasi keluarga" />
-            <Input label="Kisaran harga (opsional)" value={offering.priceRange}
-              onChange={(e) => setOffering((o) => ({ ...o, priceRange: e.target.value }))}
-              placeholder="mis. Rp50.000 - Rp500.000" />
             <Input label="Target pelanggan *" value={offering.targetCustomer}
               onChange={(e) => setOffering((o) => ({ ...o, targetCustomer: e.target.value }))}
               placeholder="mis. Keluarga muda usia 25-40 tahun" />
@@ -251,9 +277,22 @@ export default function OnboardingPage() {
             <Textarea label="Ajakan (CTA) yang biasa dipakai + cara menghubungi *" value={positioning.cta}
               onChange={(e) => setPositioning((p) => ({ ...p, cta: e.target.value }))}
               placeholder="mis. 'Daftar sekarang', pesan lewat WhatsApp" />
-            <Textarea label="Hal yang harus dihindari (opsional)" value={positioning.avoid}
-              onChange={(e) => setPositioning((p) => ({ ...p, avoid: e.target.value }))}
-              placeholder="mis. Jangan klaim 'menyembuhkan', hindari kata 'termurah'" />
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium text-navy">Hal yang harus dihindari (opsional)</span>
+              <div className="flex flex-wrap items-center gap-1.5 rounded-card border border-slate-200 bg-white px-3 py-2">
+                {avoidTags.map((tag, i) => (
+                  <span key={`${tag}-${i}`} className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                    {tag}
+                    <button type="button" onClick={() => removeAvoid(i)} className="text-primary/70 hover:text-primary" aria-label="Hapus">×</button>
+                  </span>
+                ))}
+                <input value={avoidInput} onChange={(e) => setAvoidInput(e.target.value)} onKeyDown={onAvoidKey}
+                  onBlur={() => addAvoid(avoidInput)}
+                  placeholder={avoidTags.length === 0 ? "mis. kata kasar, klaim menyembuhkan (Enter tiap poin)" : "Tambah lagi…"}
+                  className="min-w-[8rem] flex-1 bg-transparent text-sm text-navy placeholder:text-slate-400 focus:outline-none" />
+              </div>
+              <span className="text-xs text-navy/50">Ketik lalu tekan Enter atau koma untuk memisah tiap poin.</span>
+            </div>
           </>
         ) : null}
 
@@ -290,21 +329,6 @@ export default function OnboardingPage() {
 
         {step === 5 ? (
           <>
-            <h1 className="text-xl font-bold text-navy">Unggah gambar bisnis (opsional)</h1>
-            <p className="text-sm text-navy/60">Logo, foto tempat, atau produk — bisa lebih dari satu. Bisa dilengkapi nanti di Dashboard.</p>
-            <FileButton accept="image/*" multiple onChange={(e) => handleFilesChange(e.target.files)} label="Pilih Foto" />
-            {previews.length > 0 ? (
-              <div className="flex flex-wrap gap-3">
-                {previews.map((src) => (
-                  <img key={src} src={src} alt="" className="h-20 w-20 rounded-card object-cover" />
-                ))}
-              </div>
-            ) : null}
-          </>
-        ) : null}
-
-        {step === 6 ? (
-          <>
             <h1 className="text-xl font-bold text-navy">Cerita usaha</h1>
             <Textarea label="Ceritakan usahamu sedetail mungkin *" value={story}
               onChange={(e) => setStory(e.target.value)}
@@ -313,7 +337,6 @@ export default function OnboardingPage() {
           </>
         ) : null}
 
-        {/* Pesan validasi */}
         {validationError ? (
           <div className="flex items-start gap-2 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">
             <span>⚠️</span>

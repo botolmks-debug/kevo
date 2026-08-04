@@ -16,11 +16,8 @@ function profileBlock(profile: BusinessProfile): string {
   return `Profil bisnis (WAJIB dirangkai jadi dasar konten — jangan generik):
 - Nama: ${profile.business.name || "-"}
 - Industri: ${profile.business.industry || "-"}
-- Umur bisnis: ${profile.business.age || "-"}
 - Lokasi: ${profile.business.location || "-"}
 - Produk/layanan utama: ${profile.offering.mainProducts || "-"}
-- Produk unggulan: ${profile.offering.flagshipProduct || "-"}
-- Kisaran harga: ${profile.offering.priceRange || "-"}
 - Target pelanggan: ${profile.offering.targetCustomer || "-"}
 - Masalah pelanggan yang diselesaikan: ${profile.offering.customerProblem || "-"}
 - Pembeda/USP: ${profile.positioning.differentiator || "-"}

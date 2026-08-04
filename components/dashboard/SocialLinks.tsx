@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { SOCIAL_PLATFORMS, MAX_SELECTED_SOCIALS } from "@/lib/social/platforms";
+import { getLang, t, type Lang } from "@/lib/i18n";
 import type { BusinessProfile, SocialEntry } from "@/lib/onboarding/businessProfile";
 
 export function SocialLinks() {
@@ -13,6 +14,9 @@ export function SocialLinks() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [lang, setLangState] = useState<Lang>("id");
+
+  useEffect(() => { setLangState(getLang()); }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -21,7 +25,7 @@ export function SocialLinks() {
       .then(({ ok, data }) => {
         if (cancelled) return;
         if (!ok || !data?.profile) {
-          setLoadError(data?.error ?? "Gagal memuat data sosial media.");
+          setLoadError(data?.error ?? t("dash.social.errLoad", getLang()));
           return;
         }
         const p = data.profile as BusinessProfile;
@@ -34,7 +38,7 @@ export function SocialLinks() {
         setSelected(p.socials?.selectedPlatformIds ?? []);
       })
       .catch(() => {
-        if (!cancelled) setLoadError("Gagal memuat data sosial media.");
+        if (!cancelled) setLoadError(t("dash.social.errLoad", getLang()));
       });
     return () => {
       cancelled = true;
@@ -72,21 +76,21 @@ export function SocialLinks() {
         body: JSON.stringify(updated),
       });
       const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.error ?? "Gagal menyimpan.");
+      if (!res.ok) throw new Error(data?.error ?? t("dash.social.errSave", lang));
       setSelected(selectedValid);
       setStatus("saved");
     } catch (error) {
       setStatus("error");
-      setSaveError(error instanceof Error ? error.message : "Gagal menyimpan.");
+      setSaveError(error instanceof Error ? error.message : t("dash.social.errSave", lang));
     }
   }
 
   return (
     <Card className="flex flex-col gap-4">
       <div>
-        <h3 className="font-semibold text-navy">Sosial Media</h3>
+        <h3 className="font-semibold text-navy">{t("dash.sec.social", lang)}</h3>
         <p className="text-sm text-navy/60">
-          Isi akun sosial mediamu, lalu centang maksimal {MAX_SELECTED_SOCIALS} yang ingin tampil di konten.
+          {t("dash.social.descA", lang)} {MAX_SELECTED_SOCIALS} {t("dash.social.descB", lang)}
         </p>
       </div>
 
@@ -110,7 +114,7 @@ export function SocialLinks() {
                 className={`flex shrink-0 items-center gap-1.5 text-xs font-medium ${
                   hasValue ? "text-navy/70" : "text-navy/30"
                 }`}
-                title={hasValue ? "Tampilkan di konten" : "Isi akunnya dulu"}
+                title={hasValue ? t("dash.social.showTitle", lang) : t("dash.social.fillFirst", lang)}
               >
                 <input
                   type="checkbox"
@@ -118,7 +122,7 @@ export function SocialLinks() {
                   disabled={!hasValue || disabledCheck}
                   onChange={() => toggleSelected(p.id)}
                 />
-                Tampil
+                {t("dash.social.show", lang)}
               </label>
             </div>
           );
@@ -127,9 +131,9 @@ export function SocialLinks() {
 
       <div className="flex items-center gap-3">
         <Button type="button" onClick={handleSave} disabled={status === "saving"} className="w-fit">
-          {status === "saving" ? "Menyimpan…" : "Simpan Sosial Media"}
+          {status === "saving" ? t("dash.social.saving", lang) : t("dash.social.save", lang)}
         </Button>
-        {status === "saved" ? <span className="text-sm font-medium text-primary">Tersimpan ✓</span> : null}
+        {status === "saved" ? <span className="text-sm font-medium text-primary">{t("dash.social.saved", lang)}</span> : null}
       </div>
       {saveError ? <p className="text-sm text-red-600">{saveError}</p> : null}
     </Card>

@@ -53,10 +53,14 @@ async function generateFromParts(parts: GeminiPart[], aspectRatio: AspectRatio):
     return { ok: false, error: "Fitur AI belum aktif: GEMINI_API_KEY belum diisi di server." };
   }
 
-  // Selain imageConfig.aspectRatio, tegaskan rasio di teks juga — sebagian versi
-  // model lebih patuh kalau diminta lewat prompt, dan ini mencegah bar/padding.
+  // Selain imageConfig.aspectRatio, tegaskan rasio + DIMENSI PIKSEL di teks juga —
+  // sebagian versi model lebih patuh lewat prompt, dan ini mencegah bar/padding.
+  const dims =
+    aspectRatio === "9:16" ? "1080x1920 piksel, potret TEGAK (tinggi > lebar)"
+    : aspectRatio === "1:1" ? "1080x1080 piksel, PERSEGI"
+    : "1080x1350 piksel, potret";
   const aspectHint: GeminiPart = {
-    text: `PENTING: hasilkan gambar dengan rasio ${aspectRatio} PENUH mengisi seluruh bingkai. Jangan tambahkan bar/pias hitam atau putih, jangan ada padding atau margin kosong, jangan ada bingkai. Gambar harus edge-to-edge.`,
+    text: `PENTING: hasilkan gambar TEPAT rasio ${aspectRatio} (${dims}) yang PENUH mengisi seluruh bingkai. Rancang komposisi untuk orientasi ${aspectRatio} ini. Jangan tambahkan bar/pias hitam atau putih, jangan ada padding atau margin kosong, jangan ada bingkai. Gambar harus edge-to-edge sampai keempat tepi.`,
   };
   const finalParts: GeminiPart[] = [...parts, aspectHint];
 

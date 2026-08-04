@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/supabase/tokens";
 import { Header } from "@/components/ui/Header";
 import { AdminOverview } from "./AdminOverview";
+import { OnboardingQuestions } from "./OnboardingQuestions";
 
 export default async function AdminPage() {
   const supabase = await createClient();
@@ -21,6 +22,7 @@ export default async function AdminPage() {
           <p className="mt-1 text-navy/60">Aktivitas user: login terakhir, sisa token, dan pemakaian token.</p>
         </div>
         <AdminOverview />
+        <OnboardingQuestions />
       </main>
     </>
   );

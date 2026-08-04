@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { langFromCookie, t } from "@/lib/i18n";
 import { Header } from "@/components/ui/Header";
 import { createClient } from "@/lib/supabase/server";
 import { loadBusinessProfile } from "@/lib/supabase/businessProfile";
@@ -21,7 +23,8 @@ export default async function DashboardPage() {
     redirect("/onboarding");
   }
 
-  const namaBisnis = result.profile.business?.name?.trim() || "Bisnismu";
+  const lang = langFromCookie((await cookies()).get("lang")?.value);
+  const namaBisnis = result.profile.business?.name?.trim() || t("dash.fallbackName", lang);
 
   return (
     <>
@@ -29,8 +32,8 @@ export default async function DashboardPage() {
       <main className="mx-auto flex max-w-4xl flex-col gap-8 px-6 py-10">
         <header className="flex items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-bold text-navy">Halo, {namaBisnis} 👋</h1>
-            <p className="text-navy/60">Atur aset bisnismu di sini. Untuk bikin konten, buka menu di atas.</p>
+            <h1 className="text-2xl font-bold text-navy">{t("dash.greeting", lang)} {namaBisnis} 👋</h1>
+            <p className="text-navy/60">{t("dash.subtitle", lang)}</p>
           </div>
           <ContentReminderBell />
         </header>
@@ -40,17 +43,17 @@ export default async function DashboardPage() {
         <LanguageToggle />
 
         <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-navy/50">Logo Bisnis</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-navy/50">{t("dash.logo.section", lang)}</h2>
           <LogoSettings />
         </section>
 
         <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-navy/50">Sosial Media</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-navy/50">{t("dash.sec.social", lang)}</h2>
           <SocialLinks />
         </section>
 
         <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-navy/50">Data & Aset Bisnis</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-navy/50">{t("dash.sec.assets", lang)}</h2>
           <ImageLibrary />
         </section>
       </main>
