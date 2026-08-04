@@ -53,6 +53,11 @@ export default function LoginPage() {
         >
           <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="kamu@email.com" />
           <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+          <div className="-mt-2 text-right">
+            <Link href="/lupa-password" className="text-xs font-medium text-primary hover:underline">
+              Lupa password?
+            </Link>
+          </div>
           {error && <p className="text-sm text-red-500">{error}</p>}
           <Button type="submit" disabled={loading || !email || !password} className="w-full">
             {loading ? "Memproses..." : "Masuk"}
