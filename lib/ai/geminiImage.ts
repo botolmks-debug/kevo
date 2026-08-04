@@ -1,4 +1,5 @@
 import type { AspectRatio } from "@/lib/templates/types";
+import { editOpenAIImage, generateOpenAIImage } from "@/lib/ai/openaiImage";
 
 export type GeminiImageResult = { ok: true; dataUri: string } | { ok: false; error: string };
 
@@ -137,10 +138,18 @@ export async function editImage(input: {
   aspectRatio: AspectRatio;
   prompt: string;
 }): Promise<GeminiImageResult> {
-  return generateFromParts(
+  const result = await generateFromParts(
     [{ inlineData: { mimeType: input.mimeType, data: input.imageBase64 } }, { text: input.prompt }],
     input.aspectRatio,
   );
+  if (result.ok) return result;
+
+  // Fallback: Gemini gagal total (sudah retry) -> coba OpenAI kalau sudah
+  // di-setup. Kalau OPENAI_API_KEY belum diisi, ini no-op (kembalikan error
+  // Gemini apa adanya) — jadi aman dipasang sebelum user setup OpenAI.
+  if (!process.env.OPENAI_API_KEY) return result;
+  console.warn("Gemini gagal (" + result.error + "), mencoba fallback OpenAI...");
+  return editOpenAIImage(input);
 }
 
 /**
@@ -150,5 +159,10 @@ export async function generateImage(input: {
   prompt: string;
   aspectRatio: AspectRatio;
 }): Promise<GeminiImageResult> {
-  return generateFromParts([{ text: input.prompt }], input.aspectRatio);
+  const result = await generateFromParts([{ text: input.prompt }], input.aspectRatio);
+  if (result.ok) return result;
+
+  if (!process.env.OPENAI_API_KEY) return result;
+  console.warn("Gemini gagal (" + result.error + "), mencoba fallback OpenAI...");
+  return generateOpenAIImage(input);
 }

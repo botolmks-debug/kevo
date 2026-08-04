@@ -74,3 +74,30 @@ export async function consumeToken(
   await logUsage();
   return { ok: true, unlimited: false, remaining };
 }
+
+/**
+ * Kembalikan 1 token — dipanggil saat token SUDAH dipotong (consumeToken
+ * berhasil) tapi langkah AI setelahnya GAGAL (mis. "Layanan AI sedang
+ * sibuk", error render, dll). Tanpa ini, user rugi token setiap kali AI
+ * gagal walau tidak dapat hasil apa pun. Unlimited → tidak perlu refund.
+ */
+export async function refundToken(
+  client: SupabaseClient,
+  businessId: string,
+  email?: string | null,
+): Promise<void> {
+  if (isUnlimited(email)) return;
+  try {
+    const { data } = await client
+      .from("business_profile")
+      .select("tokens")
+      .eq("business_id", businessId)
+      .maybeSingle();
+    const current = typeof (data as { tokens?: number } | null)?.tokens === "number"
+      ? (data as { tokens: number }).tokens
+      : DEFAULT_TOKENS - 1;
+    await client.from("business_profile").update({ tokens: current + 1 }).eq("business_id", businessId);
+  } catch {
+    // best-effort — jangan sampai kegagalan refund menutupi error asli
+  }
+}

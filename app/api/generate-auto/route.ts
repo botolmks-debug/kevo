@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/serviceRole";
-import { consumeToken } from "@/lib/supabase/tokens";
+import { consumeToken, refundToken } from "@/lib/supabase/tokens";
 import { checkSupabaseEnvPresence } from "@/lib/env";
 import { loadBusinessProfile } from "@/lib/supabase/businessProfile";
 import { listImages, publicImageUrl, type ImageRow } from "@/lib/supabase/images";
@@ -130,24 +130,28 @@ export async function POST(request: NextRequest) {
   const token = await consumeToken(supabase, user.id, user.email, "Otomatis");
   if (!token.ok) return NextResponse.json({ error: token.error }, { status: 402 });
 
+  // Token sudah dipotong di atas. Kalau ada langkah berikutnya yang gagal,
+  // kembalikan tokennya lewat helper ini alih-alih NextResponse langsung.
+  async function fail(error: string, status: number) {
+    await refundToken(supabase, user.id, user.email);
+    return NextResponse.json({ error }, { status });
+  }
+
   const profileResult = await loadBusinessProfile(supabase, user.id);
-  if (!profileResult.ok) return NextResponse.json({ error: profileResult.error }, { status: 502 });
+  if (!profileResult.ok) return fail(profileResult.error, 502);
   const profile = profileResult.profile;
   if (!profile) {
-    return NextResponse.json({ error: "Lengkapi profil bisnis dulu di halaman onboarding." }, { status: 400 });
+    return fail("Lengkapi profil bisnis dulu di halaman onboarding.", 400);
   }
 
   let sourceImage: ImageRow | null = null;
   if (body.jenis === "produk") {
     const imagesResult = await listImages(supabase, user.id);
-    if (!imagesResult.ok) return NextResponse.json({ error: imagesResult.error }, { status: 502 });
+    if (!imagesResult.ok) return fail(imagesResult.error, 502);
     const image = imagesResult.images.find((img) => img.id === body.imageId) ?? null;
     const allowed = image && ["Produk", "Makanan/Minuman", "Kecantikan/Skincare", "Software/Website", "Wajah/Orang", "Suasana/Fasilitas"].includes(image.category);
     if (!image || !allowed || image.usage !== "olah_ai") {
-      return NextResponse.json(
-        { error: "Gambar tidak ditemukan atau bukan gambar yang boleh diolah AI." },
-        { status: 400 },
-      );
+      return fail("Gambar tidak ditemukan atau bukan gambar yang boleh diolah AI.", 400);
     }
     sourceImage = image;
   }
@@ -159,11 +163,11 @@ export async function POST(request: NextRequest) {
     : buildInteraksiContentPrompt(profile, body.language);
 
   const contentResult = await generateJsonContent(contentPrompt);
-  if (!contentResult.ok) return NextResponse.json({ error: contentResult.error }, { status: 502 });
+  if (!contentResult.ok) return fail(contentResult.error, 502);
 
   const requireScene = body.jenis !== "produk";
   if (!isAutoContent(contentResult.data, requireScene)) {
-    return NextResponse.json({ error: "AI mengembalikan format konten tidak lengkap. Coba lagi." }, { status: 502 });
+    return fail("AI mengembalikan format konten tidak lengkap. Coba lagi.", 502);
   }
   const content = contentResult.data;
   const fontOption = content.fontId ? FONT_OPTIONS.find((f) => f.id === content.fontId) : null;
@@ -171,7 +175,7 @@ export async function POST(request: NextRequest) {
   // ── Generate gambar bersih (tanpa overlay) ───────────────────────────────
   let imageDataUri: string;
   if (body.jenis === "produk") {
-    if (!sourceImage) return NextResponse.json({ error: "Pilih gambar produk dulu." }, { status: 400 });
+    if (!sourceImage) return fail("Pilih gambar produk dulu.", 400);
     let imageBase64: string; let mimeType: string;
     try {
       const sourceRes = await fetch(publicImageUrl(supabase, sourceImage.storage_path));
@@ -179,7 +183,7 @@ export async function POST(request: NextRequest) {
       mimeType = sourceRes.headers.get("content-type") ?? "image/jpeg";
       imageBase64 = Buffer.from(await sourceRes.arrayBuffer()).toString("base64");
     } catch {
-      return NextResponse.json({ error: "Gagal mengambil gambar produk." }, { status: 502 });
+      return fail("Gagal mengambil gambar produk.", 502);
     }
     const prompt =
       sourceImage.type === "makanan" ? buildFoodPrompt(profile, sourceImage.description ?? undefined)
@@ -189,13 +193,13 @@ export async function POST(request: NextRequest) {
       : sourceImage.type === "wajah" ? buildOrangPrompt(profile)
       : buildScenePrompt(profile, sourceImage.size_hint ?? undefined);
     const result = await editImage({ imageBase64, mimeType, aspectRatio: body.ratio, prompt });
-    if (!result.ok) return NextResponse.json({ error: result.error }, { status: 502 });
+    if (!result.ok) return fail(result.error, 502);
     imageDataUri = result.dataUri;
   } else {
     const scene = content.imageScene ?? "";
     const prompt = body.jenis === "general" ? buildGeneralImagePrompt(scene) : buildInteraksiImagePrompt(scene);
     const result = await generateImage({ prompt, aspectRatio: body.ratio });
-    if (!result.ok) return NextResponse.json({ error: result.error }, { status: 502 });
+    if (!result.ok) return fail(result.error, 502);
     imageDataUri = result.dataUri;
   }
 
@@ -227,10 +231,7 @@ export async function POST(request: NextRequest) {
       ratio: body.ratio,
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Gagal merender konten." },
-      { status: 500 },
-    );
+    return fail(error instanceof Error ? error.message : "Gagal merender konten.", 500);
   }
 
   // ── Insert ke database (termasuk background_path) ────────────────────────
@@ -244,7 +245,7 @@ export async function POST(request: NextRequest) {
     businessId: user.id,
     backgroundPath: bgUploadError ? undefined : bgPath,
   });
-  if (!insertResult.ok) return NextResponse.json({ error: insertResult.error }, { status: 502 });
+  if (!insertResult.ok) return fail(insertResult.error, 502);
 
   const row = insertResult.row;
   const bgRow = row as typeof row & { background_path?: string | null };
