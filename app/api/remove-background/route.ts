@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { removeChromaBackground } from "@/lib/images/backgroundRemoval";
-import { consumeToken } from "@/lib/supabase/tokens";
+import { consumeToken, refundToken } from "@/lib/supabase/tokens";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
     mimeType = res.headers.get("content-type") ?? "image/jpeg";
     imageBase64 = Buffer.from(await res.arrayBuffer()).toString("base64");
   } catch {
+    await refundToken(supabase, user.id, user.email);
     return NextResponse.json({ error: "Gagal mengambil gambar." }, { status: 502 });
   }
 
@@ -92,6 +93,7 @@ RULES:
     );
   } catch (e) {
     clearTimeout(timeoutId);
+    await refundToken(supabase, user.id, user.email);
     if (e instanceof Error && e.name === "AbortError") {
       return NextResponse.json({ error: "AI terlalu lama merespons. Coba lagi." }, { status: 504 });
     }
@@ -102,6 +104,7 @@ RULES:
   if (!response.ok) {
     const errBody = await response.json().catch(() => null);
     const msg = (errBody as { error?: { message?: string } } | null)?.error?.message ?? `Status ${response.status}`;
+    await refundToken(supabase, user.id, user.email);
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 
@@ -111,6 +114,7 @@ RULES:
   } | null)?.candidates?.[0]?.content?.parts;
   const imgPart = parts?.find(p => p.inlineData?.data);
   if (!imgPart?.inlineData?.data) {
+    await refundToken(supabase, user.id, user.email);
     return NextResponse.json({ error: "AI tidak mengembalikan gambar." }, { status: 502 });
   }
 

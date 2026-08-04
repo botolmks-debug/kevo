@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildCaptionPrompt } from "@/lib/ai/captionPrompt";
 import { generateCaption } from "@/lib/ai/gemini";
 import { createClient } from "@/lib/supabase/server";
-import { consumeToken } from "@/lib/supabase/tokens";
+import { consumeToken, refundToken } from "@/lib/supabase/tokens";
 import type { BusinessProfile } from "@/lib/onboarding/businessProfile";
 
 export const runtime = "nodejs";
@@ -59,6 +59,9 @@ export async function POST(request: NextRequest) {
   const result = await generateCaption(prompt);
 
   if (!result.ok) {
+    // Token sudah dipotong di atas, tapi TIDAK dapat hasil (Gemini & fallback
+    // OpenAI dua-duanya gagal) -> kembalikan tokennya, jangan rugikan user.
+    await refundToken(supabase, user.id, user.email);
     return NextResponse.json({ error: result.error }, { status: 502 });
   }
 
