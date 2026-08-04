@@ -64,14 +64,13 @@ export default function LupaPasswordPage() {
             <Button type="submit" disabled={status === "loading" || !email} className="w-full">
               {status === "loading" ? "Mengirim..." : "Kirim Link Reset"}
             </Button>
+            <p className="text-center text-sm text-navy/60">
+              <Link href="/login" className="font-semibold text-primary hover:underline">
+                ← Kembali ke Masuk
+              </Link>
+            </p>
           </form>
         )}
-
-        <p className="mt-5 text-center text-sm text-navy/60">
-          <Link href="/login" className="font-semibold text-primary hover:underline">
-            ← Kembali ke Masuk
-          </Link>
-        </p>
       </Card>
     </main>
   );
