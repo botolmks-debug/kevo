@@ -4,7 +4,11 @@ import { generateOpenAIJson } from "./openaiText";
 export type GeminiJsonResult = { ok: true; data: Record<string, unknown> } | { ok: false; error: string };
 
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
-const REQUEST_TIMEOUT_MS = 20_000;
+// gemini-3-flash-preview kadang lebih lambat, dan konten Otomatis (JSON
+// headline+caption+scene sekaligus) butuh output lebih panjang dari caption
+// biasa — 20 detik terlalu ketat, sering keburu timeout & jatuh ke OpenAI
+// padahal Gemini masih akan berhasil kalau ditunggu sedikit lagi.
+const REQUEST_TIMEOUT_MS = 45_000;
 // Konten auto-generate (headline+caption+scene sekaligus) butuh token lebih
 // banyak dari caption biasa (lib/ai/gemini.ts pakai 200).
 const MAX_OUTPUT_TOKENS = 1024;
@@ -71,6 +75,10 @@ async function generateJsonContentGemini(prompt: string): Promise<GeminiJsonResu
       response = await callGemini(prompt, apiKey, GEMINI_TEXT_MODEL);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
+        if (attempt < RETRY_DELAYS_MS.length) {
+          await wait(RETRY_DELAYS_MS[attempt]);
+          continue;
+        }
         return { ok: false, error: "Permintaan ke AI terlalu lama (timeout). Coba lagi." };
       }
       return { ok: false, error: "Gagal menghubungi layanan AI. Periksa koneksi internet." };

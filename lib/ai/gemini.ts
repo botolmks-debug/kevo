@@ -5,7 +5,11 @@ export type GeminiResult = { ok: true; text: string } | { ok: false; error: stri
 export const GEMINI_TEXT_MODEL = process.env.GEMINI_TEXT_MODEL || "gemini-flash-lite-latest";
 
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
-const REQUEST_TIMEOUT_MS = 20_000;
+// gemini-3-flash-preview (model 3.x) kadang lebih lambat dari model stabil
+// lama — 20 detik terlalu ketat dan sering keburu timeout sebelum sempat
+// dijawab, malah jatuh ke fallback OpenAI padahal Gemini sebenarnya masih
+// akan berhasil kalau ditunggu sedikit lagi.
+const REQUEST_TIMEOUT_MS = 45_000;
 const MAX_OUTPUT_TOKENS = 200;
 // Retry hanya untuk 503 "high demand": maks 3x percobaan ulang dengan jeda menaik.
 const RETRY_DELAYS_MS = [3_000, 6_000, 10_000];
@@ -44,6 +48,10 @@ async function generateCaptionGemini(prompt: string): Promise<GeminiResult> {
       response = await callGemini(prompt, apiKey, GEMINI_TEXT_MODEL);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
+        if (attempt < RETRY_DELAYS_MS.length) {
+          await wait(RETRY_DELAYS_MS[attempt]);
+          continue;
+        }
         return { ok: false, error: "Permintaan ke AI terlalu lama (timeout). Coba lagi." };
       }
       return { ok: false, error: "Gagal menghubungi layanan AI. Periksa koneksi internet." };
