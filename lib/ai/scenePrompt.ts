@@ -160,7 +160,10 @@ export function buildSkincarePrompt(profile: BusinessProfile, description?: stri
   const desc = (description ?? "").trim();
   const usageNote = desc
     ? `\n\nUSAGE — the user described this product as: "${desc}".
-- If this mentions WHERE it is used (face, cheeks, hands, lips, hair, under-eyes, neck, body, skin, etc.), show the product being USED / APPLIED on THAT body part naturally and tastefully — e.g. a hand smoothing cream on skin, a serum drop on a fingertip near the face, product held beside glowing skin. Realistic, elegant, never clinical or awkward.
+- If this mentions WHERE it is used (face, cheeks, hands, lips, hair, under-eyes, neck, body, skin, etc.), show the product in relation to THAT body part — but choose the SIMPLEST composition that stays anatomically coherent. Prefer ONE of these (pick whichever is safest to render correctly):
+  (a) a close-up of just a hand/fingertip applying or holding the product near the body part (no second person's head needed), OR
+  (b) a single person clearly showcasing the RESULT (already-applied, finished look) beside the product, NOT a mid-action "someone else applying it to them" shot.
+- CRITICAL ANATOMICAL RULES (this scene has failed before with disconnected/impossible bodies): if a person's head or face appears anywhere in the frame, it MUST be FULLY visible and NOT cropped/cut off at the top or any edge of the frame. Every hand shown MUST be clearly and correctly attached to a visible arm belonging to a real, single, coherent body — NEVER a floating/disembodied hand, and NEVER hair or body parts that appear disconnected from the head/scalp they belong to. If you cannot render two coordinated people (one applying, one receiving) with correct anatomy, default to composition (a) or (b) above instead.
 - The PRODUCT itself stays the clear hero: sharp, well-lit, label readable.`
     : "\n\nNo usage described: present the product elegantly on a clean premium surface (soft marble, silk, or with subtle botanicals/water droplets).";
   return `This image is a BEAUTY / SKINCARE / cosmetic product. Create a clean, PREMIUM, high-end beauty advertising image.
