@@ -18,6 +18,8 @@ const SOCIAL_COLORS: Record<string, string> = {
   instagram: "#E1306C", whatsapp: "#25D366", facebook: "#1877F2", tiktok: "#111111",
   youtube: "#FF0000", x: "#111111", line: "#06C755", telegram: "#0088CC",
   threads: "#111111", linkedin: "#0A66C2", wechat: "#07C160", shopee: "#EE4D2D",
+  xiaohongshu: "#FF2442", kakaotalk: "#FFE812", zalo: "#0068FF",
+  tokopedia: "#42B549", lazada: "#1A0E4E", website: "#0FB6A6",
 };
 
 type EditingBox = { x: number; y: number; width: number; height: number };
@@ -129,6 +131,23 @@ export function CanvasEditor({
     return {
       x: Math.max(minX, Math.min(pos.x, Math.max(minX, maxX))),
       y: Math.max(minY, Math.min(pos.y, Math.max(minY, maxY))),
+    };
+  }
+  // Khusus LOGO: boleh keluar kanvas MAKSIMAL setengah badannya (biar bisa
+  // "nempel" di pinggir/pojok). Caranya jaga TITIK TENGAH logo tetap di dalam
+  // kanvas — kalau tengah pas di tepi, berarti tepat separuh yang keluar.
+  function clampLogoDrag(this: Konva.Node, pos: { x: number; y: number }) {
+    const box = this.getClientRect();
+    const abs = this.absolutePosition();
+    const offX = box.x - abs.x;
+    const offY = box.y - abs.y;
+    const minX = -offX - box.width / 2;
+    const maxX = previewWidth - offX - box.width / 2;
+    const minY = -offY - box.height / 2;
+    const maxY = previewHeight - offY - box.height / 2;
+    return {
+      x: Math.max(minX, Math.min(pos.x, maxX)),
+      y: Math.max(minY, Math.min(pos.y, maxY)),
     };
   }
 
@@ -445,7 +464,7 @@ export function CanvasEditor({
 
             {/* Logo */}
             {logoImg ? (
-              <Group x={logoPos.x * scale} y={logoPos.y * scale} draggable dragBoundFunc={clampDrag}
+              <Group x={logoPos.x * scale} y={logoPos.y * scale} draggable dragBoundFunc={clampLogoDrag}
                 onClick={() => setSelectedId("__logo__")} onTap={() => setSelectedId("__logo__")}
                 onDblClick={toggleLogoVariant} onDblTap={toggleLogoVariant}
                 onDragMove={handleSnapDragMove}

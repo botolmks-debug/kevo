@@ -1,0 +1,21 @@
+IKON SOSMED TAMBAHAN — untuk platform yang belum ada logonya
+
+Salin semua PNG ini ke:  public/icons/
+Nama file mengikuti platformId. KALAU di kodemu id-nya beda, RENAME samakan:
+  xiaohongshu.png  (Xiaohongshu / RED)
+  kakaotalk.png    (KakaoTalk)
+  zalo.png         (Zalo)
+  tokopedia.png    (Tokopedia)  -> placeholder huruf "T" (bukan logo resmi)
+  lazada.png       (Lazada)     -> placeholder huruf "L" (bukan logo resmi)
+  website.png      (Website)    -> ikon globe generik (teal brand)
+
+Cara cek id yang benar: buka file daftar platform sosmed di project
+(kemungkinan di lib/ — yang berisi { id, label } tiap platform),
+lihat nilai "id"-nya, samakan nama file PNG dengan id itu.
+
+Catatan:
+- xiaohongshu, kakaotalk, zalo = glyph brand resmi (Simple Icons, CC0),
+  gaya kotak-warna + glyph putih biar senada set kamu.
+- tokopedia & lazada TIDAK ada di set open-source (trademark) — ini cuma
+  tile huruf. Kalau mau logo asli, ambil dari brand resource resmi mereka.
+- Ukuran 512x512.
