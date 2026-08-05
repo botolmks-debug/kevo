@@ -113,11 +113,24 @@ export function CanvasEditor({
   }, []);
   const scale = previewWidth / layout.canvas.width;
   const previewHeight = Math.round(layout.canvas.height * scale);
-  // Batasi drag: titik pegang elemen tak boleh keluar kanvas (biar tak hilang).
-  const clampDrag = (pos: { x: number; y: number }) => ({
-    x: Math.max(0, Math.min(pos.x, previewWidth - 16)),
-    y: Math.max(0, Math.min(pos.y, previewHeight - 16)),
-  });
+  // Batasi drag: SELURUH badan elemen (bukan cuma titik pegang) tetap di dalam
+  // kanvas. Ukuran tiap elemen diukur dari getClientRect, jadi logo/teks/sosmed
+  // berhenti PAS di tiap tepi — tak lagi mentok sebelum tepi kiri atau kelewat
+  // (terpotong) di tepi kanan/bawah. `this` = node Konva yang sedang di-drag.
+  function clampDrag(this: Konva.Node, pos: { x: number; y: number }) {
+    const box = this.getClientRect();          // ukuran & posisi badan (absolut)
+    const abs = this.absolutePosition();        // posisi origin node saat ini
+    const offX = box.x - abs.x;                 // selisih origin → tepi kiri badan
+    const offY = box.y - abs.y;
+    const minX = -offX;                         // tepi kiri badan mentok 0
+    const maxX = previewWidth - box.width - offX;   // tepi kanan mentok kanvas
+    const minY = -offY;
+    const maxY = previewHeight - box.height - offY;
+    return {
+      x: Math.max(minX, Math.min(pos.x, Math.max(minX, maxX))),
+      y: Math.max(minY, Math.min(pos.y, Math.max(minY, maxY))),
+    };
+  }
 
   // ── Garis panduan (smart guides) — HANYA visual di editor, tidak pernah
   // ikut disimpan: guide cuma state React lokal yang dipakai buat gambar
