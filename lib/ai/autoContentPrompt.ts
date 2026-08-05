@@ -83,6 +83,38 @@ function pickHeadlineAngleForProduk(): string {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+// Perspektif MANFAAT/MASALAH yang diacak tiap generate — supaya AI tidak
+// selalu kembali ke SATU kalimat "masalah pelanggan" yang tertulis di profil
+// onboarding. Tanpa ini, walau topik/gaya bervariasi, isi kontennya tetap
+// mengait ke satu masalah literal yang sama terus-menerus.
+const PERSPECTIVE_ANGLES = [
+  "EFISIENSI WAKTU untuk hal lain — bukan cuma soal cepat, tapi apa yang jadi BISA dilakukan pelanggan karena waktu/tenaga yang terhemat",
+  "KONSISTENSI & KUALITAS — bagaimana produk/layanan ini menjaga standar yang susah dijaga sendiri secara manual/berulang",
+  "MENGURANGI BEBAN MENTAL — bukan cuma soal teknis, tapi rasa lega/tenang karena tidak perlu terus memikirkan hal itu",
+  "PENGHEMATAN BIAYA/SUMBER DAYA dibanding cara lama atau alternatif lain",
+  "PELUANG BARU yang terbuka — apa yang jadi mungkin dilakukan pelanggan SETELAH pakai produk/layanan ini, yang sebelumnya susah/tidak sempat",
+  "KESAN PROFESIONAL/KREDIBEL — bagaimana produk ini bikin usaha pelanggan terlihat lebih rapi/terpercaya di mata orang lain",
+  "KEBERLANJUTAN JANGKA PANJANG — solusi untuk masalah yang datang BERULANG terus-menerus, bukan cuma satu momen",
+  "FLEKSIBILITAS/KEMUDAHAN ADAPTASI — bagaimana produk ini menyesuaikan situasi pelanggan yang berubah-ubah",
+  "RASA AMAN/TENANG — mengurangi risiko kesalahan, kerugian, atau hal buruk yang bisa terjadi tanpa produk ini",
+  "KEMUDAHAN MEMULAI — menghilangkan hambatan/kerumitan di awal yang biasanya bikin orang ragu atau menunda",
+  "SKALA/PERTUMBUHAN — bagaimana produk ini membantu usaha pelanggan berkembang lebih besar, bukan cuma bertahan",
+  "PERSONALISASI — hasil yang terasa dibuat khusus untuk kebutuhan pelanggan itu sendiri, bukan solusi generik",
+  "KONTROL/OTONOMI — pelanggan jadi punya kendali lebih besar atas sesuatu yang sebelumnya bergantung ke pihak lain",
+  "KOMUNITAS/RASA TERHUBUNG — bagaimana produk ini menghubungkan pelanggan dengan orang lain yang senasib/sepemikiran",
+  "KEPUASAN INSTAN vs HASIL JANGKA PANJANG — bandingkan manfaat yang terasa langsung dengan yang baru terasa belakangan",
+  "MENGHINDARI FOMO/KETINGGALAN — bagaimana produk ini bikin pelanggan tetap relevan/tidak tertinggal tren atau kompetitor",
+  "KESEDERHANAAN — mengubah sesuatu yang tadinya rumit/berlapis jadi satu langkah simpel",
+  "KEPERCAYAAN DIRI — bagaimana pakai produk ini bikin pelanggan lebih yakin mengambil keputusan atau tampil di depan orang lain",
+  "NILAI TERSEMBUNYI produk — manfaat sampingan yang jarang disadari orang saat pertama kali pakai",
+  "PERBANDINGAN SEBELUM/SESUDAH — gambarkan kontras jelas antara hidup/usaha pelanggan sebelum dan sesudah pakai produk ini",
+];
+
+function pickPerspectiveNote(): string {
+  const angle = PERSPECTIVE_ANGLES[Math.floor(Math.random() * PERSPECTIVE_ANGLES.length)];
+  return `CATATAN PENTING soal sudut pandang: "Masalah pelanggan yang diselesaikan" di profil di atas cuma SATU CONTOH, BUKAN satu-satunya sudut yang boleh dibahas. Untuk konten kali ini, eksplorasi perspektif manfaat BERBEDA berikut — tetap konsisten & masuk akal dengan produk/industri/target pelanggan di atas, TAPI jangan cuma mengulang kalimat masalah yang sudah tertulis: ${angle}.`;
+}
+
 // Topik General dipilih DI KODE (bukan diserahkan ke AI) — sebelumnya General
 // cuma dikasih hint longgar ("boleh edukasi/manfaat/cerita") tanpa dipaksa,
 // jadi AI cenderung jatuh ke pola yang sama tiap kali. Sekarang topiknya
@@ -155,6 +187,8 @@ ${profileBlock(profile)}
 
 Produk: ${productDescription || "(tidak ada deskripsi)"}
 
+${pickPerspectiveNote()}
+
 Untuk JUDUL (onImageText) kali ini, pakai ${pickHeadlineAngleForProduk()}. Buat frasa BARU yang segar; jangan mengulang judul yang biasa dipakai.
 Untuk GAYA PENULISAN caption kali ini, pakai: ${pickWritingStyle()} (tetap dalam nada brand yang sudah ditentukan di atas).
 
@@ -174,6 +208,8 @@ Buat SATU konten umum (BUKAN promosi produk spesifik) yang menjelaskan/mengangka
 ${profileBlock(profile)}
 
 TOPIK KONTEN KALI INI (WAJIB pakai ini, JANGAN diganti ke topik lain): ${topic}.
+
+${pickPerspectiveNote()}
 
 Untuk JUDUL (onImageText) kali ini, pakai ${pickHeadlineAngle()}. Buat frasa BARU yang segar; jangan mengulang judul yang biasa dipakai.
 Untuk GAYA PENULISAN caption kali ini, pakai: ${pickWritingStyle()} (tetap dalam nada brand yang sudah ditentukan di atas).
