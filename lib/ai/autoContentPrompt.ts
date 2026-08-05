@@ -65,6 +65,24 @@ function pickHeadlineAngle(): string {
   return HEADLINE_ANGLES[Math.floor(Math.random() * HEADLINE_ANGLES.length)];
 }
 
+// Sudut TAMBAHAN khusus konten PRODUK — fokus potensi viral, masalah sebagai
+// hook, dan potensi disimpan (save). Ini MENAMBAH pool judul Produk, TIDAK
+// mengganti HEADLINE_ANGLES di atas (General tetap pakai pool lama saja,
+// tidak tersentuh) — jadi Produk sekarang punya lebih banyak variasi.
+const PRODUK_VIRAL_ANGLES = [
+  "sudut HOOK VIRAL — kalimat pembuka yang mengejutkan/memancing rasa penasaran ekstrem, bikin orang berhenti scroll",
+  "sudut MASALAH SEBAGAI HOOK — sebut masalah spesifik yang PASTI dialami target pasar (bikin mereka merasa 'ini gue banget') sebelum mengarah ke produk",
+  "sudut BERPOTENSI DISIMPAN (save-worthy) — framing seperti checklist singkat atau 'hal yang wajib tahu sebelum beli/pakai [kategori produk]' yang orang ingin simpan sebagai referensi",
+  "sudut PENGUNGKAPAN/KEJUTAN — 'ternyata...', 'bedanya cuma...', yang menantang asumsi umum orang soal produk/industrinya",
+  "sudut RASA PENASARAN — janjikan sesuatu di judul yang jawaban lengkapnya baru terungkap di caption",
+];
+
+/** Khusus Produk: gabungkan pool lama + sudut viral/hook/save baru. */
+function pickHeadlineAngleForProduk(): string {
+  const pool = [...HEADLINE_ANGLES, ...PRODUK_VIRAL_ANGLES];
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 // Topik General dipilih DI KODE (bukan diserahkan ke AI) — sebelumnya General
 // cuma dikasih hint longgar ("boleh edukasi/manfaat/cerita") tanpa dipaksa,
 // jadi AI cenderung jatuh ke pola yang sama tiap kali. Sekarang topiknya
@@ -137,7 +155,7 @@ ${profileBlock(profile)}
 
 Produk: ${productDescription || "(tidak ada deskripsi)"}
 
-Untuk JUDUL (onImageText) kali ini, pakai ${pickHeadlineAngle()}. Buat frasa BARU yang segar; jangan mengulang judul yang biasa dipakai.
+Untuk JUDUL (onImageText) kali ini, pakai ${pickHeadlineAngleForProduk()}. Buat frasa BARU yang segar; jangan mengulang judul yang biasa dipakai.
 Untuk GAYA PENULISAN caption kali ini, pakai: ${pickWritingStyle()} (tetap dalam nada brand yang sudah ditentukan di atas).
 
 Format JSON: {"onImageText": "...", "caption": "...", "fontId": "..."}
