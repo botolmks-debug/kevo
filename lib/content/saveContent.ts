@@ -7,7 +7,7 @@ import type { AspectRatio } from "@/lib/templates/types";
  * Sengaja TANPA values.photo (gambar besar) — foto diambil dari background_path.
  */
 export type ContentLayoutState = {
-  templateId: "produk-latar" | "standar" | "polos" | "interaksi";
+  templateId: "produk-latar" | "standar" | "polos" | "interaksi" | "teks-saja";
   ratio: AspectRatio;
   values: Record<string, string>; // hanya slot teks (tanpa "photo")
   overrides: EditorOverrides;

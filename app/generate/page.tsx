@@ -15,6 +15,7 @@ import { saveManualContent } from "@/lib/content/saveContent";
 import { HelpTip } from "@/components/ui/HelpTip";
 import { createProdukLatarTemplate } from "@/lib/templates/model-produk-latar";
 import { StandarContent } from "@/components/generate/StandarContent";
+import { TeksSajaContent } from "@/components/generate/TeksSajaContent";
 import type { BusinessProfile } from "@/lib/onboarding/businessProfile";
 import type { AspectRatio } from "@/lib/templates/types";
 
@@ -44,7 +45,7 @@ const CONTENT_MODELS = [
   { id: "produk-latar", label: "Produk + Latar Warna", desc: "AI potong background produk, lalu gabungkan dengan latar warna pilihanmu.", emoji: "🟧", available: true },
   { id: "standar", label: "Konten Standar", desc: "Isi judul & deskripsi, pilih gambar (bisa diolah AI), lalu atur di editor.", emoji: "📝", available: true },
   { id: "gabungan-2", label: "Gabungan 2 Gambar", desc: "Foto produk + foto latar dikombinasikan.", emoji: "🖼️", available: false },
-  { id: "teks-saja", label: "Teks Saja", desc: "Background warna solid dengan teks besar.", emoji: "✍️", available: false },
+  { id: "teks-saja", label: "Teks Saja", desc: "Background warna solid dengan teks besar.", emoji: "✍️", available: true },
   { id: "perbandingan", label: "Perbandingan 2 Produk", desc: "Split kiri-kanan, bandingkan dua produk.", emoji: "⚖️", available: false },
   { id: "kolase", label: "Kolase 2–4 Produk", desc: "Grid foto beberapa produk sekaligus.", emoji: "🔲", available: false },
   { id: "foto-blur", label: "Foto + Latar Buram", desc: "Foto produk/orang di depan dengan latar blur.", emoji: "🌫️", available: false },
@@ -375,6 +376,18 @@ export default function GeneratePage() {
       <>
         <Header />
         <StandarContent
+          businessProfile={businessProfile}
+          onBack={() => { setShowModelPicker(true); setSelectedModel(null); }}
+        />
+      </>
+    );
+  }
+
+  if (selectedModel === "teks-saja") {
+    return (
+      <>
+        <Header />
+        <TeksSajaContent
           businessProfile={businessProfile}
           onBack={() => { setShowModelPicker(true); setSelectedModel(null); }}
         />
