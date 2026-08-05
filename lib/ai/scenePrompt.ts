@@ -170,7 +170,7 @@ export function buildSkincarePrompt(profile: BusinessProfile, description?: stri
 
 PRODUCT PRESERVATION: keep the product EXACTLY as photographed — its shape, colors, and every text/label printed on it. Do NOT redraw or restyle it.
 
-STYLE: clean, minimal, premium, spa-like and hygienic. Soft diffused lighting, elegant neutral or soft pastel tones, gentle reflections, dewy fresh feel, shallow depth of field. Looks like a luxury cosmetic commercial.${usageNote}
+STYLE: clean, minimal, premium, spa-like and hygienic. Soft diffused lighting, elegant neutral or soft pastel tones, dewy fresh feel on skin, shallow depth of field. Looks like a luxury cosmetic commercial. SURFACE: use a MATTE or softly-lit surface (fabric, soft-focus marble, wood, or blurred background) — do NOT use a glossy/mirror-like surface that would visibly reflect the product or its text upside-down; reflections of text/labels tend to render as distorted, garbled duplicates and must be avoided entirely.${usageNote}
 
 Business context: Industry ${profile.business.industry || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.
 
