@@ -16,7 +16,25 @@ export type ContentLayoutState = {
   descCount?: number; // untuk standar
 };
 
+/**
+ * Ubah data: URI (base64) jadi Blob TANPA lewat fetch(). Beberapa browser
+ * mobile (terutama saat memori terbatas) bisa gagal men-fetch data: URI
+ * besar dengan error generik "Load failed" — decode base64 manual jauh
+ * lebih andal karena tidak menyentuh Fetch API sama sekali.
+ */
+function dataUriToBlob(dataUri: string): Blob {
+  const [header, base64] = dataUri.split(",", 2);
+  const mimeMatch = /data:([^;]+);base64/.exec(header);
+  const mime = mimeMatch?.[1] ?? "image/png";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
 async function srcToBlob(src: string): Promise<Blob> {
+  if (src.startsWith("data:")) return dataUriToBlob(src);
+  // URL remote (mis. foto asli dari galeri) tetap lewat fetch seperti biasa.
   const res = await fetch(src, { cache: "no-store" });
   if (!res.ok) throw new Error("Gagal membaca gambar latar.");
   return res.blob();

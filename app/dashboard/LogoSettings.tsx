@@ -32,16 +32,19 @@ interface LogoCardProps {
 function LogoCard({ variant, logo, onReload, lang }: LogoCardProps) {
   const info = VARIANT_INFO[variant];
   const label = t(info.labelKey, lang);
-  const [file, setFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<Status>("idle");
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [deleteStatus, setDeleteStatus] = useState<Status>("idle");
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [positionStatus, setPositionStatus] = useState<Status>("idle");
+  const [removeBgStatus, setRemoveBgStatus] = useState<Status>("idle");
+  const [removeBgError, setRemoveBgError] = useState<string | null>(null);
 
-  async function handleUpload() {
+  // Upload OTOMATIS begitu file dipilih — tanpa perlu klik tombol terpisah.
+  async function handleFileSelected(file: File | null) {
     if (!file) return;
-    setUploadStatus("loading"); setUploadError(null);
+    setUploadStatus("loading");
+    setUploadError(null);
     try {
       const form = new FormData();
       form.append("file", file);
@@ -49,7 +52,7 @@ function LogoCard({ variant, logo, onReload, lang }: LogoCardProps) {
       const res = await fetch("/api/business-logo", { method: "POST", body: form });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error ?? t("dash.logo.uploadErr", lang));
-      setFile(null); setUploadStatus("success");
+      setUploadStatus("success");
       onReload();
     } catch (e) {
       setUploadStatus("error");
@@ -70,6 +73,23 @@ function LogoCard({ variant, logo, onReload, lang }: LogoCardProps) {
     }
   }
 
+  async function handleRemoveBackground() {
+    setRemoveBgStatus("loading"); setRemoveBgError(null);
+    try {
+      const res = await fetch("/api/business-logo/remove-background", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ variant }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error ?? t("dash.logo.removeBgErr", lang));
+      setRemoveBgStatus("success"); onReload();
+    } catch (e) {
+      setRemoveBgStatus("error");
+      setRemoveBgError(e instanceof Error ? e.message : t("dash.logo.removeBgErr", lang));
+    }
+  }
+
   async function handlePosition(position: LogoPosition) {
     setPositionStatus("loading");
     try {
@@ -84,6 +104,8 @@ function LogoCard({ variant, logo, onReload, lang }: LogoCardProps) {
       setPositionStatus("error");
     }
   }
+
+  const isUploading = uploadStatus === "loading";
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-line p-4">
@@ -114,35 +136,35 @@ function LogoCard({ variant, logo, onReload, lang }: LogoCardProps) {
               ))}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <FileButton accept="image/png,image/jpeg,image/svg+xml,image/webp"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)} label={t("dash.logo.chooseLogo", lang)} />
-            {file ? <span className="text-xs text-navy/50">{file.name}</span> : null}
-            {file ? (
-              <Button type="button" onClick={handleUpload} disabled={uploadStatus === "loading"} className="text-xs px-3 py-1.5">
-                {uploadStatus === "loading" ? t("dash.logo.uploading", lang) : t("dash.logo.replace", lang)}
-              </Button>
-            ) : null}
+              onChange={(e) => handleFileSelected(e.target.files?.[0] ?? null)}
+              disabled={isUploading}
+              label={isUploading ? t("dash.logo.uploading", lang) : t("dash.logo.replace", lang)} />
+            <Button type="button" variant="secondary" onClick={handleRemoveBackground}
+              disabled={removeBgStatus === "loading"} className="text-xs px-3 py-1.5">
+              {removeBgStatus === "loading" ? t("dash.logo.removingBg", lang) : t("dash.logo.removeBg", lang)}
+            </Button>
             <Button type="button" variant="secondary" onClick={handleDelete} disabled={deleteStatus === "loading"} className="text-xs px-3 py-1.5">
               {deleteStatus === "loading" ? t("dash.logo.deleting", lang) : t("dash.logo.delete", lang)}
             </Button>
           </div>
+          <p className="text-xs text-navy/40">{t("dash.logo.removeBgHint", lang)}</p>
           {deleteError ? <p className="text-xs text-red-600">{deleteError}</p> : null}
           {uploadError ? <p className="text-xs text-red-600">{uploadError}</p> : null}
+          {removeBgError ? <p className="text-xs text-red-600">{removeBgError}</p> : null}
         </>
       ) : (
         <>
           <div className={`flex items-center justify-center rounded-xl p-4 ${info.bg} min-h-[80px]`}>
-            <p className="text-xs text-navy/40">{t("dash.logo.none", lang)}</p>
+            <p className="text-xs text-navy/40">
+              {isUploading ? t("dash.logo.uploading", lang) : t("dash.logo.none", lang)}
+            </p>
           </div>
-          <div className="flex items-center gap-2">
-            <FileButton accept="image/png,image/jpeg,image/svg+xml,image/webp"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)} label={`${t("dash.logo.choose", lang)} ${label}`} />
-            {file ? <span className="text-xs text-navy/50">{file.name}</span> : null}
-            <Button type="button" onClick={handleUpload} disabled={!file || uploadStatus === "loading"} className="text-xs px-3 py-1.5">
-              {uploadStatus === "loading" ? t("dash.logo.uploading", lang) : `${t("dash.logo.uploadPrefix", lang)} ${label}`}
-            </Button>
-          </div>
+          <FileButton accept="image/png,image/jpeg,image/svg+xml,image/webp"
+            onChange={(e) => handleFileSelected(e.target.files?.[0] ?? null)}
+            disabled={isUploading}
+            label={isUploading ? t("dash.logo.uploading", lang) : `${t("dash.logo.choose", lang)} ${label}`} />
           {uploadError ? <p className="text-xs text-red-600">{uploadError}</p> : null}
         </>
       )}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Stage, Layer, Text as KonvaText, Image as KonvaImage, Group, Rect } from "react-konva";
+import { Stage, Layer, Text as KonvaText, Image as KonvaImage, Group, Rect, Line as KonvaLine } from "react-konva";
 import { HelpTip } from "@/components/ui/HelpTip";
 import type Konva from "konva";
 import { FONT_OPTIONS } from "@/lib/templates/fonts";
@@ -118,6 +118,46 @@ export function CanvasEditor({
     x: Math.max(0, Math.min(pos.x, previewWidth - 16)),
     y: Math.max(0, Math.min(pos.y, previewHeight - 16)),
   });
+
+  // ── Garis panduan (smart guides) — HANYA visual di editor, tidak pernah
+  // ikut disimpan: guide cuma state React lokal yang dipakai buat gambar
+  // <Line> di preview Konva. Simpan PNG lewat jalur Satori yang sama sekali
+  // terpisah (baca overrides x/y saja) → guide otomatis tidak ikut tersimpan.
+  const [guides, setGuides] = useState<{ v: number[]; h: number[] }>({ v: [], h: [] });
+  const SNAP_THRESHOLD = 6;
+
+  function bestSnap(candidates: number[], targets: number[]): { delta: number; hit: number | null } {
+    let best: { diff: number; delta: number; hit: number } | null = null;
+    for (const c of candidates) {
+      for (const t of targets) {
+        const diff = Math.abs(c - t);
+        if (diff <= SNAP_THRESHOLD && (!best || diff < best.diff)) best = { diff, delta: t - c, hit: t };
+      }
+    }
+    return best ? { delta: best.delta, hit: best.hit } : { delta: 0, hit: null };
+  }
+
+  // Dipasang di onDragMove SEMUA elemen (teks, logo, footer, delivery) —
+  // magnet ke tengah & tepi kanvas begitu jaraknya dekat.
+  function handleSnapDragMove(e: Konva.KonvaEventObject<DragEvent>) {
+    const node = e.target;
+    const stage = node.getStage();
+    if (!stage) return;
+    const rect = node.getClientRect({ relativeTo: stage });
+    const targetsX = [0, previewWidth / 2, previewWidth];
+    const targetsY = [0, previewHeight / 2, previewHeight];
+    const candidatesX = [rect.x, rect.x + rect.width / 2, rect.x + rect.width];
+    const candidatesY = [rect.y, rect.y + rect.height / 2, rect.y + rect.height];
+    const snapX = bestSnap(candidatesX, targetsX);
+    const snapY = bestSnap(candidatesY, targetsY);
+    if (snapX.delta !== 0) node.x(node.x() + snapX.delta);
+    if (snapY.delta !== 0) node.y(node.y() + snapY.delta);
+    setGuides({ v: snapX.hit !== null ? [snapX.hit] : [], h: snapY.hit !== null ? [snapY.hit] : [] });
+  }
+
+  function clearGuides() {
+    setGuides({ v: [], h: [] });
+  }
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
@@ -330,7 +370,8 @@ export function CanvasEditor({
                   fill={eff.color} align={eff.align} {...outline} {...shadow}
                   draggable dragBoundFunc={clampDrag}
                   onClick={() => setSelectedId(slot.id)} onTap={() => setSelectedId(slot.id)}
-                  onDragEnd={(e) => { const n = e.target; updateSlotBox(slot.id, n.x(), n.y(), eff.box.width, eff.box.height); }}
+                  onDragMove={handleSnapDragMove}
+                  onDragEnd={(e) => { const n = e.target; updateSlotBox(slot.id, n.x(), n.y(), eff.box.width, eff.box.height); clearGuides(); }}
                   onDblClick={(e) => openEdit(slot.id, e.target as Konva.Text)}
                   onDblTap={(e) => openEdit(slot.id, e.target as Konva.Text)} />
               );
@@ -339,7 +380,8 @@ export function CanvasEditor({
             {/* Footer sosmed */}
             <Group x={footerX} y={footerY} draggable dragBoundFunc={clampDrag}
               onClick={() => setSelectedId("__footer__")} onTap={() => setSelectedId("__footer__")}
-              onDragEnd={(e) => { const n = e.target; updateFooter({ x: n.x() / scale, y: n.y() / scale }); }}>
+              onDragMove={handleSnapDragMove}
+              onDragEnd={(e) => { const n = e.target; updateFooter({ x: n.x() / scale, y: n.y() / scale }); clearGuides(); }}>
               <Rect x={-8} y={-8} width={(footerW + 16) * scale} height={(footerH + 16) * scale} fill="transparent" />
               {footerSocials.length === 0 ? (
                 <>
@@ -367,7 +409,8 @@ export function CanvasEditor({
             {deliveryIds.length > 0 ? (
               <Group x={deliveryX} y={deliveryY} draggable dragBoundFunc={clampDrag}
                 onClick={() => setSelectedId("__delivery__")} onTap={() => setSelectedId("__delivery__")}
-                onDragEnd={(e) => { const n = e.target; updateDelivery({ x: n.x() / scale, y: n.y() / scale }); }}>
+                onDragMove={handleSnapDragMove}
+                onDragEnd={(e) => { const n = e.target; updateDelivery({ x: n.x() / scale, y: n.y() / scale }); clearGuides(); }}>
                 <Rect x={-8} y={-8} width={(deliveryW + 16) * scale} height={(deliveryH + 16) * scale} fill="transparent" />
                 {selectedId === "__delivery__" ? (
                   <Rect x={-4} y={-4} width={(deliveryW + 8) * scale} height={(deliveryH + 8) * scale}
@@ -392,7 +435,8 @@ export function CanvasEditor({
               <Group x={logoPos.x * scale} y={logoPos.y * scale} draggable dragBoundFunc={clampDrag}
                 onClick={() => setSelectedId("__logo__")} onTap={() => setSelectedId("__logo__")}
                 onDblClick={toggleLogoVariant} onDblTap={toggleLogoVariant}
-                onDragEnd={(e) => { const n = e.target; updateLogo({ x: n.x() / scale, y: n.y() / scale }); }}>
+                onDragMove={handleSnapDragMove}
+                onDragEnd={(e) => { const n = e.target; updateLogo({ x: n.x() / scale, y: n.y() / scale }); clearGuides(); }}>
                 {/* Area drag transparan — wajib agar Group bisa di-drag */}
                 <Rect width={logoPos.size * scale} height={logoPos.size * scale} fill="transparent" />
                 {selectedId === "__logo__" ? (
@@ -402,6 +446,16 @@ export function CanvasEditor({
                 <LogoKonva url={logoUrl!} size={logoPos.size} scale={scale} />
               </Group>
             ) : null}
+
+            {/* Garis panduan (smart guides) — cuma visual, tidak pernah tersimpan */}
+            {guides.v.map((x, i) => (
+              <KonvaLine key={`guide-v-${i}`} points={[x, 0, x, previewHeight]}
+                stroke="#0FB6A6" strokeWidth={1.5} dash={[5, 4]} listening={false} />
+            ))}
+            {guides.h.map((y, i) => (
+              <KonvaLine key={`guide-h-${i}`} points={[0, y, previewWidth, y]}
+                stroke="#0FB6A6" strokeWidth={1.5} dash={[5, 4]} listening={false} />
+            ))}
           </Layer>
         </Stage>
 
@@ -419,7 +473,7 @@ export function CanvasEditor({
         ) : null}
       </div>
 
-      <p className="text-xs text-navy/50">Geser teks, sosmed, atau logo. Klik logo/sosmed untuk atur. Dobel-klik teks untuk edit isi{canToggleLogo ? ", dobel-klik logo untuk ganti versi terang/gelap" : ""}.</p>
+      <p className="text-xs text-navy/50">Geser teks, sosmed, atau logo — otomatis nempel (snap) ke tengah/tepi. Klik logo/sosmed untuk atur. Dobel-klik teks untuk edit isi{canToggleLogo ? ", dobel-klik logo untuk ganti versi terang/gelap" : ""}.</p>
 
       {/* Panel pesan-antar (untuk konten makanan/minuman) */}
       <div className="flex flex-col gap-2 rounded-2xl border border-line bg-white p-3 text-xs">

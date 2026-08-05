@@ -138,6 +138,10 @@ const DICT: Record<string, Entry> = {
   "dash.logo.uploadErr": { id: "Gagal mengunggah logo.", en: "Failed to upload logo." },
   "dash.logo.deleteErr": { id: "Gagal menghapus logo.", en: "Failed to delete logo." },
   "dash.logo.posErr": { id: "Gagal update posisi.", en: "Failed to update position." },
+  "dash.logo.removeBg": { id: "Hapus Background", en: "Remove Background" },
+  "dash.logo.removingBg": { id: "Menghapus background…", en: "Removing background…" },
+  "dash.logo.removeBgErr": { id: "Gagal menghapus background.", en: "Failed to remove background." },
+  "dash.logo.removeBgHint": { id: "Untuk logo dengan latar warna solid (mis. putih polos).", en: "For logos with a solid-color background (e.g. plain white)." },
 
   // ── Dashboard: umum ──
   "dash.greeting": { id: "Halo,", en: "Hi," },
