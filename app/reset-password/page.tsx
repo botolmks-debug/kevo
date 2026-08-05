@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -10,27 +11,20 @@ import { AuthBackground } from "@/components/ui/AuthBackground";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState<"checking" | "ready" | "missing">("checking");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Link dari email membawa sesi sementara (recovery session) lewat
-    // Supabase — begitu client memuatnya, auth state berubah ke SIGNED_IN.
-    // Kita tunggu event ini sebelum menampilkan form supaya tidak submit ke
-    // sesi yang belum siap.
+    // Begitu mendarat di sini, sesi SUDAH dibuat di server (lewat
+    // /auth/confirm yang menukar token Supabase menjadi cookie sesi) —
+    // jadi cukup dicek sekali, tidak perlu lagi menunggu event browser.
     const supabase = createClient();
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") setReady(true);
-    });
-    // Kalau event sudah lewat sebelum listener terpasang (kadang terjadi),
-    // cek juga sesi yang sedang aktif secara langsung.
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setReady(true);
+      setReady(data.session ? "ready" : "missing");
     });
-    return () => sub.subscription.unsubscribe();
   }, []);
 
   async function handleSubmit() {
@@ -71,8 +65,15 @@ export default function ResetPasswordPage() {
           <h1 className="text-2xl font-bold text-navy">Atur Password Baru</h1>
         </div>
 
-        {!ready ? (
+        {ready === "checking" ? (
           <p className="text-center text-sm text-navy/50">Memverifikasi link...</p>
+        ) : ready === "missing" ? (
+          <div className="flex flex-col items-center gap-3 text-center">
+            <p className="text-sm text-red-600">Link sudah kedaluwarsa atau tidak valid.</p>
+            <Link href="/lupa-password" className="text-sm font-semibold text-primary hover:underline">
+              ← Minta link reset baru
+            </Link>
+          </div>
         ) : status === "success" ? (
           <p className="text-center text-sm font-medium text-primary">Password berhasil diubah! Mengalihkan...</p>
         ) : (

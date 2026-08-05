@@ -17,7 +17,7 @@ export default function LupaPasswordPage() {
     setStatus("loading");
     setError(null);
     const supabase = createClient();
-    const redirectTo = `${window.location.origin}/reset-password`;
+    const redirectTo = `${window.location.origin}/auth/confirm?next=/reset-password`;
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
     setStatus("sent");
     // Sengaja TIDAK membedakan pesan sukses/gagal berdasarkan apakah email
