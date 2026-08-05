@@ -1,4 +1,5 @@
 import type { BusinessProfile } from "@/lib/onboarding/businessProfile";
+import { localeSceneNote, type Lang } from "@/lib/ai/lang";
 
 const ANGLES = [
   "Eye-level, produk di tengah frame.",
@@ -21,7 +22,7 @@ function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-export function buildScenePrompt(profile: BusinessProfile, sizeHint?: string): string {
+export function buildScenePrompt(profile: BusinessProfile, sizeHint?: string, lang?: Lang): string {
   const sizeNote =
     sizeHint && sizeHint.trim()
       ? `\n\nPRODUCT SIZE (critical for scale): product is approximately "${sizeHint.trim()}". Render it at its REAL size relative to the scene. If LARGE (machine, fridge, furniture, vending machine): show it standing on the FLOOR as a big, dominant object in a real room; do NOT shrink it or place it like a small item on a table. If SMALL (packaging, bottle, food): a close-up on a table/surface is fine.`
@@ -63,7 +64,9 @@ STEP 5 - FRAMING (fill the whole frame):
 - The scene MUST fill the ENTIRE frame edge-to-edge. NO empty margins, NO blank/plain areas, NO black or white bars, NO border/padding.
 - The bottom ~third will be covered later by a thin dark layer with text, so keep it a bit calmer - but it must STILL contain the scene/background, never left blank.
 
-Do NOT add any new text, logos, watermarks, or branding to the scene. Product is the HERO.${sizeNote}`;
+Do NOT add any new text, logos, watermarks, or branding to the scene. Product is the HERO.${sizeNote}
+
+${localeSceneNote(lang)}`;
 }
 
 /**
@@ -71,7 +74,7 @@ Do NOT add any new text, logos, watermarks, or branding to the scene. Product is
  * produk: jangan menambah/mengurangi/memindahkan apa pun — hanya percantik
  * cahaya & realisme.
  */
-export function buildRuanganPrompt(profile: BusinessProfile, sizeHint?: string): string {
+export function buildRuanganPrompt(profile: BusinessProfile, sizeHint?: string, lang?: Lang): string {
   const sizeNote = sizeHint && sizeHint.trim() ? `\nApproximate room size: "${sizeHint.trim()}" — keep proportions realistic.` : "";
   return `This image is a PLACE / room / facility — NOT a product. Enhance it as a professional interior/real-estate photographer would.
 
@@ -86,7 +89,9 @@ ONLY IMPROVE (do not change content):
 
 Business context (for mood only, do NOT add objects): Industry ${profile.business.industry || "-"}, Location ${profile.business.location || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.${sizeNote}
 
-Photorealistic (NOT illustration/cartoon). Do NOT add any text, logos, or watermarks. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.`;
+Photorealistic (NOT illustration/cartoon). Do NOT add any text, logos, or watermarks. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.
+
+${localeSceneNote(lang)}`;
 }
 
 /**
@@ -94,7 +99,7 @@ Photorealistic (NOT illustration/cartoon). Do NOT add any text, logos, or waterm
  * ditempel di meja — tapi menyatu dengan lingkungan target market, DAN menjadi
  * pusat perhatian.
  */
-export function buildOrangPrompt(profile: BusinessProfile): string {
+export function buildOrangPrompt(profile: BusinessProfile, lang?: Lang): string {
   return `The main subject is a PERSON. Do NOT treat them like a product placed or stuck on a table.
 
 CRITICAL - PRESERVE THE PERSON:
@@ -108,7 +113,9 @@ PERSON IS THE HERO (center of attention):
 
 Business context: Industry ${profile.business.industry || "-"}, Location ${profile.business.location || "-"}, Differentiator ${profile.positioning.differentiator || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.
 
-Photorealistic, warm professional lighting. Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.`;
+Photorealistic, warm professional lighting. Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.
+
+${localeSceneNote(lang)}`;
 }
 
 /**
@@ -116,7 +123,7 @@ Photorealistic, warm professional lighting. Remove phone watermarks / date stamp
  * AI membuat adegan orang (target market) memakai/menunjukkan software itu di
  * layar desktop/smartphone. `display` = "desktop" | "smartphone".
  */
-export function buildSoftwarePrompt(profile: BusinessProfile, display?: string): string {
+export function buildSoftwarePrompt(profile: BusinessProfile, display?: string, lang?: Lang): string {
   const device =
     display === "desktop"
       ? "a laptop or desktop monitor on a desk"
@@ -138,7 +145,9 @@ PERSON & SCENE:
 
 Business context: Industry ${profile.business.industry || "-"}, Location ${profile.business.location || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.
 
-Do NOT add any new text, logos, or branding to the scene. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.`;
+Do NOT add any new text, logos, or branding to the scene. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.
+
+${localeSceneNote(lang)}`;
 }
 
 /**
@@ -147,7 +156,7 @@ Do NOT add any new text, logos, or branding to the scene. Fill the whole frame e
  * rambut, kulit, dll), AI menampilkan produk seolah sedang DIPAKAI di bagian
  * itu. Dipakai HANYA di Otomatis (di manual, skincare = produk biasa).
  */
-export function buildSkincarePrompt(profile: BusinessProfile, description?: string): string {
+export function buildSkincarePrompt(profile: BusinessProfile, description?: string, lang?: Lang): string {
   const desc = (description ?? "").trim();
   const usageNote = desc
     ? `\n\nUSAGE — the user described this product as: "${desc}".
@@ -162,14 +171,16 @@ STYLE: clean, minimal, premium, spa-like and hygienic. Soft diffused lighting, e
 
 Business context: Industry ${profile.business.industry || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.
 
-Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding to the scene. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.`;
+Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding to the scene. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.
+
+${localeSceneNote(lang)}`;
 }
 
 /**
  * Untuk kategori MAKANAN / MINUMAN. Gaya food photography yang menggugah selera.
  * Dipakai HANYA di Otomatis (di manual, makanan = produk biasa).
  */
-export function buildFoodPrompt(profile: BusinessProfile, description?: string): string {
+export function buildFoodPrompt(profile: BusinessProfile, description?: string, lang?: Lang): string {
   const desc = (description ?? "").trim();
   const dishNote = desc ? `\n\nThe user described this as: "${desc}". Keep it that exact dish/drink.` : "";
   return `This image is FOOD or a DRINK. Create a mouth-watering, professional FOOD PHOTOGRAPHY image that makes people crave it and want to order.
@@ -184,5 +195,7 @@ STYLE (appetizing food photography):
 
 Business context: Industry ${profile.business.industry || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.${dishNote}
 
-Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding to the scene. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.`;
+Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding to the scene. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.
+
+${localeSceneNote(lang)}`;
 }

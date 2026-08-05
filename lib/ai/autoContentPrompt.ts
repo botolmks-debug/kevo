@@ -65,6 +65,41 @@ function pickHeadlineAngle(): string {
   return HEADLINE_ANGLES[Math.floor(Math.random() * HEADLINE_ANGLES.length)];
 }
 
+// Topik General dipilih DI KODE (bukan diserahkan ke AI) — sebelumnya General
+// cuma dikasih hint longgar ("boleh edukasi/manfaat/cerita") tanpa dipaksa,
+// jadi AI cenderung jatuh ke pola yang sama tiap kali. Sekarang topiknya
+// benar-benar dirotasi seperti INTERAKSI_FORMATS di bawah.
+const TOPIC_ANGLES_GENERAL = [
+  "EDUKASI seputar produk/industri — satu fakta atau insight yang berguna buat target pasar",
+  "CERITA ASAL-USUL (origin story) — kenapa/bagaimana usaha ini dimulai atau nilai yang dipegang",
+  "MANFAAT SPESIFIK — satu keuntungan konkret yang dirasakan pelanggan, bukan klaim umum",
+  "MOMEN KESEHARIAN pelanggan yang berkaitan dengan usaha ini — bikin pembaca merasa terwakili",
+  "TIPS PRAKTIS yang relevan dengan industri usaha ini, bisa langsung dipakai pembaca",
+  "MITOS vs FAKTA seputar industri/produk ini — luruskan kesalahpahaman umum",
+  "DI BALIK LAYAR — proses, dedikasi, atau detail kerja yang biasanya tidak terlihat pelanggan",
+  "SEBELUM vs SESUDAH — perubahan/hasil yang dirasakan setelah pakai produk/layanan ini",
+];
+
+function pickTopicAngleGeneral(): string {
+  return TOPIC_ANGLES_GENERAL[Math.floor(Math.random() * TOPIC_ANGLES_GENERAL.length)];
+}
+
+// Gaya PENULISAN dirotasi tiap generate (terpisah dari nada/tone brand yang
+// tetap) — supaya pilihan kata & struktur kalimat tidak itu-itu saja walau
+// brand tone-nya sama. Berlaku untuk SEMUA jenis konten.
+const WRITING_STYLES = [
+  "storytelling singkat (buka dengan potongan cerita/momen kecil)",
+  "to-the-point & lugas (langsung ke inti, kalimat pendek-pendek)",
+  "hangat & personal (seolah bicara ke satu orang, bukan ke banyak orang)",
+  "reflektif & menyentuh (mengajak pembaca merenung sejenak)",
+  "playful & ringan (sedikit jenaka, tidak kaku)",
+  "informatif dengan satu fakta/angka kecil di awal",
+];
+
+function pickWritingStyle(): string {
+  return WRITING_STYLES[Math.floor(Math.random() * WRITING_STYLES.length)];
+}
+
 // Khusus jenis INTERAKSI — memaksa caption benar-benar memancing interaksi,
 // bukan promosi satu arah.
 const ONIMAGE_RULE_INTERAKSI =
@@ -103,6 +138,7 @@ ${profileBlock(profile)}
 Produk: ${productDescription || "(tidak ada deskripsi)"}
 
 Untuk JUDUL (onImageText) kali ini, pakai ${pickHeadlineAngle()}. Buat frasa BARU yang segar; jangan mengulang judul yang biasa dipakai.
+Untuk GAYA PENULISAN caption kali ini, pakai: ${pickWritingStyle()} (tetap dalam nada brand yang sudah ditentukan di atas).
 
 Format JSON: {"onImageText": "...", "caption": "...", "fontId": "..."}
 ${ONIMAGE_RULE}
@@ -112,18 +148,22 @@ ${JSON_TAIL}`;
 }
 
 export function buildGeneralContentPrompt(profile: BusinessProfile, lang?: Lang): string {
+  const topic = pickTopicAngleGeneral();
   return `${PERSONA}
 ${outputLangDirective(lang)}
-Buat SATU konten umum (BUKAN promosi produk spesifik) yang menjelaskan/mengangkat usaha ini, dalam Bahasa Indonesia — edukasi, manfaat, cerita brand, atau momen berkaitan. Tetap pada topik usaha.
+Buat SATU konten umum (BUKAN promosi produk spesifik) yang menjelaskan/mengangkat usaha ini, dalam Bahasa Indonesia. Tetap pada topik usaha.
 
 ${profileBlock(profile)}
 
+TOPIK KONTEN KALI INI (WAJIB pakai ini, JANGAN diganti ke topik lain): ${topic}.
+
 Untuk JUDUL (onImageText) kali ini, pakai ${pickHeadlineAngle()}. Buat frasa BARU yang segar; jangan mengulang judul yang biasa dipakai.
+Untuk GAYA PENULISAN caption kali ini, pakai: ${pickWritingStyle()} (tetap dalam nada brand yang sudah ditentukan di atas).
 
 Format JSON: {"onImageText": "...", "caption": "...", "imageScene": "...", "fontId": "..."}
 ${ONIMAGE_RULE}
 ${CAPTION_RULES}
-imageScene = satu kalimat Bahasa Indonesia, adegan foto realistis yang mencerminkan isi konten. Spesifik, bukan umum. Tanpa teks/logo di adegan.
+imageScene = satu kalimat Bahasa Indonesia, adegan foto realistis yang mencerminkan TOPIK di atas. Spesifik, bukan umum. Tanpa teks/logo di adegan.
 ${FONT_RULE}
 ${JSON_TAIL}`;
 }
@@ -198,6 +238,7 @@ ${profileBlock(profile)}
 FORMAT KONTEN KALI INI (WAJIB pakai ini, JANGAN diganti ke format lain): ${format.label}.
 Instruksi format: ${format.brief}
 Rancang onImageText, caption, DAN imageScene agar KOMPAK & konsisten dengan format di atas, serta benar-benar relevan dengan bisnis dan target pasarnya.
+Untuk GAYA PENULISAN caption kali ini, pakai: ${pickWritingStyle()} (tetap konsisten dengan format & nada brand).
 
 Format JSON: {"onImageText": "...", "caption": "...", "jawaban": "...", "imageScene": "...", "fontId": "..."}
 ${ONIMAGE_RULE_INTERAKSI}

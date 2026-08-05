@@ -186,18 +186,18 @@ export async function POST(request: NextRequest) {
       return fail("Gagal mengambil gambar produk.", 502);
     }
     const prompt =
-      sourceImage.type === "makanan" ? buildFoodPrompt(profile, sourceImage.description ?? undefined)
-      : sourceImage.type === "skincare" ? buildSkincarePrompt(profile, sourceImage.description ?? undefined)
-      : sourceImage.type === "software" ? buildSoftwarePrompt(profile, sourceImage.size_hint ?? undefined)
-      : sourceImage.type === "suasana" ? buildRuanganPrompt(profile, sourceImage.size_hint ?? undefined)
-      : sourceImage.type === "wajah" ? buildOrangPrompt(profile)
-      : buildScenePrompt(profile, sourceImage.size_hint ?? undefined);
+      sourceImage.type === "makanan" ? buildFoodPrompt(profile, sourceImage.description ?? undefined, body.language)
+      : sourceImage.type === "skincare" ? buildSkincarePrompt(profile, sourceImage.description ?? undefined, body.language)
+      : sourceImage.type === "software" ? buildSoftwarePrompt(profile, sourceImage.size_hint ?? undefined, body.language)
+      : sourceImage.type === "suasana" ? buildRuanganPrompt(profile, sourceImage.size_hint ?? undefined, body.language)
+      : sourceImage.type === "wajah" ? buildOrangPrompt(profile, body.language)
+      : buildScenePrompt(profile, sourceImage.size_hint ?? undefined, body.language);
     const result = await editImage({ imageBase64, mimeType, aspectRatio: body.ratio, prompt });
     if (!result.ok) return fail(result.error, 502);
     imageDataUri = result.dataUri;
   } else {
     const scene = content.imageScene ?? "";
-    const prompt = body.jenis === "general" ? buildGeneralImagePrompt(scene) : buildInteraksiImagePrompt(scene);
+    const prompt = body.jenis === "general" ? buildGeneralImagePrompt(scene, body.language) : buildInteraksiImagePrompt(scene, body.language);
     const result = await generateImage({ prompt, aspectRatio: body.ratio });
     if (!result.ok) return fail(result.error, 502);
     imageDataUri = result.dataUri;
