@@ -1,7 +1,7 @@
 "use client";
 
 import { getLang } from "@/lib/i18n";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Textarea } from "@/components/ui/Input";
@@ -80,6 +80,9 @@ export function AutoGenerate() {
   const [editorOverrides, setEditorOverrides] = useState<EditorOverrides>({ slots: {} });
   const [saveStatus, setSaveStatus] = useState<Status>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Kunci keras supaya generate tidak pernah jalan dobel (klik/efek beruntun),
+  // apa pun kondisi state async-nya.
+  const generatingRef = useRef(false);
 
   async function loadHistory() {
     setHistoryError(null);
@@ -142,11 +145,13 @@ export function AutoGenerate() {
   }, []);
 
   async function handleGenerate(ratioArg?: AspectRatio) {
+    if (generatingRef.current) return; // sudah ada proses generate berjalan
     if (jenis === "produk" && !selectedImageId) {
       setGenerateStatus("error");
       setGenerateError("Pilih foto dulu.");
       return;
     }
+    generatingRef.current = true;
     setGenerateStatus("loading");
     setGenerateError(null);
     setSaveStatus("idle");
@@ -178,6 +183,8 @@ export function AutoGenerate() {
     } catch (error) {
       setGenerateStatus("error");
       setGenerateError(error instanceof Error ? error.message : "Gagal generate konten.");
+    } finally {
+      generatingRef.current = false;
     }
   }
 
@@ -267,6 +274,13 @@ export function AutoGenerate() {
 
   async function handleSimpanPng() {
     if (!result || !editTemplate) return;
+    if (!editValues.photo) {
+      // Jangan pernah simpan render tanpa foto — hasilnya cuma teks di atas
+      // latar hitam dan akan menimpa baris Riwayat yang tadinya bagus.
+      setSaveStatus("error");
+      setSaveError("Gambar belum siap. Generate ulang dulu sebelum menyimpan.");
+      return;
+    }
     setSaveStatus("loading");
     setSaveError(null);
     try {
@@ -368,7 +382,7 @@ export function AutoGenerate() {
                 key={opt.value}
                 type="button"
                 disabled={isGenerating}
-                onClick={() => { setRatio(opt.value); if (result && !isGenerating) handleGenerate(opt.value); }}
+                onClick={() => setRatio(opt.value)}
                 className={`rounded-full border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${
                   active ? "border-primary bg-primary/10 text-primary" : "border-line text-navy hover:bg-navy/5"
                 }`}
@@ -379,7 +393,7 @@ export function AutoGenerate() {
           })}
         </div>
         {result ? (
-          <span className="text-xs text-navy/50">Ganti ukuran akan membuat ulang konten (1 token) agar gambar pas penuh di ukuran itu.</span>
+          <span className="text-xs text-navy/50">Ganti ukuran, lalu tekan &quot;Generate Otomatis&quot; lagi untuk membuat ulang di ukuran itu (1 token).</span>
         ) : null}
       </div>
 
