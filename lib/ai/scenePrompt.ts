@@ -29,8 +29,9 @@ export function buildScenePrompt(profile: BusinessProfile, sizeHint?: string, la
       : "";
   return `You are a world-class commercial product photographer. Create an award-winning advertising image.
 
-STEP 1 - PRODUCT PRESERVATION:
-Keep the main product/object EXACTLY as photographed. Do NOT redraw, restyle, distort, or alter its shape, proportions, colors, or appearance in any way. ALL text, labels, prints, and designs PHYSICALLY ON the product's own surface must be perfectly preserved and readable.
+STEP 1 - PRODUCT IDENTITY (preserve) vs LIGHTING (may be adjusted for naturalness):
+Preserve the product's IDENTITY exactly: its shape, proportions, materials, real colors, and ALL text/labels/prints/designs physically ON its surface (kept sharp and readable). This ALSO covers everything that makes up the product itself — its real CONTENTS and components: the food and its toppings/ingredients, the liquid and its colour, whatever is inside a container or visible through/inside the packaging. Keep all of that EXACTLY as photographed — same items, same colours, same textures, same arrangement. Do NOT redraw, restyle, reshape, add, or remove any part of the product or its contents.
+The ONLY thing you may change about the product is its LIGHTING: you MUST re-render its lighting, shadows, reflections, and highlights to match the new scene so it looks natural — this is REQUIRED and does NOT count as altering the product. A product that keeps its original flat lighting while sitting in a new scene is the #1 cause of a fake "pasted sticker" look. Relight it as if it were physically re-photographed inside the new scene.
 
 STEP 2 - AGGRESSIVE CLEANUP (zero tolerance for leftover text):
 Remove EVERYTHING from the image EXCEPT the physical product itself:
@@ -54,15 +55,20 @@ Create a FRESH scene: ${pick(ANGLES)} ${pick(MOODS)}
 - Use professional lighting: soft key light + gentle fill. Rich warm shadows, not flat.
 - Shallow depth of field (f/1.8): product sharp, background creamy bokeh.
 
-STEP 4 - PHOTOREALISTIC INTEGRATION:
-- Relight the product to perfectly match the new scene's light direction and color temperature.
-- Add contact shadow + ambient occlusion so the product sits naturally on the surface.
-- Blend edges naturally - no cut-out outline, no halo.
-- Match focus, grain, and white balance of the background.
+STEP 4 - PHOTOREALISTIC INTEGRATION (make it ONE real photograph, not a composite):
+The whole image must look like a SINGLE photo taken by ONE camera with ONE lighting setup — never a collage, a cut-out, or a sticker pasted onto a background.
+- ONE light source: decide the scene's main light (its direction, softness, and color temperature), then light the product from that SAME direction, with the SAME softness and warmth. The product must never look lit differently from its surroundings.
+- Grounding: the product physically RESTS on the surface — a soft contact shadow directly beneath it PLUS a cast shadow pointing the SAME direction as every other shadow in the scene, with ambient occlusion where it meets the surface. It must not float or hover.
+- Perspective & scale: shoot the product from the SAME camera height and lens as the scene; its base sits flat on the surface plane (correct perspective, not tilted), and its size is realistic next to nearby objects.
+- Optics match: SAME depth of field and bokeh — if the background is soft, the product's far edges also fall off gently (no razor-sharp cut-out against blur). Same lens character and focus falloff.
+- Colour & texture unity: the product picks up subtle colour bounce and reflections from the scene, and the surface shows a faint reflection of the product; use identical white balance, colour grade, grain, and micro-contrast across product and background.
+- Edges: soft, natural contact edges — absolutely NO hard outline, halo, glow, or fringe around the product.
 
 STEP 5 - FRAMING (fill the whole frame):
 - The scene MUST fill the ENTIRE frame edge-to-edge. NO empty margins, NO blank/plain areas, NO black or white bars, NO border/padding.
 - The bottom ~third will be covered later by a thin dark layer with text, so keep it a bit calmer - but it must STILL contain the scene/background, never left blank.
+
+FINAL CHECK: before finishing, ask yourself "does this look like ONE real photograph, or like a product pasted onto a background?" If it looks pasted, fix the light direction, the grounding/contact shadow, and the edge blending until it reads as a single genuine photo.
 
 Do NOT add any new text, logos, watermarks, or branding to the scene. Product is the HERO.${sizeNote}
 
@@ -199,6 +205,33 @@ STYLE (appetizing food photography):
 Business context: Industry ${profile.business.industry || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.${dishNote}
 
 Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding to the scene. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.
+
+${localeSceneNote(lang)}`;
+}
+
+/**
+ * GABUNG PRODUK — prompt untuk menggabung 2–5 foto produk jadi 1 frame.
+ * `descriptions` = deskripsi tiap produk (urut sesuai foto yang dikirim).
+ */
+export function buildGabungPrompt(profile: BusinessProfile, descriptions: string[], lang?: Lang): string {
+  const list = descriptions
+    .map((d, i) => `  ${i + 1}. ${d && d.trim() ? d.trim() : "(tanpa deskripsi)"}`)
+    .join("\n");
+  return `You are a world-class commercial product photographer. You are given ${descriptions.length} separate product photos.
+
+TASK — combine them into ONE cohesive image:
+- From EACH photo, detect and keep ONLY the MAIN product. Ignore the original background, props, hands, clutter, and any surrounding items.
+- Preserve each product EXACTLY as photographed: same shape, colors, and any packaging/label text. Do NOT invent, redesign, or swap products.
+- Arrange all ${descriptions.length} products together in a single frame as a clean, tasteful product line-up — balanced composition, consistent scale and perspective, unified soft studio lighting, and one simple complementary background that suits the brand.
+- Make it look like a single professionally-shot catalog / social-feed hero image, not a collage or a grid of pasted cut-outs. No visible seams, no hard outlines or halos around any product.
+- ONE light source for all products (same direction, softness, warmth). Each product physically RESTS on the surface with a soft contact shadow and cast shadows all pointing the SAME direction, plus subtle reflections on the surface. Relight every product to match this shared lighting so none looks pasted.
+
+Products in the photos (in order):
+${list}
+
+Business context: Industry ${profile.business.industry || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.
+
+Remove phone watermarks / date stamps / pre-existing overlay text. Do NOT add any new text, logos, or branding. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.
 
 ${localeSceneNote(lang)}`;
 }

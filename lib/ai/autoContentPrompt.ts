@@ -302,3 +302,34 @@ imageScene = 1-2 kalimat Bahasa Indonesia. ${format.scene} Adegan WAJIB mengisi 
 ${FONT_RULE}
 ${JSON_TAIL}`;
 }
+
+/**
+ * GABUNG PRODUK — judul & caption dari INTISARI yang menghubungkan 2–5 produk
+ * yang digabung jadi satu gambar. `descriptions` urut sesuai produk terpilih.
+ */
+export function buildGabungContentPrompt(profile: BusinessProfile, descriptions: string[], lang?: Lang): string {
+  const list = descriptions
+    .map((d, i) => `  ${i + 1}. ${d && d.trim() ? d.trim() : "(tanpa deskripsi)"}`)
+    .join("\n");
+  return `${PERSONA}
+${outputLangDirective(lang)}
+Buat SATU konten promosi yang menggabungkan ${descriptions.length} produk berikut dalam satu gambar, dalam Bahasa Indonesia.
+
+${profileBlock(profile)}
+
+Produk yang digabung (${descriptions.length}):
+${list}
+
+PENTING: jangan sekadar menyebut produk satu per satu. Cari BENANG MERAH / INTISARI yang menghubungkan semua produk itu (mis. sama-sama cocok untuk momen tertentu, satu paket/hampers, satu kategori rasa, solusi untuk kebutuhan yang sama), lalu jadikan itu sudut judul & caption.
+
+${pickPerspectiveNote()}
+
+Untuk JUDUL (onImageText) kali ini, pakai ${pickHeadlineAngleForProduk()}. Buat frasa BARU yang segar; jangan mengulang judul yang biasa dipakai.
+Untuk GAYA PENULISAN caption kali ini, pakai: ${pickWritingStyle()} (tetap dalam nada brand yang sudah ditentukan di atas).
+
+Format JSON: {"onImageText": "...", "caption": "...", "fontId": "..."}
+${ONIMAGE_RULE}
+${CAPTION_RULES}
+${FONT_RULE}
+${JSON_TAIL}`;
+}

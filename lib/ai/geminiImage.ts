@@ -166,3 +166,18 @@ export async function generateImage(input: {
   console.warn("Gemini gagal (" + result.error + "), mencoba fallback OpenAI...");
   return generateOpenAIImage(input);
 }
+/**
+ * GABUNG PRODUK — kirim beberapa foto produk (2–5) sekaligus, AI diminta
+ * mendeteksi produk utama tiap foto lalu menyusunnya jadi SATU frame.
+ * Tidak ada fallback OpenAI di sini karena alur multi-image berbeda.
+ */
+export async function composeProducts(input: {
+  images: { imageBase64: string; mimeType: string }[];
+  aspectRatio: AspectRatio;
+  prompt: string;
+}): Promise<GeminiImageResult> {
+  const imageParts: GeminiPart[] = input.images.map((img) => ({
+    inlineData: { mimeType: img.mimeType, data: img.imageBase64 },
+  }));
+  return generateFromParts([...imageParts, { text: input.prompt }], input.aspectRatio);
+}

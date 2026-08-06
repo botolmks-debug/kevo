@@ -16,13 +16,14 @@ import { withLogoOverride } from "@/app/generate/withLogoOverride";
 import { polosTemplate } from "@/lib/templates/polos";
 import { interaksiTemplate } from "@/lib/templates/interaksi";
 import { renderTemplate } from "@/lib/render/renderTemplate";
-import { buildScenePrompt, buildRuanganPrompt, buildOrangPrompt, buildSoftwarePrompt, buildSkincarePrompt, buildFoodPrompt } from "@/lib/ai/scenePrompt";
-import { editImage, generateImage } from "@/lib/ai/geminiImage";
+import { buildScenePrompt, buildRuanganPrompt, buildOrangPrompt, buildSoftwarePrompt, buildSkincarePrompt, buildFoodPrompt, buildGabungPrompt } from "@/lib/ai/scenePrompt";
+import { editImage, generateImage, composeProducts } from "@/lib/ai/geminiImage";
 import { generateJsonContent } from "@/lib/ai/geminiJson";
 import {
   buildGeneralContentPrompt,
   buildInteraksiContentPrompt,
   buildProdukContentPrompt,
+  buildGabungContentPrompt,
 } from "@/lib/ai/autoContentPrompt";
 import { buildGeneralImagePrompt, buildInteraksiImagePrompt } from "@/lib/ai/autoImagePrompt";
 import { FONT_OPTIONS } from "@/lib/templates/fonts";
@@ -79,7 +80,7 @@ export async function GET() {
   return NextResponse.json({ items });
 }
 
-type RequestBody = { jenis: GeneratedContentJenis; ratio: AspectRatio; imageId?: string; language?: "id" | "en" };
+type RequestBody = { jenis: GeneratedContentJenis; ratio: AspectRatio; imageId?: string; imageIds?: string[]; language?: "id" | "en" };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -90,6 +91,10 @@ function isValidBody(body: unknown): body is RequestBody {
   if (typeof body.jenis !== "string" || !VALID_JENIS.includes(body.jenis as GeneratedContentJenis)) return false;
   if (typeof body.ratio !== "string" || !VALID_RATIOS.includes(body.ratio as AspectRatio)) return false;
   if (body.imageId !== undefined && typeof body.imageId !== "string") return false;
+  if (body.imageIds !== undefined) {
+    if (!Array.isArray(body.imageIds) || body.imageIds.length < 1 || body.imageIds.length > 5) return false;
+    if (!body.imageIds.every((x) => typeof x === "string")) return false;
+  }
   return true;
 }
 
@@ -119,8 +124,10 @@ export async function POST(request: NextRequest) {
   if (!isValidBody(body)) {
     return NextResponse.json({ error: "jenis dan ratio wajib diisi dengan nilai yang valid." }, { status: 400 });
   }
-  if (body.jenis === "produk" && !body.imageId) {
-    return NextResponse.json({ error: "Pilih gambar produk dulu." }, { status: 400 });
+  const selectedImageIds =
+    body.imageIds && body.imageIds.length ? body.imageIds : body.imageId ? [body.imageId] : [];
+  if (body.jenis === "produk" && selectedImageIds.length === 0) {
+    return NextResponse.json({ error: "Pilih minimal satu gambar produk dulu." }, { status: 400 });
   }
 
   const supabase = await createClient();
@@ -145,20 +152,29 @@ export async function POST(request: NextRequest) {
   }
 
   let sourceImage: ImageRow | null = null;
+  const sourceImages: ImageRow[] = [];
   if (body.jenis === "produk") {
     const imagesResult = await listImages(supabase, user.id);
     if (!imagesResult.ok) return fail(imagesResult.error, 502);
-    const image = imagesResult.images.find((img) => img.id === body.imageId) ?? null;
-    const allowed = image && ["Produk", "Makanan/Minuman", "Kecantikan/Skincare", "Software/Website", "Wajah/Orang", "Suasana/Fasilitas"].includes(image.category);
-    if (!image || !allowed || image.usage !== "olah_ai") {
-      return fail("Gambar tidak ditemukan atau bukan gambar yang boleh diolah AI.", 400);
+    const ALLOWED_CATEGORIES = ["Produk", "Makanan/Minuman", "Kecantikan/Skincare", "Software/Website", "Wajah/Orang", "Suasana/Fasilitas"];
+    for (const id of selectedImageIds) {
+      const image = imagesResult.images.find((img) => img.id === id) ?? null;
+      const allowed = image && ALLOWED_CATEGORIES.includes(image.category);
+      if (!image || !allowed || image.usage !== "olah_ai") {
+        return fail("Gambar tidak ditemukan atau bukan gambar yang boleh diolah AI.", 400);
+      }
+      sourceImages.push(image);
     }
-    sourceImage = image;
+    sourceImage = sourceImages[0] ?? null;
   }
+
+  // Gabung produk aktif kalau user memilih lebih dari satu foto produk.
+  const isGabung = body.jenis === "produk" && sourceImages.length > 1;
 
   // ── Generate teks (headline + caption + fontId) ──────────────────────────
   const contentPrompt =
-    body.jenis === "produk" ? buildProdukContentPrompt(profile, sourceImage?.description ?? "", body.language)
+    isGabung ? buildGabungContentPrompt(profile, sourceImages.map((s) => s.description ?? ""), body.language)
+    : body.jenis === "produk" ? buildProdukContentPrompt(profile, sourceImage?.description ?? "", body.language)
     : body.jenis === "general" ? buildGeneralContentPrompt(profile, body.language)
     : buildInteraksiContentPrompt(profile, body.language);
 
@@ -174,7 +190,25 @@ export async function POST(request: NextRequest) {
 
   // ── Generate gambar bersih (tanpa overlay) ───────────────────────────────
   let imageDataUri: string;
-  if (body.jenis === "produk") {
+  if (isGabung) {
+    // Ambil semua foto produk terpilih → base64, lalu minta AI menggabung.
+    const images: { imageBase64: string; mimeType: string }[] = [];
+    try {
+      for (const img of sourceImages) {
+        const res = await fetch(publicImageUrl(supabase, img.storage_path));
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        const mt = res.headers.get("content-type") ?? "image/jpeg";
+        const b64 = Buffer.from(await res.arrayBuffer()).toString("base64");
+        images.push({ imageBase64: b64, mimeType: mt });
+      }
+    } catch {
+      return fail("Gagal mengambil salah satu gambar produk.", 502);
+    }
+    const prompt = buildGabungPrompt(profile, sourceImages.map((s) => s.description ?? ""), body.language);
+    const result = await composeProducts({ images, aspectRatio: body.ratio, prompt });
+    if (!result.ok) return fail(result.error, 502);
+    imageDataUri = result.dataUri;
+  } else if (body.jenis === "produk") {
     if (!sourceImage) return fail("Pilih gambar produk dulu.", 400);
     let imageBase64: string; let mimeType: string;
     try {

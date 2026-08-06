@@ -61,11 +61,30 @@ const JENIS_LABEL: Record<GeneratedContentJenis, string> = {
   interaksi: "Interaksi",
 };
 
+// Dua gangguan sesaat bisa bikin request gagal walau semuanya sebenarnya baik:
+// (1) 401 "Belum login" saat token akses sedang diputar (refresh-token rotation),
+// (2) "fetch failed" saat jaringan ngeblip / dev server sedang recompile.
+// Untuk keduanya, coba sekali lagi setelah jeda singkat — percobaan kedua
+// hampir selalu berhasil, jadi gangguan sesaat itu tak sampai terlihat user.
+// Hanya untuk GET/DELETE (aman diulang), bukan untuk generate (POST).
+async function fetchWithAuthRetry(input: string, init?: RequestInit): Promise<Response> {
+  const attempt = () => fetch(input, init);
+  try {
+    const res = await attempt();
+    if (res.status !== 401) return res;
+  } catch {
+    // kegagalan jaringan sesaat — lanjut ke retry di bawah
+  }
+  await new Promise((r) => setTimeout(r, 500));
+  return attempt();
+}
+
 export function AutoGenerate() {
   const [jenis, setJenis] = useState<GeneratedContentJenis>("produk");
   const [ratio, setRatio] = useState<AspectRatio>("4:5");
   const [images, setImages] = useState<PickableImage[]>([]);
-  const [selectedImageId, setSelectedImageId] = useState("");
+  const [selectedImageIds, setSelectedImageIds] = useState<string[]>([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [generateStatus, setGenerateStatus] = useState<Status>("idle");
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [result, setResult] = useState<GeneratedItem | null>(null);
@@ -87,7 +106,7 @@ export function AutoGenerate() {
   async function loadHistory() {
     setHistoryError(null);
     try {
-      const res = await fetch("/api/generate-auto");
+      const res = await fetchWithAuthRetry("/api/generate-auto");
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error ?? "Gagal memuat riwayat konten.");
       setHistory(data?.items ?? []);
@@ -126,7 +145,7 @@ export function AutoGenerate() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/generate-auto")
+    fetchWithAuthRetry("/api/generate-auto")
       .then(async (res) => ({ ok: res.ok, data: await res.json().catch(() => null) }))
       .then(({ ok, data }) => {
         if (cancelled) return;
@@ -146,9 +165,9 @@ export function AutoGenerate() {
 
   async function handleGenerate(ratioArg?: AspectRatio) {
     if (generatingRef.current) return; // sudah ada proses generate berjalan
-    if (jenis === "produk" && !selectedImageId) {
+    if (jenis === "produk" && selectedImageIds.length === 0) {
       setGenerateStatus("error");
-      setGenerateError("Pilih foto dulu.");
+      setGenerateError("Pilih minimal satu foto dulu.");
       return;
     }
     generatingRef.current = true;
@@ -163,7 +182,7 @@ export function AutoGenerate() {
         body: JSON.stringify({
           jenis,
           ratio: ratioArg && RATIO_OPTIONS.some((o) => o.value === ratioArg) ? ratioArg : ratio,
-          imageId: jenis === "produk" ? selectedImageId : undefined,
+          imageIds: jenis === "produk" ? selectedImageIds : undefined,
           language: getLang(),
         }),
       });
@@ -219,7 +238,7 @@ export function AutoGenerate() {
     setDeletingId(id);
     setHistoryError(null);
     try {
-      const res = await fetch(`/api/generate-auto/${id}`, { method: "DELETE" });
+      const res = await fetchWithAuthRetry(`/api/generate-auto/${id}`, { method: "DELETE" });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error ?? "Gagal menghapus konten.");
       setHistory((cur) => cur.filter((it) => it.id !== id));
@@ -350,26 +369,64 @@ export function AutoGenerate() {
       </div>
 
       {jenis === "produk" ? (
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-navy">Pilih foto (produk / ruangan / orang)</span>
-          <select
-            value={selectedImageId}
-            onChange={(e) => setSelectedImageId(e.target.value)}
-            className="rounded-2xl border border-line bg-white px-4 py-3 text-sm text-navy transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
-          >
-            <option value="">Pilih gambar...</option>
-            {images.map((image) => (
-              <option key={image.id} value={image.id}>
-                {(image.description || "(tanpa deskripsi)")} — {image.category}
-              </option>
-            ))}
-          </select>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-navy">Pilih foto produk (bisa 1–5, centang &gt;1 untuk digabung)</span>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setPickerOpen((v) => !v)}
+              className="flex w-full items-center justify-between rounded-2xl border border-line bg-white px-4 py-3 text-left text-sm transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15"
+            >
+              <span className={selectedImageIds.length ? "text-navy" : "text-navy/50"}>
+                {selectedImageIds.length === 0
+                  ? "Pilih gambar..."
+                  : `${selectedImageIds.length} produk dipilih${selectedImageIds.length > 1 ? " — akan digabung" : ""}`}
+              </span>
+              <span className="text-navy/40">{pickerOpen ? "▲" : "▼"}</span>
+            </button>
+            {pickerOpen ? (
+              <div className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-2xl border border-line bg-white p-1 shadow-lg">
+                {images.map((image) => {
+                  const checked = selectedImageIds.includes(image.id);
+                  const atLimit = selectedImageIds.length >= 5 && !checked;
+                  return (
+                    <label
+                      key={image.id}
+                      className={`flex items-start gap-2 rounded-xl px-3 py-2 text-sm ${atLimit ? "cursor-not-allowed opacity-40" : "cursor-pointer hover:bg-navy/5"}`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 accent-primary"
+                        checked={checked}
+                        disabled={atLimit}
+                        onChange={() =>
+                          setSelectedImageIds((prev) =>
+                            prev.includes(image.id)
+                              ? prev.filter((id) => id !== image.id)
+                              : prev.length >= 5
+                                ? prev
+                                : [...prev, image.id],
+                          )
+                        }
+                      />
+                      <span className="text-navy">
+                        {(image.description || "(tanpa deskripsi)")} — <span className="text-navy/50">{image.category}</span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
+          {selectedImageIds.length >= 5 ? (
+            <p className="text-xs text-navy/50">Maksimal 5 produk.</p>
+          ) : null}
           {images.length === 0 ? (
             <p className="text-xs text-navy/50">
-              Belum ada foto (produk/ruangan/orang) yang boleh diolah AI. Unggah dulu di Database Gambar (pilih "Boleh diolah AI").
+              Belum ada foto (produk/ruangan/orang) yang boleh diolah AI. Unggah dulu di Database Gambar (pilih &quot;Boleh diolah AI&quot;).
             </p>
           ) : null}
-        </label>
+        </div>
       ) : null}
 
       <div className="flex flex-col gap-2">
