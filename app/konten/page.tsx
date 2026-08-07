@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Input";
 import { CanvasEditor } from "@/components/editor/CanvasEditor";
+import { useLiveRender } from "@/components/editor/LivePreview";
 import { applyEditorOverrides, type EditorOverrides } from "@/lib/editor/layoutOverrides";
 import { buildFooterSocials } from "@/lib/onboarding/profileStorage";
 import { withFooterOverride } from "@/app/generate/withFooterOverride";
@@ -54,6 +55,7 @@ export default function KontenPage() {
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [overrides, setOverrides] = useState<EditorOverrides>({ slots: {} });
+  const [previewMode, setPreviewMode] = useState(false); // false = edit cepat (Konva), true = render asli
   const [editTemplateId, setEditTemplateId] = useState<ContentLayoutState["templateId"]>("polos");
   const [editBgColor, setEditBgColor] = useState<string | undefined>(undefined);
   const [editDescCount, setEditDescCount] = useState<number | undefined>(undefined);
@@ -99,6 +101,34 @@ export default function KontenPage() {
     setSaveError(null);
   }
 
+  // Ubah URL gambar → data URI di sisi browser. Dipakai agar server /api/render
+  // meng-embed gambar (bukan mem-fetch URL storage yang bisa gagal → hitam).
+  async function urlToDataUri(url: string): Promise<string | null> {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) return null;
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      if (bytes.length < 4) return null;
+      // Deteksi MIME dari MAGIC BYTES, bukan header Content-Type — storage kadang
+      // melayani JPEG dengan label image/png. Label salah bikin mesin render
+      // (Satori) gagal decode → gambar hitam. Ini akar bug "simpan hitam".
+      let mime = "image/jpeg";
+      if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) mime = "image/png";
+      else if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) mime = "image/jpeg";
+      else if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) mime = "image/gif";
+      else if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[8] === 0x57 && bytes[9] === 0x45) mime = "image/webp";
+      const typed = new Blob([bytes], { type: mime });
+      return await new Promise<string | null>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(typeof reader.result === "string" ? reader.result : null);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(typed);
+      });
+    } catch {
+      return null;
+    }
+  }
+
   function downloadBlob(blob: Blob, filename: string) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url; a.download = filename;
@@ -107,11 +137,35 @@ export default function KontenPage() {
 
   async function handleSimpanPng() {
     if (!selected || !editTemplate) return;
+    let renderValues = editValues;
+    const photo = editValues.photo;
+    if (!photo) {
+      setSaveStatus("error");
+      setSaveError("Gambar belum siap. Buka ulang konten ini sebelum menyimpan.");
+      return;
+    }
+    if (!photo.startsWith("data:")) {
+      const dataUri = await urlToDataUri(photo);
+      if (!dataUri) {
+        setSaveStatus("error");
+        setSaveError("Gambar latar gagal dimuat. Buka ulang konten ini lalu coba lagi.");
+        return;
+      }
+      renderValues = { ...editValues, photo: dataUri };
+    }
     setSaveStatus("saving"); setSaveError(null);
+    // Sematkan LOGO sebagai data URI juga, supaya server tak perlu fetch URL logo
+    // (bisa gagal → logo jadi lingkaran placeholder di hasil export).
+    let renderTpl = editTemplate;
+    const logoUrl = editTemplate.brand.logoUrl;
+    if (logoUrl && !logoUrl.startsWith("data:")) {
+      const logoData = await urlToDataUri(logoUrl);
+      if (logoData) renderTpl = { ...editTemplate, brand: { ...editTemplate.brand, logoUrl: logoData } };
+    }
     try {
       const res = await fetch("/api/render", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildRenderInput(editTemplate, editValues, selected.ratio)),
+        body: JSON.stringify(buildRenderInput(renderTpl, renderValues, selected.ratio)),
       });
       if (!res.ok) { const d = await res.json().catch(() => null); throw new Error(d?.error ?? "Gagal merender."); }
       const blob = await res.blob();
@@ -210,6 +264,8 @@ export default function KontenPage() {
     activeLogo,
   );
   const editTemplate = selected ? applyEditorOverrides(templateBase, selected.ratio, overrides) : null;
+  // WYSIWYG: render Satori asli sebagai latar editor (ghost) — yang dilihat = hasil export.
+  const { url: ghostUrl, rendering: ghostRendering } = useLiveRender(editTemplate, editValues, selected?.ratio ?? "4:5", !!selected && previewMode);
 
   return (
     <>
@@ -217,7 +273,7 @@ export default function KontenPage() {
       <main className="mx-auto flex max-w-4xl flex-col gap-6 px-6 py-10">
         <div>
           <h1 className="text-2xl font-bold text-navy">Edit Konten</h1>
-          <p className="mt-1 text-navy/60">Klik konten untuk buka editor — atur ulang dan Simpan PNG.</p>
+          <p className="mt-1 text-navy/60">Klik konten untuk buka editor — atur ulang dan Simpan Gambar.</p>
         </div>
 
         {selected && editTemplate ? (
@@ -229,6 +285,22 @@ export default function KontenPage() {
               <button type="button" onClick={() => setSelected(null)} className="text-xs text-navy/50 hover:text-navy">✕ Tutup</button>
             </div>
             <div className="mx-auto">
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <p className="text-xs font-medium text-navy/50">
+                  {previewMode
+                    ? "Hasil asli (persis yang akan diekspor). Geser untuk atur presisi."
+                    : "Mode edit cepat — geser bebas, tanpa jeda."}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode((v) => !v)}
+                  className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition ${
+                    previewMode ? "bg-navy/10 text-navy hover:bg-navy/15" : "bg-primary text-white hover:opacity-90"
+                  }`}
+                >
+                  {previewMode ? "✏ Lanjut edit cepat" : "👁 Lihat hasil asli"}
+                </button>
+              </div>
               <CanvasEditor
                 layout={editTemplate.layouts[selected.ratio]}
                 values={editValues}
@@ -242,7 +314,11 @@ export default function KontenPage() {
                 logoVariant={activeLogoVariant}
                 canToggleLogo={!!(logoDark && logoLight)}
                 onLogoVariantChange={(v) => setOverrides((o) => ({ ...o, logoVariant: v }))}
+                ghostUrl={previewMode ? (ghostUrl ?? undefined) : undefined}
               />
+              {previewMode && ghostRendering ? (
+                <p className="mt-1 text-center text-[11px] text-navy/40">memperbarui hasil asli…</p>
+              ) : null}
             </div>
             <Textarea label="Caption" value={selected.caption} readOnly />
             <label className="flex flex-wrap items-center gap-2 text-sm">
@@ -268,7 +344,7 @@ export default function KontenPage() {
             </label>
             <div className="flex flex-wrap items-center gap-2">
               <Button type="button" onClick={handleSimpanPng} disabled={saveStatus === "saving"}>
-                {saveStatus === "saving" ? "Menyimpan..." : "Simpan PNG"}
+                {saveStatus === "saving" ? "Menyimpan..." : "Simpan Gambar"}
               </Button>
               <Button type="button" variant="secondary" onClick={() => handleCopy("edit", selected.caption)}>
                 {copiedId === "edit" ? "Tersalin!" : "Salin Caption"}

@@ -176,7 +176,7 @@ export function LogoSettings() {
   const [logoDark, setLogoDark] = useState<BusinessLogo | null>(null);
   const [logoLight, setLogoLight] = useState<BusinessLogo | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [lang, setLangState] = useState<Lang>("id");
+  const [lang, setLangState] = useState<Lang>("en");
 
   useEffect(() => { setLangState(getLang()); }, []);
 

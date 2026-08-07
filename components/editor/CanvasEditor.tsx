@@ -40,6 +40,8 @@ type CanvasEditorProps = {
   /** true kalau kedua versi logo (terang & gelap) tersedia untuk ditukar. */
   canToggleLogo?: boolean;
   onLogoVariantChange?: (variant: "dark" | "light") => void;
+  /** WYSIWYG: URL render Satori asli sebagai latar; semua elemen jadi transparan (opt-in, hanya di Edit). */
+  ghostUrl?: string;
 };
 
 function SocialIconKonva({ platformId, size, scale }: { platformId: string; size: number; scale: number }) {
@@ -99,11 +101,12 @@ function LogoKonva({ url, size, scale }: { url: string; size: number; scale: num
 export function CanvasEditor({
   layout, values, overrides, onOverridesChange, onTextChange,
   footerPreviewText, socials, businessName, logoUrl,
-  logoVariant = "light", canToggleLogo = false, onLogoVariantChange,
+  logoVariant = "light", canToggleLogo = false, onLogoVariantChange, ghostUrl,
 }: CanvasEditorProps) {
   // Lebar preview mengikuti lebar container (maks 340) supaya muat di HP.
   const wrapRef = useRef<HTMLDivElement>(null);
   const [previewWidth, setPreviewWidth] = useState(PREVIEW_WIDTH);
+  const [dragging, setDragging] = useState(false); // WYSIWYG: tampilkan elemen saat diseret
   useEffect(() => {
     function measure() {
       const w = wrapRef.current?.clientWidth ?? PREVIEW_WIDTH;
@@ -356,8 +359,13 @@ export function CanvasEditor({
       <div className="relative overflow-hidden rounded-2xl border border-slate-200"
         style={{ width: previewWidth, height: previewHeight, background: "#1e293b" }}>
 
+        {/* WYSIWYG ghost: render Satori asli sebagai latar (persis hasil export) */}
+        {ghostUrl ? (
+          <img src={ghostUrl} alt=""
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 0, pointerEvents: "none" }} />
+        ) : null}
         {/* ① Foto latar — HTML img tag, bebas masalah CORS/Konva */}
-        {photoSrc ? (
+        {!ghostUrl && photoSrc ? (
           <img src={photoSrc} alt=""
             style={{
               position: "absolute", inset: 0,
@@ -369,7 +377,7 @@ export function CanvasEditor({
         ) : null}
 
         {/* ② Scrim gradient (simulasi dekorasi template) — hanya kalau template punya */}
-        {photoSrc && hasFrontScrim ? (
+        {!ghostUrl && photoSrc && hasFrontScrim ? (
           <div style={{
             position: "absolute", bottom: 0, left: 0, right: 0,
             height: "38%",
@@ -381,6 +389,8 @@ export function CanvasEditor({
         {/* ③ Konva: teks, logo, sosmed — di atas foto */}
         <Stage width={previewWidth} height={previewHeight}
           style={{ position: "relative", zIndex: 2 }}
+          onDragStart={() => setDragging(true)}
+          onDragEnd={() => setDragging(false)}
           onMouseDown={(e) => { if (e.target === e.target.getStage()) setSelectedId(null); }}>
           <Layer>
             {/* Teks */}
@@ -399,7 +409,7 @@ export function CanvasEditor({
                   x={eff.box.x * scale} y={eff.box.y * scale} width={eff.box.width * scale}
                   fontFamily={eff.fontFamily} fontSize={eff.fontSize * scale}
                   fontStyle={eff.fontWeight >= 600 ? "bold" : "normal"}
-                  fill={eff.color} align={eff.align} {...outline} {...shadow}
+                  fill={eff.color} align={eff.align} opacity={ghostUrl ? (dragging ? 1 : 0) : 1} {...outline} {...shadow}
                   draggable dragBoundFunc={clampDrag}
                   onClick={() => setSelectedId(slot.id)} onTap={() => setSelectedId(slot.id)}
                   onDragMove={handleSnapDragMove}
@@ -410,7 +420,7 @@ export function CanvasEditor({
             })}
 
             {/* Footer sosmed */}
-            <Group x={footerX} y={footerY} draggable dragBoundFunc={clampDrag}
+            <Group x={footerX} y={footerY} opacity={ghostUrl ? (dragging ? 1 : 0) : 1} draggable dragBoundFunc={clampDrag}
               onClick={() => setSelectedId("__footer__")} onTap={() => setSelectedId("__footer__")}
               onDragMove={handleSnapDragMove}
               onDragEnd={(e) => { const n = e.target; updateFooter({ x: n.x() / scale, y: n.y() / scale }); clearGuides(); }}>
@@ -439,7 +449,7 @@ export function CanvasEditor({
 
             {/* Badge pesan-antar (logo + heading) */}
             {deliveryIds.length > 0 ? (
-              <Group x={deliveryX} y={deliveryY} draggable dragBoundFunc={clampDrag}
+              <Group x={deliveryX} y={deliveryY} opacity={ghostUrl ? (dragging ? 1 : 0) : 1} draggable dragBoundFunc={clampDrag}
                 onClick={() => setSelectedId("__delivery__")} onTap={() => setSelectedId("__delivery__")}
                 onDragMove={handleSnapDragMove}
                 onDragEnd={(e) => { const n = e.target; updateDelivery({ x: n.x() / scale, y: n.y() / scale }); clearGuides(); }}>
@@ -464,7 +474,7 @@ export function CanvasEditor({
 
             {/* Logo */}
             {logoImg ? (
-              <Group x={logoPos.x * scale} y={logoPos.y * scale} draggable dragBoundFunc={clampLogoDrag}
+              <Group x={logoPos.x * scale} y={logoPos.y * scale} opacity={ghostUrl ? (dragging ? 1 : 0) : 1} draggable dragBoundFunc={clampLogoDrag}
                 onClick={() => setSelectedId("__logo__")} onTap={() => setSelectedId("__logo__")}
                 onDblClick={toggleLogoVariant} onDblTap={toggleLogoVariant}
                 onDragMove={handleSnapDragMove}

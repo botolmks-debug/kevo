@@ -1,6 +1,6 @@
 "use client";
 
-import { getLang } from "@/lib/i18n";
+import { getLang, type Lang } from "@/lib/i18n";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -43,22 +43,22 @@ type GeneratedItem = {
 
 type Status = "idle" | "loading" | "error" | "success";
 
-const JENIS_OPTIONS: { value: GeneratedContentJenis; label: string; description: string }[] = [
-  { value: "produk", label: "Dari Foto", description: "Pakai foto (produk, ruangan, atau orang) yang sudah diupload. AI mempercantik sesuai kategori." },
-  { value: "general", label: "General", description: "AI generate gambar & isi konten dari nol." },
-  { value: "interaksi", label: "Interaksi", description: "AI tentukan sendiri isi konten (kuis/quote/tips)." },
+const JENIS_OPTIONS: { value: GeneratedContentJenis; label: string; en: string; description: string; descEn: string }[] = [
+  { value: "produk", label: "Dari Foto", en: "From Photo", description: "Pakai foto (produk, ruangan, atau orang) yang sudah diupload. AI mempercantik sesuai kategori.", descEn: "Use an uploaded photo (product, space, or person). AI enhances it to match the category." },
+  { value: "general", label: "General", en: "General", description: "AI generate gambar & isi konten dari nol.", descEn: "AI generates the image & content from scratch." },
+  { value: "interaksi", label: "Interaksi", en: "Interaction", description: "AI tentukan sendiri isi konten (kuis/quote/tips).", descEn: "AI decides the content itself (quiz/quote/tips)." },
 ];
 
-const RATIO_OPTIONS: { value: AspectRatio; label: string }[] = [
-  { value: "4:5", label: "Feed (4:5)" },
-  { value: "1:1", label: "Kotak (1:1)" },
-  { value: "9:16", label: "Story (9:16)" },
+const RATIO_OPTIONS: { value: AspectRatio; label: string; en: string }[] = [
+  { value: "4:5", label: "Feed (4:5)", en: "Feed (4:5)" },
+  { value: "1:1", label: "Kotak (1:1)", en: "Square (1:1)" },
+  { value: "9:16", label: "Story (9:16)", en: "Story (9:16)" },
 ];
 
-const JENIS_LABEL: Record<GeneratedContentJenis, string> = {
-  produk: "Produk",
-  general: "General",
-  interaksi: "Interaksi",
+const JENIS_LABEL: Record<GeneratedContentJenis, { id: string; en: string }> = {
+  produk: { id: "Produk", en: "Product" },
+  general: { id: "General", en: "General" },
+  interaksi: { id: "Interaksi", en: "Interaction" },
 };
 
 // Dua gangguan sesaat bisa bikin request gagal walau semuanya sebenarnya baik:
@@ -81,6 +81,9 @@ async function fetchWithAuthRetry(input: string, init?: RequestInit): Promise<Re
 
 export function AutoGenerate() {
   const [jenis, setJenis] = useState<GeneratedContentJenis>("produk");
+  const [uiLang, setUiLang] = useState<Lang>("en");
+  useEffect(() => setUiLang(getLang()), []);
+  const L = (id: string, en: string) => (uiLang === "en" ? en : id);
   const [ratio, setRatio] = useState<AspectRatio>("4:5");
   const [images, setImages] = useState<PickableImage[]>([]);
   const [selectedImageIds, setSelectedImageIds] = useState<string[]>([]);
@@ -108,10 +111,10 @@ export function AutoGenerate() {
     try {
       const res = await fetchWithAuthRetry("/api/generate-auto");
       const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.error ?? "Gagal memuat riwayat konten.");
+      if (!res.ok) throw new Error(data?.error ?? L("Gagal memuat riwayat konten.", "Failed to load content history."));
       setHistory(data?.items ?? []);
     } catch (error) {
-      setHistoryError(error instanceof Error ? error.message : "Gagal memuat riwayat konten.");
+      setHistoryError(error instanceof Error ? error.message : L("Gagal memuat riwayat konten.", "Failed to load content history."));
     }
   }
 
@@ -150,13 +153,13 @@ export function AutoGenerate() {
       .then(({ ok, data }) => {
         if (cancelled) return;
         if (!ok) {
-          setHistoryError(data?.error ?? "Gagal memuat riwayat konten.");
+          setHistoryError(data?.error ?? L("Gagal memuat riwayat konten.", "Failed to load content history."));
           return;
         }
         setHistory(data?.items ?? []);
       })
       .catch(() => {
-        if (!cancelled) setHistoryError("Gagal memuat riwayat konten.");
+        if (!cancelled) setHistoryError(L("Gagal memuat riwayat konten.", "Failed to load content history."));
       });
     return () => {
       cancelled = true;
@@ -167,7 +170,7 @@ export function AutoGenerate() {
     if (generatingRef.current) return; // sudah ada proses generate berjalan
     if (jenis === "produk" && selectedImageIds.length === 0) {
       setGenerateStatus("error");
-      setGenerateError("Pilih minimal satu foto dulu.");
+      setGenerateError(L("Pilih minimal satu foto dulu.", "Pick at least one photo first."));
       return;
     }
     generatingRef.current = true;
@@ -176,18 +179,27 @@ export function AutoGenerate() {
     setSaveStatus("idle");
     setSaveError(null);
     try {
-      const res = await fetch("/api/generate-auto", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jenis,
-          ratio: ratioArg && RATIO_OPTIONS.some((o) => o.value === ratioArg) ? ratioArg : ratio,
-          imageIds: jenis === "produk" ? selectedImageIds : undefined,
-          language: getLang(),
-        }),
-      });
+      const doPost = () =>
+        fetch("/api/generate-auto", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jenis,
+            ratio: ratioArg && RATIO_OPTIONS.some((o) => o.value === ratioArg) ? ratioArg : ratio,
+            imageIds: jenis === "produk" ? selectedImageIds : undefined,
+            language: getLang(),
+          }),
+        });
+      let res = await doPost();
+      // 401 "Belum login" ditolak di gerbang auth SEBELUM generate jalan — belum
+      // ada token yang kepotong, jadi aman diulang SEKALI setelah sesi ter-refresh.
+      // Hanya untuk 401, TIDAK untuk kegagalan jaringan (biar tak dobel-generate).
+      if (res.status === 401) {
+        await new Promise((r) => setTimeout(r, 500));
+        res = await doPost();
+      }
       const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.error ?? "Gagal generate konten.");
+      if (!res.ok) throw new Error(data?.error ?? L("Gagal generate konten.", "Failed to generate content."));
 
       const item: GeneratedItem = data.item;
       setResult(item);
@@ -201,7 +213,7 @@ export function AutoGenerate() {
       await loadHistory();
     } catch (error) {
       setGenerateStatus("error");
-      setGenerateError(error instanceof Error ? error.message : "Gagal generate konten.");
+      setGenerateError(error instanceof Error ? error.message : L("Gagal generate konten.", "Failed to generate content."));
     } finally {
       generatingRef.current = false;
     }
@@ -234,17 +246,17 @@ export function AutoGenerate() {
   }
 
   async function handleDeleteHistory(id: string) {
-    if (!window.confirm("Hapus konten ini dari riwayat? Tindakan ini permanen.")) return;
+    if (!window.confirm(L("Hapus konten ini dari riwayat? Tindakan ini permanen.", "Delete this content from history? This action is permanent."))) return;
     setDeletingId(id);
     setHistoryError(null);
     try {
       const res = await fetchWithAuthRetry(`/api/generate-auto/${id}`, { method: "DELETE" });
       const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.error ?? "Gagal menghapus konten.");
+      if (!res.ok) throw new Error(data?.error ?? L("Gagal menghapus konten.", "Failed to delete content."));
       setHistory((cur) => cur.filter((it) => it.id !== id));
       setResult((cur) => (cur && cur.id === id ? null : cur));
     } catch (error) {
-      setHistoryError(error instanceof Error ? error.message : "Gagal menghapus konten.");
+      setHistoryError(error instanceof Error ? error.message : L("Gagal menghapus konten.", "Failed to delete content."));
     } finally {
       setDeletingId(null);
     }
@@ -275,16 +287,16 @@ export function AutoGenerate() {
   async function handleShareIg() {
     if (sharing || !result) return;
     if (!sharedBlob) {
-      window.alert("Tekan 'Simpan PNG' dulu, lalu 'Bagikan ke IG'.");
+      window.alert("Tekan 'Simpan Gambar' dulu, lalu 'Bagikan ke IG'.");
       return;
     }
     setSharing(true);
     try {
       const r = await shareContent(sharedBlob, result.caption, `kevo-${result.jenis}-${result.id}.png`);
       if (r === "fallback") {
-        window.alert("Gambar diunduh & caption disalin. Buka Instagram → post baru → pilih gambar → tempel caption.");
+        window.alert(L("Gambar diunduh & caption disalin. Buka Instagram → post baru → pilih gambar → tempel caption.", "Image downloaded & caption copied. Open Instagram → new post → pick the image → paste the caption."));
       } else if (r === "error") {
-        window.alert("Gagal membagikan. Coba lagi.");
+        window.alert(L("Gagal membagikan. Coba lagi.", "Failed to share. Try again."));
       }
     } finally {
       setSharing(false);
@@ -297,7 +309,7 @@ export function AutoGenerate() {
       // Jangan pernah simpan render tanpa foto — hasilnya cuma teks di atas
       // latar hitam dan akan menimpa baris Riwayat yang tadinya bagus.
       setSaveStatus("error");
-      setSaveError("Gambar belum siap. Generate ulang dulu sebelum menyimpan.");
+      setSaveError(L("Gambar belum siap. Generate ulang dulu sebelum menyimpan.", "Image not ready yet. Regenerate before saving."));
       return;
     }
     setSaveStatus("loading");
@@ -310,7 +322,7 @@ export function AutoGenerate() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        throw new Error(data?.error ?? "Gagal merender.");
+        throw new Error(data?.error ?? L("Gagal merender.", "Failed to render."));
       }
       const blob = await res.blob();
 
@@ -328,7 +340,7 @@ export function AutoGenerate() {
       setSaveStatus("success");
     } catch (error) {
       setSaveStatus("error");
-      setSaveError(error instanceof Error ? error.message : "Gagal menyimpan.");
+      setSaveError(error instanceof Error ? error.message : L("Gagal menyimpan.", "Failed to save."));
     }
   }
 
@@ -338,14 +350,14 @@ export function AutoGenerate() {
   return (
     <Card className="flex flex-col gap-6">
       <div>
-        <h3 className="text-lg font-bold text-navy">Generate Otomatis</h3>
+        <h3 className="text-lg font-bold text-navy">{L("Generate Otomatis", "Auto Generate")}</h3>
         <p className="text-sm text-navy/60">
-          AI membuat gambar, headline, dan caption. Setelah muncul, tinggal atur posisinya lalu Simpan PNG.
+          {L("AI membuat gambar, headline, dan caption. Setelah muncul, tinggal atur posisinya lalu Simpan Gambar.", "AI creates the image, headline, and caption. Once it appears, just position it and Save Image.")}
         </p>
       </div>
 
       <div className="flex flex-col gap-2">
-        <span className="text-sm font-medium text-navy">Jenis konten</span>
+        <span className="text-sm font-medium text-navy">{L("Jenis konten", "Content type")}</span>
         <div className="grid gap-3 sm:grid-cols-3">
           {JENIS_OPTIONS.map((opt) => {
             const active = jenis === opt.value;
@@ -360,8 +372,8 @@ export function AutoGenerate() {
                     : "border-line hover:border-primary/40 hover:bg-navy/[0.02]"
                 }`}
               >
-                <span className={`font-semibold ${active ? "text-primary" : "text-navy"}`}>{opt.label}</span>
-                <span className="text-xs text-navy/60">{opt.description}</span>
+                <span className={`font-semibold ${active ? "text-primary" : "text-navy"}`}>{uiLang === "en" ? opt.en : opt.label}</span>
+                <span className="text-xs text-navy/60">{uiLang === "en" ? opt.descEn : opt.description}</span>
               </button>
             );
           })}
@@ -370,7 +382,7 @@ export function AutoGenerate() {
 
       {jenis === "produk" ? (
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-navy">Pilih foto produk (bisa 1–5, centang &gt;1 untuk digabung)</span>
+          <span className="text-sm font-medium text-navy">{L("Pilih foto produk (bisa 1–5, centang >1 untuk digabung)", "Select product photos (1–5, tick >1 to combine)")}</span>
           <div className="relative">
             <button
               type="button"
@@ -379,8 +391,8 @@ export function AutoGenerate() {
             >
               <span className={selectedImageIds.length ? "text-navy" : "text-navy/50"}>
                 {selectedImageIds.length === 0
-                  ? "Pilih gambar..."
-                  : `${selectedImageIds.length} produk dipilih${selectedImageIds.length > 1 ? " — akan digabung" : ""}`}
+                  ? L("Pilih gambar...", "Select image...")
+                  : `${selectedImageIds.length} ${L("produk dipilih", "products selected")}${selectedImageIds.length > 1 ? L(" — akan digabung", " — will be combined") : ""}`}
               </span>
               <span className="text-navy/40">{pickerOpen ? "▲" : "▼"}</span>
             </button>
@@ -410,7 +422,7 @@ export function AutoGenerate() {
                         }
                       />
                       <span className="text-navy">
-                        {(image.description || "(tanpa deskripsi)")} — <span className="text-navy/50">{image.category}</span>
+                        {(image.description || L("(tanpa deskripsi)", "(no description)"))} — <span className="text-navy/50">{image.category}</span>
                       </span>
                     </label>
                   );
@@ -419,18 +431,18 @@ export function AutoGenerate() {
             ) : null}
           </div>
           {selectedImageIds.length >= 5 ? (
-            <p className="text-xs text-navy/50">Maksimal 5 produk.</p>
+            <p className="text-xs text-navy/50">{L("Maksimal 5 produk.", "Maximum 5 products.")}</p>
           ) : null}
           {images.length === 0 ? (
             <p className="text-xs text-navy/50">
-              Belum ada foto (produk/ruangan/orang) yang boleh diolah AI. Unggah dulu di Database Gambar (pilih &quot;Boleh diolah AI&quot;).
+              {L("Belum ada foto (produk/ruangan/orang) yang boleh diolah AI. Unggah dulu di Database Gambar (pilih \"Boleh diolah AI\").", "No photos (product/space/person) are enabled for AI yet. Upload them first in the Image Database (choose \"Allow AI\").")}
             </p>
           ) : null}
         </div>
       ) : null}
 
       <div className="flex flex-col gap-2">
-        <span className="text-sm font-medium text-navy">Ukuran</span>
+        <span className="text-sm font-medium text-navy">{L("Ukuran", "Size")}</span>
         <div className="flex flex-wrap gap-2">
           {RATIO_OPTIONS.map((opt) => {
             const active = ratio === opt.value;
@@ -444,18 +456,18 @@ export function AutoGenerate() {
                   active ? "border-primary bg-primary/10 text-primary" : "border-line text-navy hover:bg-navy/5"
                 }`}
               >
-                {opt.label}
+                {uiLang === "en" ? opt.en : opt.label}
               </button>
             );
           })}
         </div>
         {result ? (
-          <span className="text-xs text-navy/50">Ganti ukuran, lalu tekan &quot;Generate Otomatis&quot; lagi untuk membuat ulang di ukuran itu (1 token).</span>
+          <span className="text-xs text-navy/50">{L("Ganti ukuran, lalu tekan \"Generate Otomatis\" lagi untuk membuat ulang di ukuran itu (1 token).", "Change the size, then press \"Auto Generate\" again to remake it at that size (1 token).")}</span>
         ) : null}
       </div>
 
       <Button type="button" variant="cta" onClick={() => handleGenerate()} disabled={isGenerating} className="w-fit">
-        {isGenerating ? "Sedang membuat..." : "Generate Otomatis"}
+        {isGenerating ? L("Sedang membuat...", "Generating...") : L("Generate Otomatis", "Auto Generate")}
       </Button>
 
       {generateError ? <p className="text-sm text-red-600">{generateError}</p> : null}
@@ -463,7 +475,7 @@ export function AutoGenerate() {
       {result && editTemplate ? (
         <div className="flex flex-col gap-4 rounded-[20px] border border-line bg-surface/50 p-5">
           <p className="text-sm font-medium text-navy">
-            Atur posisi teks, logo, dan sosmed langsung di gambar, lalu Simpan PNG.
+            {L("Atur posisi teks, logo, dan sosmed langsung di gambar, lalu Simpan Gambar.", "Position the text, logo, and socials right on the image, then Save Image.")}
           </p>
 
           <div className="mx-auto">
@@ -483,36 +495,36 @@ export function AutoGenerate() {
             />
           </div>
 
-          <Textarea label="Caption (bisa disalin)" value={result.caption} readOnly />
+          <Textarea label={L("Caption (bisa disalin)", "Caption (copyable)")} value={result.caption} readOnly />
 
           {result.jawaban ? (
             <div className="mt-3 rounded-xl border border-primary/25 bg-primary/5 p-3 text-sm text-navy/80">
-              <p className="mb-1 font-semibold text-primary">💡 Jawaban / Pembahasan (buat kamu — tidak ikut diposting)</p>
+              <p className="mb-1 font-semibold text-primary">{L("💡 Jawaban / Pembahasan (buat kamu — tidak ikut diposting)", "💡 Answer / Explanation (for you — not posted)")}</p>
               <p>{result.jawaban}</p>
             </div>
           ) : null}
 
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" onClick={handleSimpanPng} disabled={isSaving}>
-              {isSaving ? "Menyimpan..." : "Simpan PNG"}
+              {isSaving ? L("Menyimpan...", "Saving...") : L("Simpan Gambar", "Save Image")}
             </Button>
             <Button type="button" variant="secondary" onClick={() => handleCopyCaption("result", result.caption)}>
-              {copiedId === "result" ? "Tersalin!" : "Salin Caption"}
+              {copiedId === "result" ? L("Tersalin!", "Copied!") : L("Salin Caption", "Copy Caption")}
             </Button>
             <Button type="button" variant="secondary" onClick={handleShareIg} disabled={sharing}>
-              {sharing ? "Menyiapkan..." : "Bagikan ke IG"}
+              {sharing ? L("Menyiapkan...", "Preparing...") : L("Bagikan ke IG", "Share to IG")}
             </Button>
-            {saveStatus === "success" ? <span className="text-sm font-medium text-primary">Tersimpan ke Riwayat ✓</span> : null}
+            {saveStatus === "success" ? <span className="text-sm font-medium text-primary">{L("Tersimpan ke Riwayat ✓", "Saved to History ✓")}</span> : null}
           </div>
           {saveError ? <p className="text-sm text-red-600">{saveError}</p> : null}
         </div>
       ) : null}
 
       <div className="flex flex-col gap-3">
-        <h4 className="text-sm font-semibold text-navy">Riwayat</h4>
+        <h4 className="text-sm font-semibold text-navy">{L("Riwayat", "History")}</h4>
         {historyError ? <p className="text-sm text-red-600">{historyError}</p> : null}
         {history.length === 0 ? (
-          <p className="text-xs text-navy/50">Belum ada konten yang digenerate.</p>
+          <p className="text-xs text-navy/50">{L("Belum ada konten yang digenerate.", "No content generated yet.")}</p>
         ) : (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             {history.map((item) => (
@@ -523,7 +535,7 @@ export function AutoGenerate() {
                   className="aspect-square w-full rounded-xl border border-line object-cover"
                 />
                 <span className="inline-flex w-fit rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                  {JENIS_LABEL[item.jenis]}
+                  {uiLang === "en" ? JENIS_LABEL[item.jenis].en : JENIS_LABEL[item.jenis].id}
                 </span>
                 <p className="line-clamp-2 text-xs text-navy/60" title={item.caption}>
                   {item.caption}
@@ -541,7 +553,7 @@ export function AutoGenerate() {
                     onClick={() => handleCopyCaption(item.id, item.caption)}
                     className="text-xs font-medium text-primary hover:underline"
                   >
-                    {copiedId === item.id ? "Tersalin!" : "Salin Caption"}
+                    {copiedId === item.id ? L("Tersalin!", "Copied!") : L("Salin Caption", "Copy Caption")}
                   </button>
                   <button
                     type="button"
@@ -549,7 +561,7 @@ export function AutoGenerate() {
                     disabled={deletingId === item.id}
                     className="text-xs font-medium text-red-500 hover:underline disabled:opacity-50"
                   >
-                    {deletingId === item.id ? "Menghapus..." : "Hapus"}
+                    {deletingId === item.id ? L("Menghapus...", "Deleting...") : L("Hapus", "Delete")}
                   </button>
                 </div>
               </div>

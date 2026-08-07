@@ -315,7 +315,7 @@ export function TeksSajaContent({
           {showEditor ? (
             <div className="flex flex-wrap items-center gap-2">
               <Button type="button" variant="cta" onClick={handleSimpanPng} disabled={renderStatus === "loading"}>
-                {renderStatus === "loading" ? "Merender..." : "Simpan PNG"}
+                {renderStatus === "loading" ? "Merender..." : "Simpan Gambar"}
               </Button>
               {renderStatus === "success" ? <span className="text-sm font-medium text-primary">PNG Terunduh</span> : null}
               {renderError ? <p className="text-sm text-red-600">{renderError}</p> : null}

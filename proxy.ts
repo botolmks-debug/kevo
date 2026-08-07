@@ -32,7 +32,13 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isPublic = PUBLIC_PATHS.some((p) => path.startsWith(p));
+  // Root "/" (landing) dicocokkan PERSIS, bukan startsWith — kalau tidak,
+  // semua path (yang selalu diawali "/") ikut jadi publik dan auth jebol.
+  const isPublic =
+    path === "/" ||
+    path === "/sitemap.xml" ||
+    path === "/robots.txt" ||
+    PUBLIC_PATHS.some((p) => path.startsWith(p));
   const isApi = path.startsWith("/api");
 
   // Belum login & buka halaman terproteksi -> lempar ke /login

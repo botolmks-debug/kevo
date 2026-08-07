@@ -159,14 +159,59 @@ export function StandarContent({
   const editTemplate = applyEditorOverrides(template, ratio, overrides);
   const layout = editTemplate.layouts[ratio];
 
+  async function urlToDataUri(url: string): Promise<string | null> {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) return null;
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      if (bytes.length < 4) return null;
+      // Deteksi MIME dari MAGIC BYTES, bukan header Content-Type — storage kadang
+      // melayani JPEG dengan label image/png. Label salah bikin mesin render
+      // (Satori) gagal decode → gambar hitam. Ini akar bug "simpan hitam".
+      let mime = "image/jpeg";
+      if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) mime = "image/png";
+      else if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) mime = "image/jpeg";
+      else if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) mime = "image/gif";
+      else if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[8] === 0x57 && bytes[9] === 0x45) mime = "image/webp";
+      const typed = new Blob([bytes], { type: mime });
+      return await new Promise<string | null>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(typeof reader.result === "string" ? reader.result : null);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(typed);
+      });
+    } catch {
+      return null;
+    }
+  }
+
   async function handleSimpanPng() {
+    // photo bisa berupa URL (opsi "Pakai Gambar Asli") — ubah ke data URI dulu
+    // supaya server render meng-embed-nya, bukan mem-fetch URL storage yang bisa
+    // gagal (auth/RLS) dan menghasilkan gambar hitam tanpa foto.
+    let renderValues = values;
+    const photo = values.photo;
+    if (!photo) {
+      setRenderStatus("error");
+      setRenderError("Pilih gambar dulu sebelum menyimpan.");
+      return;
+    }
+    if (!photo.startsWith("data:")) {
+      const dataUri = await urlToDataUri(photo);
+      if (!dataUri) {
+        setRenderStatus("error");
+        setRenderError("Gambar gagal dimuat. Coba pilih ulang gambarnya.");
+        return;
+      }
+      renderValues = { ...values, photo: dataUri };
+    }
     setRenderStatus("loading");
     setRenderError(null);
     try {
       const res = await fetch("/api/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildRenderInput(editTemplate, values, ratio)),
+        body: JSON.stringify(buildRenderInput(editTemplate, renderValues, ratio)),
       });
       if (!res.ok) {
         const d = await res.json().catch(() => null);
@@ -185,7 +230,7 @@ export function StandarContent({
       const { photo: _photo, ...textValues } = values;
       const saved = await saveManualContent({
         pngBlob: blob,
-        backgroundSrc: photo ?? _photo ?? "",
+        backgroundSrc: renderValues.photo ?? "",
         layoutState: { templateId: "standar", ratio, values: textValues, overrides, logoVariant: activeLogoVariant, descCount },
         onImageText: judul,
         caption,
@@ -373,7 +418,7 @@ export function StandarContent({
           {photo ? (
             <div className="flex flex-wrap items-center gap-2">
               <Button type="button" variant="cta" onClick={handleSimpanPng} disabled={renderStatus === "loading"}>
-                {renderStatus === "loading" ? "Merender..." : "Simpan PNG"}
+                {renderStatus === "loading" ? "Merender..." : "Simpan Gambar"}
               </Button>
               {renderStatus === "success" ? <span className="text-sm font-medium text-primary">PNG Terunduh</span> : null}
               {renderError ? <p className="text-sm text-red-600">{renderError}</p> : null}

@@ -14,7 +14,7 @@ export function SocialLinks() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [lang, setLangState] = useState<Lang>("id");
+  const [lang, setLangState] = useState<Lang>("en");
 
   useEffect(() => { setLangState(getLang()); }, []);
 

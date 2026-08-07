@@ -48,16 +48,31 @@ export type InsertGeneratedContentResult =
 export async function insertGeneratedContent(
   client: SupabaseClient,
   input: InsertGeneratedContentInput,
+  // Client khusus untuk upload storage. Default = client. Route melewatkan
+  // service-role client agar upload tak kena RLS storage / balapan refresh-token
+  // (penyebab error "Gagal mengunggah hasil generate").
+  storageClient: SupabaseClient = client,
 ): Promise<InsertGeneratedContentResult> {
   const businessId = input.businessId ?? DEV_BUSINESS_ID;
   const storagePath = `${businessId}/generated/${randomUUID()}.png`;
 
-  const { error: uploadError } = await client.storage.from(BUCKET).upload(storagePath, input.pngBuffer, {
-    contentType: "image/png",
-  });
+  // Upload dengan RETRY — "fetch failed" adalah kegagalan jaringan sesaat ke
+  // Supabase Storage; percobaan ulang biasanya berhasil. upsert:true supaya aman
+  // kalau percobaan sebelumnya sempat separuh jalan.
+  let uploadError: unknown = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const res = await storageClient.storage.from(BUCKET).upload(storagePath, input.pngBuffer, {
+      contentType: "image/png",
+      upsert: true,
+    });
+    uploadError = res.error;
+    if (!uploadError) break;
+    if (attempt < 3) await new Promise((r) => setTimeout(r, 500 * attempt));
+  }
   if (uploadError) {
-    console.error(`insertGeneratedContent (storage) failed: ${describeSupabaseError(uploadError)}`);
-    return { ok: false, error: "Gagal mengunggah hasil generate. Coba lagi." };
+    const detail = describeSupabaseError(uploadError);
+    console.error(`insertGeneratedContent (storage) failed after retries: ${detail}`);
+    return { ok: false, error: `Gagal mengunggah hasil generate: ${detail}` };
   }
 
   const { data, error } = await client

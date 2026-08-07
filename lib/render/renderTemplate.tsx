@@ -41,6 +41,41 @@ export function loadFontBuffers(): {
   };
 }
 
+// Deteksi MIME dari magic bytes — jangan percaya Content-Type/blob.type yang bisa
+// salah (mis. JPEG dilayani sebagai image/png → Satori gagal decode → hitam).
+// Baca dimensi asli gambar (PNG/JPEG) dari byte — dipakai agar logo di render
+// (Satori) mengisi kotak PERSIS seperti di editor (Konva): contain + center
+// dihitung manual, bukan mengandalkan objectFit yang bisa beda perilaku.
+function getImageDimensions(buf: Buffer): { w: number; h: number } | null {
+  try {
+    if (buf.length >= 24 && buf[0] === 0x89 && buf[1] === 0x50) {
+      return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) }; // PNG IHDR
+    }
+    if (buf.length >= 4 && buf[0] === 0xff && buf[1] === 0xd8) {
+      let off = 2;
+      while (off + 9 < buf.length) {
+        if (buf[off] !== 0xff) { off++; continue; }
+        const marker = buf[off + 1];
+        if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+          return { h: buf.readUInt16BE(off + 5), w: buf.readUInt16BE(off + 7) }; // JPEG SOF
+        }
+        off += 2 + buf.readUInt16BE(off + 2);
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function sniffImageMime(buf: Buffer): string {
+  if (buf.length >= 4 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return "image/png";
+  if (buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return "image/jpeg";
+  if (buf.length >= 3 && buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46) return "image/gif";
+  if (buf.length >= 12 && buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[8] === 0x57 && buf[9] === 0x45) return "image/webp";
+  return "image/jpeg";
+}
+
 export async function loadImageAsDataUri(
   url: string | undefined,
 ): Promise<string | null> {
@@ -50,15 +85,36 @@ export async function loadImageAsDataUri(
   if (url.startsWith("data:")) {
     return url;
   }
+  // 1) Coba fetch biasa (cepat; berhasil kalau bucket/URL publik).
   try {
     const res = await fetch(url);
-    if (!res.ok) {
-      return null;
+    if (res.ok) {
+      const buf = Buffer.from(await res.arrayBuffer());
+      return `data:${sniffImageMime(buf)};base64,${buf.toString("base64")}`;
     }
-    const contentType = res.headers.get("content-type") ?? "image/jpeg";
-    const arrayBuffer = await res.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString("base64");
-    return `data:${contentType};base64,${base64}`;
+  } catch {
+    // lanjut ke fallback di bawah
+  }
+  // 2) Fallback: kalau ini URL storage Supabase yang gagal di-fetch (bucket
+  //    privat / RLS), unduh langsung pakai service-role client. Ini AKAR
+  //    perbaikan bug "gambar hitam saat simpan" — server jadi selalu bisa
+  //    membaca gambar tanpa bergantung bucket harus publik.
+  return downloadSupabaseStorageAsDataUri(url);
+}
+
+async function downloadSupabaseStorageAsDataUri(url: string): Promise<string | null> {
+  try {
+    // Format URL Supabase: .../storage/v1/object/(public|sign|authenticated)/<bucket>/<path>
+    const m = url.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)\/([^/?]+)\/([^?]+)/);
+    if (!m) return null;
+    const bucket = m[1];
+    const objectPath = decodeURIComponent(m[2]);
+    const { createServiceRoleClient } = await import("@/lib/supabase/serviceRole");
+    const client = createServiceRoleClient();
+    const { data, error } = await client.storage.from(bucket).download(objectPath);
+    if (error || !data) return null;
+    const buf = Buffer.from(await data.arrayBuffer());
+    return `data:${sniffImageMime(buf)};base64,${buf.toString("base64")}`;
   } catch {
     return null;
   }
@@ -98,6 +154,9 @@ async function renderSlotElement(slot: Slot, values: Record<string, string>) {
       color: slot.color,
       textAlign: slot.align,
       lineClamp: slot.maxLines,
+      // Samakan dengan editor Konva (default lineHeight = 1) supaya tinggi blok
+      // teks & posisinya identik antara preview dan hasil export.
+      lineHeight: 1,
     };
 
     // Outline + shadow (dari editor overrides) → disimulasikan via textShadow
@@ -320,6 +379,20 @@ export async function renderTemplate(input: RenderInput): Promise<Buffer> {
   const logoDataUri = await loadImageAsDataUri(template.brand.logoUrl);
   const { logo, footerLayout } = layout;
 
+  // Hitung ukuran & offset logo yang "contain"-ed di dalam kotak logo.size,
+  // persis seperti LogoKonva di editor — supaya export == preview.
+  let logoDraw: { w: number; h: number; left: number; top: number } | null = null;
+  if (logoDataUri) {
+    const b64 = logoDataUri.split(",")[1] ?? "";
+    const dim = getImageDimensions(Buffer.from(b64, "base64"));
+    if (dim && dim.w > 0 && dim.h > 0) {
+      const fit = Math.min(logo.size / dim.w, logo.size / dim.h);
+      const w = dim.w * fit;
+      const h = dim.h * fit;
+      logoDraw = { w, h, left: logo.x + (logo.size - w) / 2, top: logo.y + (logo.size - h) / 2 };
+    }
+  }
+
   // Urutan tumpuk sengaja begini (bukan cuma urutan array `slots`), supaya:
   // - scrim (decoration layer:"front") bisa di atas foto tapi di bawah teks;
   // - foto full-bleed (mis. "Tanpa Template") tidak pernah menutupi logo —
@@ -372,9 +445,16 @@ export async function renderTemplate(input: RenderInput): Promise<Buffer> {
         <img
           src={logoDataUri}
           alt=""
-          width={logo.size}
-          height={logo.size}
-          style={{ position: "absolute", top: logo.y, left: logo.x, objectFit: "contain" }}
+          width={logoDraw ? logoDraw.w : logo.size}
+          height={logoDraw ? logoDraw.h : logo.size}
+          style={{
+            position: "absolute",
+            top: logoDraw ? logoDraw.top : logo.y,
+            left: logoDraw ? logoDraw.left : logo.x,
+            // Kalau dimensi gambar tak terbaca (mis. format WEBP), jangan melar —
+            // tetap contain seperti editor.
+            ...(logoDraw ? {} : { objectFit: "contain" as const }),
+          }}
         />
       ) : (
         <div

@@ -12,9 +12,20 @@ export const LANG_LABELS: Record<Lang, string> = { id: "Indonesia", en: "English
 const STORAGE_KEY = "kevo_lang"; // key internal — jangan diubah (backward-compat)
 
 export function getLang(): Lang {
-  if (typeof window === "undefined") return "id";
+  // Default English kalau user belum memilih.
+  if (typeof window === "undefined") return "en";
   const v = window.localStorage.getItem(STORAGE_KEY);
-  return (LANGS as string[]).includes(v ?? "") ? (v as Lang) : "id";
+  return (LANGS as string[]).includes(v ?? "") ? (v as Lang) : "en";
+}
+
+/**
+ * Bahasa yang SUDAH dipilih user (tersimpan), atau null kalau belum pernah.
+ * Dipakai halaman login untuk default ke English hanya jika belum ada pilihan.
+ */
+export function getStoredLang(): Lang | null {
+  if (typeof window === "undefined") return null;
+  const v = window.localStorage.getItem(STORAGE_KEY);
+  return (LANGS as string[]).includes(v ?? "") ? (v as Lang) : null;
 }
 
 export function setLang(lang: Lang): void {
@@ -27,7 +38,8 @@ export function setLang(lang: Lang): void {
 
 /** Untuk server component: baca Lang dari nilai cookie "lang". */
 export function langFromCookie(value: string | undefined | null): Lang {
-  return value === "en" ? "en" : "id";
+  // Default English kalau cookie belum ada.
+  return value === "id" ? "id" : "en";
 }
 
 // Entri minimal wajib punya "id"; bahasa lain opsional (fallback ke id).
@@ -51,6 +63,19 @@ const DICT: Record<string, Entry> = {
     id: "Bahasa hasil generate (judul & caption). Indonesia atau English.",
     en: "Language of generated content (title & caption). Indonesian or English.",
   },
+
+  // ── Halaman Login ──
+  "login.title": { id: "Masuk", en: "Sign in" },
+  "login.tagline": { id: "Setiap Produk Punya Cerita", en: "Every Product Has a Story" },
+  "login.email": { id: "Email", en: "Email" },
+  "login.emailPlaceholder": { id: "kamu@email.com", en: "you@email.com" },
+  "login.password": { id: "Password", en: "Password" },
+  "login.forgot": { id: "Lupa password?", en: "Forgot password?" },
+  "login.error": { id: "Email atau password salah. Coba lagi.", en: "Wrong email or password. Please try again." },
+  "login.processing": { id: "Memproses...", en: "Signing in..." },
+  "login.submit": { id: "Masuk", en: "Sign in" },
+  "login.noAccount": { id: "Belum punya akun?", en: "Don't have an account?" },
+  "login.signup": { id: "Daftar", en: "Sign up" },
 
   // ── Panduan (onboarding) ──
   "panduan.badge": { id: "Panduan Mulai", en: "Getting Started" },

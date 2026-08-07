@@ -195,10 +195,12 @@ export async function POST(request: NextRequest) {
     const images: { imageBase64: string; mimeType: string }[] = [];
     try {
       for (const img of sourceImages) {
-        const res = await fetch(publicImageUrl(supabase, img.storage_path));
-        if (!res.ok) throw new Error(`status ${res.status}`);
-        const mt = res.headers.get("content-type") ?? "image/jpeg";
-        const b64 = Buffer.from(await res.arrayBuffer()).toString("base64");
+        // Baca foto sumber via SERVICE client (tembus bucket privat/RLS), bukan
+        // fetch URL publik yang bisa gagal → akar bug storage.
+        const { data, error } = await createServiceRoleClient().storage.from(BUCKET).download(img.storage_path);
+        if (error || !data) throw new Error(error?.message ?? "download gagal");
+        const mt = (data as Blob).type || "image/jpeg";
+        const b64 = Buffer.from(await data.arrayBuffer()).toString("base64");
         images.push({ imageBase64: b64, mimeType: mt });
       }
     } catch {
@@ -212,10 +214,10 @@ export async function POST(request: NextRequest) {
     if (!sourceImage) return fail("Pilih gambar produk dulu.", 400);
     let imageBase64: string; let mimeType: string;
     try {
-      const sourceRes = await fetch(publicImageUrl(supabase, sourceImage.storage_path));
-      if (!sourceRes.ok) throw new Error(`status ${sourceRes.status}`);
-      mimeType = sourceRes.headers.get("content-type") ?? "image/jpeg";
-      imageBase64 = Buffer.from(await sourceRes.arrayBuffer()).toString("base64");
+      const { data, error } = await createServiceRoleClient().storage.from(BUCKET).download(sourceImage.storage_path);
+      if (error || !data) throw new Error(error?.message ?? "download gagal");
+      mimeType = (data as Blob).type || "image/jpeg";
+      imageBase64 = Buffer.from(await data.arrayBuffer()).toString("base64");
     } catch {
       return fail("Gagal mengambil gambar produk.", 502);
     }
@@ -278,7 +280,7 @@ export async function POST(request: NextRequest) {
     ratio: body.ratio,
     businessId: user.id,
     backgroundPath: bgUploadError ? undefined : bgPath,
-  });
+  }, serviceClient);
   if (!insertResult.ok) return fail(insertResult.error, 502);
 
   const row = insertResult.row;

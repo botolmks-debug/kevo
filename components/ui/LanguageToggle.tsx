@@ -5,7 +5,7 @@ import { getLang, setLang, t, type Lang } from "@/lib/i18n";
 import { Card } from "@/components/ui/Card";
 
 export function LanguageToggle() {
-  const [lang, setL] = useState<Lang>("id");
+  const [lang, setL] = useState<Lang>("en");
 
   useEffect(() => setL(getLang()), []);
 

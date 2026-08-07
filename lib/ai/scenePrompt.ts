@@ -192,15 +192,16 @@ ${localeSceneNote(lang)}`;
 export function buildFoodPrompt(profile: BusinessProfile, description?: string, lang?: Lang): string {
   const desc = (description ?? "").trim();
   const dishNote = desc ? `\n\nThe user described this as: "${desc}". Keep it that exact dish/drink.` : "";
-  return `This image is FOOD or a DRINK. Create a mouth-watering, professional FOOD PHOTOGRAPHY image that makes people crave it and want to order.
+  return `This image is FOOD or a DRINK. RE-SHOOT it as a professional, mouth-watering FOOD PHOTOGRAPH. The result MUST look clearly and noticeably more polished than the original phone snapshot — this is a professional makeover, NOT a copy of the input.
 
-FOOD PRESERVATION: keep the actual food/drink EXACTLY as photographed — same dish, same ingredients, same colors and portions. Do NOT invent a different food or add/remove ingredients that aren't there. Preserve any packaging/label text.
+KEEP (the dish identity): the actual food/drink itself — same dish, same ingredients, same portions and real colors. Do NOT invent a different food or add/remove ingredients. Preserve any packaging/label text on the product.
 
-STYLE (appetizing food photography):
-- Close-up, appetizing angle (about 45 degrees, or top-down if it suits the dish). Sharp focus on the food with shallow depth of field (soft background).
-- Fresh, irresistible cues ONLY where natural: gentle steam for hot food, condensation / water droplets for cold drinks, glossy sauce sheen, fresh garnish. Subtle and realistic — never overdone.
-- Clean, tasteful plating in a warm, inviting setting (rustic wood, marble, or soft neutral surface). Natural warm lighting, cozy cafe/restaurant mood.
-- Rich, vibrant, freshly-served colors.
+TRANSFORM (make it look professionally shot):
+- Background: REPLACE or clean away any distracting, messy, or cluttered surroundings (bottles, signage, random objects, busy kitchen/warung background) with a clean, tasteful food-photography setting — rustic wood, marble, or a soft neutral surface with a gently blurred, cohesive backdrop. The background should never compete with the food.
+- Lighting: studio-quality, warm and directional, that makes the food pop with appetizing highlights and soft shadows.
+- Composition: close-up, appetizing angle (about 45 degrees, or top-down if it suits the dish), sharp focus on the food with shallow depth of field.
+- Freshness cues ONLY where natural: gentle steam for hot food, condensation for cold drinks, glossy sauce sheen, fresh garnish — subtle and realistic, never overdone.
+- Enhance texture, freshness, and colour richness so it looks freshly served and irresistible.
 
 Business context: Industry ${profile.business.industry || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.${dishNote}
 

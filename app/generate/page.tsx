@@ -1,6 +1,6 @@
 "use client";
 
-import { getLang } from "@/lib/i18n";
+import { getLang, type Lang } from "@/lib/i18n";
 import { useRef, useEffect, useState } from "react";
 import { Header } from "@/components/ui/Header";
 import { Card } from "@/components/ui/Card";
@@ -22,32 +22,32 @@ import type { AspectRatio } from "@/lib/templates/types";
 type Status = "idle" | "loading" | "success" | "error";
 type PickableImage = { id: string; description: string; category: string; publicUrl: string };
 
-const RATIO_OPTIONS: { value: AspectRatio; label: string; w: number; h: number }[] = [
-  { value: "4:5", label: "Feed (4:5)", w: 1080, h: 1350 },
-  { value: "1:1", label: "Kotak (1:1)", w: 1080, h: 1080 },
-  { value: "9:16", label: "Story (9:16)", w: 1080, h: 1920 },
+const RATIO_OPTIONS: { value: AspectRatio; label: string; en: string; w: number; h: number }[] = [
+  { value: "4:5", label: "Feed (4:5)", en: "Feed (4:5)", w: 1080, h: 1350 },
+  { value: "1:1", label: "Kotak (1:1)", en: "Square (1:1)", w: 1080, h: 1080 },
+  { value: "9:16", label: "Story (9:16)", en: "Story (9:16)", w: 1080, h: 1920 },
 ];
 
 const BG_PRESETS = [
-  { label: "Orange", value: "#F97316" },
-  { label: "Merah", value: "#EF4444" },
-  { label: "Biru Tua", value: "#1D4ED8" },
-  { label: "Hijau", value: "#16A34A" },
-  { label: "Ungu", value: "#7C3AED" },
-  { label: "Kuning", value: "#CA8A04" },
-  { label: "Coklat", value: "#78350F" },
-  { label: "Teal", value: "#0F766E" },
-  { label: "Hitam", value: "#111111" },
-  { label: "Abu", value: "#374151" },
+  { label: "Orange", en: "Orange", value: "#F97316" },
+  { label: "Merah", en: "Red", value: "#EF4444" },
+  { label: "Biru Tua", en: "Dark Blue", value: "#1D4ED8" },
+  { label: "Hijau", en: "Green", value: "#16A34A" },
+  { label: "Ungu", en: "Purple", value: "#7C3AED" },
+  { label: "Kuning", en: "Yellow", value: "#CA8A04" },
+  { label: "Coklat", en: "Brown", value: "#78350F" },
+  { label: "Teal", en: "Teal", value: "#0F766E" },
+  { label: "Hitam", en: "Black", value: "#111111" },
+  { label: "Abu", en: "Gray", value: "#374151" },
 ];
 
 const CONTENT_MODELS = [
-  { id: "standar", label: "Konten Standar", desc: "Isi judul & deskripsi, pilih gambar (bisa diolah AI), lalu atur di editor.", emoji: "📝", available: true },
-  { id: "produk-latar", label: "Produk + Latar Buram", desc: "AI potong background produk, lalu gabungkan dengan latar warna & efek blur pilihanmu.", emoji: "🟧", available: true },
-  { id: "gabungan-2", label: "Gabungan 2 Gambar", desc: "Foto produk + foto latar dikombinasikan.", emoji: "🖼️", available: false },
-  { id: "teks-saja", label: "Teks Saja", desc: "Background warna solid dengan teks besar.", emoji: "✍️", available: true },
-  { id: "perbandingan", label: "Perbandingan 2 Produk", desc: "Split kiri-kanan, bandingkan dua produk.", emoji: "⚖️", available: false },
-  { id: "kolase", label: "Kolase 2–4 Produk", desc: "Grid foto beberapa produk sekaligus.", emoji: "🔲", available: false },
+  { id: "standar", label: "Konten Standar", en: "Standard Content", desc: "Isi judul & deskripsi, pilih gambar (bisa diolah AI), lalu atur di editor.", descEn: "Fill in a title & description, pick an image (AI-editable), then arrange it in the editor.", emoji: "📝", available: true },
+  { id: "produk-latar", label: "Produk + Latar Buram", en: "Product + Blurred Background", desc: "AI potong background produk, lalu gabungkan dengan latar warna & efek blur pilihanmu.", descEn: "AI cuts out the product, then combines it with your chosen colour background & blur.", emoji: "🟧", available: true },
+  { id: "gabungan-2", label: "Gabungan 2 Gambar", en: "Combine 2 Images", desc: "Foto produk + foto latar dikombinasikan.", descEn: "Product photo + background photo combined.", emoji: "🖼️", available: false },
+  { id: "teks-saja", label: "Teks Saja", en: "Text Only", desc: "Background warna solid dengan teks besar.", descEn: "Solid colour background with big text.", emoji: "✍️", available: true },
+  { id: "perbandingan", label: "Perbandingan 2 Produk", en: "Compare 2 Products", desc: "Split kiri-kanan, bandingkan dua produk.", descEn: "Left-right split, compare two products.", emoji: "⚖️", available: false },
+  { id: "kolase", label: "Kolase 2–4 Produk", en: "Collage 2–4 Products", desc: "Grid foto beberapa produk sekaligus.", descEn: "Grid of several product photos at once.", emoji: "🔲", available: false },
 ];
 
 /** Load gambar dari URL jadi HTMLImageElement via blob (bebas CORS) */
@@ -158,6 +158,9 @@ async function buildComposite(
 }
 
 export default function GeneratePage() {
+  const [uiLang, setUiLang] = useState<Lang>("en");
+  useEffect(() => setUiLang(getLang()), []);
+  const L = (id: string, en: string) => (uiLang === "en" ? en : id);
   const [showModelPicker, setShowModelPicker] = useState(true);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [bgColor, setBgColor] = useState("#F97316");
@@ -239,12 +242,12 @@ export default function GeneratePage() {
         body: JSON.stringify({ imageUrl: img.publicUrl }),
       });
       const d = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(d?.error ?? "Gagal hapus background.");
+      if (!res.ok) throw new Error(d?.error ?? L("Gagal hapus background.", "Failed to remove background."));
       setProductDataUri(d.dataUri);
       setRemoveBgStatus("success");
     } catch (e) {
       setRemoveBgStatus("error");
-      setRemoveBgError(e instanceof Error ? e.message : "Gagal hapus background.");
+      setRemoveBgError(e instanceof Error ? e.message : L("Gagal hapus background.", "Failed to remove background."));
       // Fallback: pakai foto asli kalau AI gagal
       setProductDataUri(null);
     }
@@ -278,7 +281,7 @@ export default function GeneratePage() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildRenderInput(editTemplate, values, ratio)),
       });
-      if (!res.ok) { const d = await res.json().catch(() => null); throw new Error(d?.error ?? "Gagal merender."); }
+      if (!res.ok) { const d = await res.json().catch(() => null); throw new Error(d?.error ?? L("Gagal merender.", "Failed to render.")); }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a"); a.href = url; a.download = `kevo-produk-${Date.now()}.png`;
@@ -296,9 +299,9 @@ export default function GeneratePage() {
         existingId: savedId,
       });
       if (saved.ok) setSavedId(saved.id);
-      else setRenderError(`PNG terunduh, tapi gagal simpan ke Riwayat: ${saved.error}`);
+      else setRenderError(L("PNG terunduh, tapi gagal simpan ke Riwayat: ", "PNG downloaded, but failed to save to History: ") + saved.error);
       setRenderStatus("success");
-    } catch (e) { setRenderStatus("error"); setRenderError(e instanceof Error ? e.message : "Gagal."); }
+    } catch (e) { setRenderStatus("error"); setRenderError(e instanceof Error ? e.message : L("Gagal.", "Failed.")); }
   }
 
   async function handleGenerateCaption() {
@@ -315,7 +318,7 @@ export default function GeneratePage() {
         }),
       });
       const d = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(d?.error ?? "Gagal.");
+      if (!res.ok) throw new Error(d?.error ?? L("Gagal.", "Failed."));
       setCaption(d.caption ?? ""); setCaptionStatus("success");
     } catch { setCaptionStatus("error"); }
   }
@@ -331,21 +334,21 @@ export default function GeneratePage() {
         <main className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-10">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-navy">Pilih Model Konten</h1>
+              <h1 className="text-2xl font-bold text-navy">{L("Pilih Model Konten", "Choose a Content Model")}</h1>
               <HelpTip
-                title="Panduan & saran"
+                title={L("Panduan & saran", "Guide & tips")}
                 align="left"
                 text={
                   <span className="flex flex-col gap-1.5">
-                    <span><b>Produk + Latar Warna</b> — untuk 1 produk jelas dengan latar sederhana (mis. botol di meja polos). AI memotong produk lalu menaruhnya di latar warna pilihanmu.</span>
-                    <span><b>Konten Standar</b> — paling fleksibel: isi judul & deskripsi, pilih gambar (bisa diolah AI atau dipakai apa adanya). Cocok untuk hampir semua foto.</span>
-                    <span><b>Otomatis</b> — AI membuat gambar + caption otomatis dari data bisnismu.</span>
-                    <span className="mt-1 rounded-lg bg-amber-50 p-2 text-amber-800">💡 <b>Saran:</b> kalau fotomu ramai / banyak objek / produk kecil, jangan pakai "Produk + Latar Warna" — hasil potongnya kurang rapi. Pakai <b>Konten Standar</b> (Generate AI) atau opsi "Pakai Gambar Asli".</span>
+                    <span>{L("Produk + Latar Warna — untuk 1 produk jelas dengan latar sederhana (mis. botol di meja polos). AI memotong produk lalu menaruhnya di latar warna pilihanmu.", "Product + Colour Background — for one clear product on a simple background (e.g. a bottle on a plain table). AI cuts out the product and places it on your chosen colour.")}</span>
+                    <span>{L("Konten Standar — paling fleksibel: isi judul & deskripsi, pilih gambar (bisa diolah AI atau dipakai apa adanya). Cocok untuk hampir semua foto.", "Standard Content — the most flexible: fill in a title & description, pick an image (AI-edited or used as-is). Works for almost any photo.")}</span>
+                    <span>{L("Otomatis — AI membuat gambar + caption otomatis dari data bisnismu.", "Auto — AI creates the image + caption automatically from your business data.")}</span>
+                    <span className="mt-1 rounded-lg bg-amber-50 p-2 text-amber-800">{L("💡 Saran: kalau fotomu ramai / banyak objek / produk kecil, jangan pakai \"Produk + Latar Warna\" — hasil potongnya kurang rapi. Pakai Konten Standar (Generate AI) atau opsi \"Pakai Gambar Asli\".", "💡 Tip: if your photo is busy / has many objects / a small product, avoid \"Product + Colour Background\" — the cutout gets messy. Use Standard Content (AI Generate) or the \"Use Original Image\" option.")}</span>
                   </span>
                 }
               />
             </div>
-            <p className="mt-1 text-navy/60">Pilih tampilan yang ingin kamu buat.</p>
+            <p className="mt-1 text-navy/60">{L("Pilih tampilan yang ingin kamu buat.", "Pick the look you want to create.")}</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {CONTENT_MODELS.map((model) => (
@@ -356,12 +359,12 @@ export default function GeneratePage() {
                   : "border-line bg-navy/[0.02] opacity-50 cursor-not-allowed"}`}>
                 <span className="text-3xl">{model.emoji}</span>
                 <div>
-                  <p className="font-semibold text-navy">{model.label}</p>
-                  <p className="mt-0.5 text-xs text-navy/60">{model.desc}</p>
+                  <p className="font-semibold text-navy">{uiLang === "en" ? model.en : model.label}</p>
+                  <p className="mt-0.5 text-xs text-navy/60">{uiLang === "en" ? model.descEn : model.desc}</p>
                 </div>
                 <span className={`mt-1 rounded-full px-2 py-0.5 text-xs font-medium ${
                   model.available ? "bg-primary/15 text-primary" : "bg-navy/10 text-navy/50"
-                }`}>{model.available ? "Tersedia" : "Segera hadir"}</span>
+                }`}>{model.available ? L("Tersedia", "Available") : L("Segera hadir", "Coming soon")}</span>
               </button>
             ))}
           </div>
@@ -400,9 +403,9 @@ export default function GeneratePage() {
       <main className="mx-auto flex max-w-5xl flex-col gap-6 px-6 py-10">
         <div className="flex items-center gap-3">
           <button type="button" onClick={() => { setShowModelPicker(true); setSelectedModel(null); }}
-            className="text-sm font-medium text-navy/60 hover:text-navy">← Ganti Model</button>
+            className="text-sm font-medium text-navy/60 hover:text-navy">{L("← Ganti Model", "← Change Model")}</button>
           <span className="text-navy/30">|</span>
-          <h1 className="text-xl font-bold text-navy">Produk + Latar Warna</h1>
+          <h1 className="text-xl font-bold text-navy">{L("Produk + Latar Warna", "Product + Colour Background")}</h1>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
@@ -410,13 +413,13 @@ export default function GeneratePage() {
 
             {/* Ukuran */}
             <Card className="flex flex-col gap-3">
-              <h3 className="text-sm font-semibold text-navy">Ukuran</h3>
+              <h3 className="text-sm font-semibold text-navy">{L("Ukuran", "Size")}</h3>
               <div className="flex flex-wrap gap-2">
                 {RATIO_OPTIONS.map((opt) => (
                   <button key={opt.value} type="button" onClick={() => setRatio(opt.value)}
                     className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
                       ratio === opt.value ? "border-primary bg-primary/10 text-primary" : "border-line text-navy hover:bg-navy/5"
-                    }`}>{opt.label}</button>
+                    }`}>{uiLang === "en" ? opt.en : opt.label}</button>
                 ))}
               </div>
             </Card>
@@ -424,22 +427,22 @@ export default function GeneratePage() {
             {/* Foto Produk — pilih dulu, AI langsung proses */}
             <Card className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-navy">Foto Produk</h3>
+                <h3 className="text-sm font-semibold text-navy">{L("Foto Produk", "Product Photo")}</h3>
                 {removeBgStatus === "loading" && (
                   <span className="flex items-center gap-1.5 text-xs text-primary animate-pulse">
                     <span className="h-2 w-2 rounded-full bg-primary animate-bounce" />
-                    AI memotong background... (~30 detik)
+                    {L("AI memotong background... (~30 detik)", "AI cutting out the background... (~30s)")}
                   </span>
                 )}
                 {removeBgStatus === "success" && (
-                  <span className="text-xs font-medium text-primary">✓ Background berhasil dipotong</span>
+                  <span className="text-xs font-medium text-primary">{L("✓ Background berhasil dipotong", "✓ Background removed")}</span>
                 )}
                 {removeBgStatus === "error" && (
-                  <span className="text-xs text-red-500">Gagal potong background</span>
+                  <span className="text-xs text-red-500">{L("Gagal potong background", "Failed to remove background")}</span>
                 )}
               </div>
               <p className="text-xs text-navy/50">
-                Pilih foto → AI otomatis memotong background produk (~30 detik), lalu efek latar diterapkan.
+                {L("Pilih foto → AI otomatis memotong background produk (~30 detik), lalu efek latar diterapkan.", "Pick a photo → AI removes the product background (~30s), then the background effect is applied.")}
               </p>
               {images.length > 0 ? (
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -458,14 +461,14 @@ export default function GeneratePage() {
                       ) : null}
                       {selectedImage?.id === img.id && removeBgStatus === "loading" ? (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                          <span className="text-white text-xs">Memproses...</span>
+                          <span className="text-white text-xs">{L("Memproses...", "Processing...")}</span>
                         </div>
                       ) : null}
                     </button>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-navy/60">Belum ada gambar. Upload dulu di Database Gambar.</p>
+                <p className="text-sm text-navy/60">{L("Belum ada gambar. Upload dulu di Database Gambar.", "No images yet. Upload some in the Image Database first.")}</p>
               )}
               {removeBgError ? <p className="text-xs text-red-600">{removeBgError}</p> : null}
             </Card>
@@ -473,38 +476,38 @@ export default function GeneratePage() {
             {/* Warna & Efek — hanya aktif kalau produk sudah dipotong */}
             <Card className={`flex flex-col gap-4 transition ${!productDataUri ? "opacity-50 pointer-events-none" : ""}`}>
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-navy">Warna & Efek Latar</h3>
+                <h3 className="text-sm font-semibold text-navy">{L("Warna & Efek Latar", "Background Colour & Effects")}</h3>
                 {compositeStatus === "loading" ? (
-                  <span className="text-xs text-primary animate-pulse">⏳ Memperbarui...</span>
+                  <span className="text-xs text-primary animate-pulse">{L("⏳ Memperbarui...", "⏳ Updating...")}</span>
                 ) : compositeStatus === "success" ? (
-                  <span className="text-xs text-primary">✓ Diperbarui</span>
+                  <span className="text-xs text-primary">{L("✓ Diperbarui", "✓ Updated")}</span>
                 ) : null}
               </div>
               {!productDataUri && (
-                <p className="text-xs text-navy/40">Pilih foto produk dulu untuk mengaktifkan pengaturan warna.</p>
+                <p className="text-xs text-navy/40">{L("Pilih foto produk dulu untuk mengaktifkan pengaturan warna.", "Pick a product photo first to enable colour settings.")}</p>
               )}
               <div className="flex flex-wrap gap-2">
                 {BG_PRESETS.map((c) => (
-                  <button key={c.value} type="button" title={c.label} onClick={() => setBgColor(c.value)}
+                  <button key={c.value} type="button" title={uiLang === "en" ? c.en : c.label} onClick={() => setBgColor(c.value)}
                     className={`h-9 w-9 rounded-xl border-2 transition hover:scale-110 ${bgColor === c.value ? "border-primary scale-110" : "border-transparent"}`}
                     style={{ background: c.value }} />
                 ))}
                 <label className="flex items-center gap-1.5 text-xs text-navy/60">
                   <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)}
                     className="h-9 w-9 rounded-xl border border-line cursor-pointer" />
-                  Custom
+                  {L("Custom", "Custom")}
                 </label>
               </div>
               <div className="flex flex-col gap-3 rounded-2xl bg-navy/[0.03] p-4">
-                <p className="text-xs font-medium text-navy/60">Sesuaikan efek latar:</p>
+                <p className="text-xs font-medium text-navy/60">{L("Sesuaikan efek latar:", "Adjust background effect:")}</p>
                 <label className="flex items-center gap-3 text-xs">
-                  <span className="w-28 shrink-0 text-navy/60">Overlay warna</span>
+                  <span className="w-28 shrink-0 text-navy/60">{L("Overlay warna", "Colour overlay")}</span>
                   <input type="range" min={5} max={80} step={5} value={Math.round(overlayOpacity * 100)}
                     onChange={(e) => setOverlayOpacity(Number(e.target.value) / 100)} className="flex-1" />
                   <span className="tabular-nums w-8 text-navy/60">{Math.round(overlayOpacity * 100)}%</span>
                 </label>
                 <label className="flex items-center gap-3 text-xs">
-                  <span className="w-28 shrink-0 text-navy/60">Blur latar</span>
+                  <span className="w-28 shrink-0 text-navy/60">{L("Blur latar", "Background blur")}</span>
                   <input type="range" min={0} max={40} step={2} value={blurRadius}
                     onChange={(e) => setBlurRadius(Number(e.target.value))} className="flex-1" />
                   <span className="tabular-nums w-8 text-navy/60">{blurRadius}px</span>
@@ -514,19 +517,19 @@ export default function GeneratePage() {
 
             {/* Teks */}
             <Card className="flex flex-col gap-3">
-              <h3 className="text-sm font-semibold text-navy">Teks</h3>
+              <h3 className="text-sm font-semibold text-navy">{L("Teks", "Text")}</h3>
               <label className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium text-navy/70">Judul</span>
+                <span className="text-sm font-medium text-navy/70">{L("Judul", "Title")}</span>
                 <input type="text" value={values.title ?? ""}
                   onChange={(e) => setValues(v => ({ ...v, title: e.target.value }))}
-                  placeholder="Nama produk / headline"
+                  placeholder={L("Nama produk / headline", "Product name / headline")}
                   className="rounded-2xl border border-line px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15" />
               </label>
               <label className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium text-navy/70">Tagline / Deskripsi</span>
+                <span className="text-sm font-medium text-navy/70">{L("Tagline / Deskripsi", "Tagline / Description")}</span>
                 <textarea value={values.subtitle ?? ""} rows={2}
                   onChange={(e) => setValues(v => ({ ...v, subtitle: e.target.value }))}
-                  placeholder="Tagline atau harga"
+                  placeholder={L("Tagline atau harga", "Tagline or price")}
                   className="rounded-2xl border border-line px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 resize-none" />
               </label>
             </Card>
@@ -534,21 +537,21 @@ export default function GeneratePage() {
             {/* Caption */}
             <Card className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-navy">Caption Instagram</h3>
+                <h3 className="text-sm font-semibold text-navy">{L("Caption Instagram", "Instagram Caption")}</h3>
                 <Button type="button" variant="secondary" onClick={handleGenerateCaption}
                   disabled={captionStatus === "loading"} className="text-xs px-3 py-1.5">
-                  {captionStatus === "loading" ? "Membuat..." : "✨ Generate"}
+                  {captionStatus === "loading" ? L("Membuat...", "Creating...") : L("✨ Generate", "✨ Generate")}
                 </Button>
               </div>
               <textarea value={caption} onChange={(e) => setCaption(e.target.value)} rows={4}
-                placeholder="Caption di sini, atau generate otomatis"
+                placeholder={L("Caption di sini, atau generate otomatis", "Caption here, or generate automatically")}
                 className="rounded-2xl border border-line px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 resize-none" />
               {caption ? (
                 <button type="button" onClick={async () => {
                   await navigator.clipboard.writeText(caption).catch(() => {});
                   setCopiedCaption(true); setTimeout(() => setCopiedCaption(false), 2000);
                 }} className="self-start text-xs font-medium text-primary hover:underline">
-                  {copiedCaption ? "Tersalin! ✓" : "Salin Caption"}
+                  {copiedCaption ? L("Tersalin! ✓", "Copied! ✓") : L("Salin Caption", "Copy Caption")}
                 </button>
               ) : null}
             </Card>
@@ -557,31 +560,31 @@ export default function GeneratePage() {
             <div className="flex flex-wrap items-center gap-2">
               <Button type="button" variant="cta" onClick={handleSimpanPng}
                 disabled={renderStatus === "loading" || !isReady || isProcessing}>
-                {renderStatus === "loading" ? "Merender..." : "Simpan PNG"}
+                {renderStatus === "loading" ? L("Merender...", "Rendering...") : L("Simpan Gambar", "Save Image")}
               </Button>
-              {renderStatus === "success" ? <span className="text-sm font-medium text-primary">PNG Terunduh ✓</span> : null}
+              {renderStatus === "success" ? <span className="text-sm font-medium text-primary">{L("PNG Terunduh ✓", "PNG Downloaded ✓")}</span> : null}
               {renderError ? <p className="text-sm text-red-600">{renderError}</p> : null}
-              {!isReady && !isProcessing ? <p className="text-xs text-navy/50">Pilih foto produk dulu.</p> : null}
-              {isProcessing ? <p className="text-xs text-navy/50">Menunggu proses selesai...</p> : null}
+              {!isReady && !isProcessing ? <p className="text-xs text-navy/50">{L("Pilih foto produk dulu.", "Pick a product photo first.")}</p> : null}
+              {isProcessing ? <p className="text-xs text-navy/50">{L("Menunggu proses selesai...", "Waiting for processing to finish...")}</p> : null}
             </div>
           </div>
 
           {/* Preview */}
           <div className="flex flex-col gap-2 lg:sticky lg:top-24 lg:self-start">
-            <p className="text-xs font-medium text-navy/60">Preview — geser & edit langsung</p>
+            <p className="text-xs font-medium text-navy/60">{L("Preview — geser & edit langsung", "Preview — drag & edit directly")}</p>
 
             {/* Status step */}
             <div className="rounded-2xl border border-line bg-white p-3 text-xs flex flex-col gap-1.5">
               <div className="flex items-center gap-2">
                 <span className={`h-2 w-2 rounded-full ${removeBgStatus === "success" ? "bg-primary" : removeBgStatus === "loading" ? "bg-amber-400 animate-pulse" : "bg-slate-300"}`} />
                 <span className={removeBgStatus === "success" ? "text-primary font-medium" : "text-navy/50"}>
-                  {removeBgStatus === "loading" ? "AI memotong background produk..." : removeBgStatus === "success" ? "Background berhasil dipotong" : "Langkah 1: Pilih foto produk"}
+                  {removeBgStatus === "loading" ? L("AI memotong background produk...", "AI removing product background...") : removeBgStatus === "success" ? L("Background berhasil dipotong", "Background removed") : L("Langkah 1: Pilih foto produk", "Step 1: Pick a product photo")}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className={`h-2 w-2 rounded-full ${compositeStatus === "success" ? "bg-primary" : compositeStatus === "loading" ? "bg-amber-400 animate-pulse" : "bg-slate-300"}`} />
                 <span className={compositeStatus === "success" ? "text-primary font-medium" : "text-navy/50"}>
-                  {compositeStatus === "loading" ? "Menggabungkan latar + produk..." : compositeStatus === "success" ? "Preview siap diedit" : "Langkah 2: Pilih warna & efek latar"}
+                  {compositeStatus === "loading" ? L("Menggabungkan latar + produk...", "Combining background + product...") : compositeStatus === "success" ? L("Preview siap diedit", "Preview ready to edit") : L("Langkah 2: Pilih warna & efek latar", "Step 2: Pick colour & background effect")}
                 </span>
               </div>
             </div>
@@ -592,10 +595,10 @@ export default function GeneratePage() {
                 {removeBgStatus === "loading" ? (
                   <>
                     <div className="h-10 w-10 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-                    <p className="text-xs text-navy/60 text-center">AI sedang memotong background produk...<br/>Mohon tunggu ~30 detik</p>
+                    <p className="text-xs text-navy/60 text-center">{L("AI sedang memotong background produk...", "AI is removing the product background...")}<br/>{L("Mohon tunggu ~30 detik", "Please wait ~30s")}</p>
                   </>
                 ) : (
-                  <p className="text-xs text-navy/40 text-center">Pilih foto produk untuk memulai</p>
+                  <p className="text-xs text-navy/40 text-center">{L("Pilih foto produk untuk memulai", "Pick a product photo to start")}</p>
                 )}
               </div>
             ) : (

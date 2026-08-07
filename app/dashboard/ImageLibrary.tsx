@@ -23,7 +23,7 @@ type UploadedImage = {
 type Status = "idle" | "loading" | "error" | "success";
 
 export function ImageLibrary() {
-  const [lang, setLangState] = useState<Lang>("id");
+  const [lang, setLangState] = useState<Lang>("en");
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [listError, setListError] = useState<string | null>(null);
 
