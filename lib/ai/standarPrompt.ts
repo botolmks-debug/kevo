@@ -25,8 +25,8 @@ Build a fresh background/scene whose mood, setting, props, and color palette MAT
 - Deskripsi: ${desc || "-"}
 Use realistic, professional, warm indoor lighting with soft depth of field unless the text clearly implies another setting.
 
-STEP 4 - INTEGRATION & FRAMING:
-Relight the subject to match the new scene, add a natural contact shadow and ambient occlusion, and blend the edges (no cut-out outline/halo). The scene MUST fill the ENTIRE frame edge-to-edge - no empty margins, no black/white bars, no border. Keep the lower third a bit calmer for text, but it must still contain scene/background, never left blank.
+STEP 4 - INTEGRATION & FRAMING (reserve a clean SPOT for text):
+Relight the subject to match the new scene, add a natural contact shadow and ambient occlusion, and blend the edges (no cut-out outline/halo). Place the MAIN SUBJECT in the UPPER ~55% of the frame. Keep the LOWER ~45% of the frame as a CALM, SIMPLE, uncluttered continuation of the background (soft gradient or plain surface) — this area is reserved as a clean spot for the TITLE and DESCRIPTION text, so do NOT place the product, busy props, or important details there. The scene MUST still fill the ENTIRE frame edge-to-edge - no empty margins, no black/white bars, no border - but that lower area stays visually quiet so overlaid text is easy to read.
 
 Do NOT add any new text, letters, numbers, logos, or watermarks to the image.${sizeNote}`;
 }

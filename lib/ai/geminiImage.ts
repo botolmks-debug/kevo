@@ -181,3 +181,29 @@ export async function composeProducts(input: {
   }));
   return generateFromParts([...imageParts, { text: input.prompt }], input.aspectRatio);
 }
+
+/**
+ * Konten manual dengan REFERENSI: kirim foto PRODUK (image 1) + gambar
+ * REFERENSI gaya (image 2). Prompt menyuruh AI menata ulang produk mengikuti
+ * konsep/komposisi/mood referensi, tapi mempertahankan identitas produk.
+ * Label teks sebelum tiap gambar membantu Gemini membedakan perannya.
+ */
+export async function editImageWithReference(input: {
+  productBase64: string;
+  productMime: string;
+  referenceBase64: string;
+  referenceMime: string;
+  aspectRatio: AspectRatio;
+  prompt: string;
+}): Promise<GeminiImageResult> {
+  return generateFromParts(
+    [
+      { text: "IMAGE 1 = PRODUCT (keep this product):" },
+      { inlineData: { mimeType: input.productMime, data: input.productBase64 } },
+      { text: "IMAGE 2 = STYLE REFERENCE (copy only its look, not its product/text):" },
+      { inlineData: { mimeType: input.referenceMime, data: input.referenceBase64 } },
+      { text: input.prompt },
+    ],
+    input.aspectRatio,
+  );
+}

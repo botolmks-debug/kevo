@@ -16,8 +16,8 @@ import { withLogoOverride } from "@/app/generate/withLogoOverride";
 import { polosTemplate } from "@/lib/templates/polos";
 import { interaksiTemplate } from "@/lib/templates/interaksi";
 import { renderTemplate } from "@/lib/render/renderTemplate";
-import { buildScenePrompt, buildRuanganPrompt, buildOrangPrompt, buildSoftwarePrompt, buildSkincarePrompt, buildFoodPrompt, buildGabungPrompt } from "@/lib/ai/scenePrompt";
-import { editImage, generateImage, composeProducts } from "@/lib/ai/geminiImage";
+import { buildScenePrompt, buildRuanganPrompt, buildOrangPrompt, buildSoftwarePrompt, buildSkincarePrompt, buildFoodPrompt, buildGabungPrompt, buildReferencePrompt } from "@/lib/ai/scenePrompt";
+import { editImage, generateImage, composeProducts, editImageWithReference } from "@/lib/ai/geminiImage";
 import { generateJsonContent } from "@/lib/ai/geminiJson";
 import {
   buildGeneralContentPrompt,
@@ -80,7 +80,7 @@ export async function GET() {
   return NextResponse.json({ items });
 }
 
-type RequestBody = { jenis: GeneratedContentJenis; ratio: AspectRatio; imageId?: string; imageIds?: string[]; language?: "id" | "en" };
+type RequestBody = { jenis: GeneratedContentJenis; ratio: AspectRatio; imageId?: string; imageIds?: string[]; language?: "id" | "en"; referenceDataUri?: string };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -95,6 +95,7 @@ function isValidBody(body: unknown): body is RequestBody {
     if (!Array.isArray(body.imageIds) || body.imageIds.length < 1 || body.imageIds.length > 5) return false;
     if (!body.imageIds.every((x) => typeof x === "string")) return false;
   }
+  if (body.referenceDataUri !== undefined && typeof body.referenceDataUri !== "string") return false;
   return true;
 }
 
@@ -228,7 +229,22 @@ export async function POST(request: NextRequest) {
       : sourceImage.type === "suasana" ? buildRuanganPrompt(profile, sourceImage.size_hint ?? undefined, body.language)
       : sourceImage.type === "wajah" ? buildOrangPrompt(profile, body.language)
       : buildScenePrompt(profile, sourceImage.size_hint ?? undefined, body.language);
-    const result = await editImage({ imageBase64, mimeType, aspectRatio: body.ratio, prompt });
+    let result;
+    if (body.referenceDataUri) {
+      // Konten manual dengan referensi gaya: kirim foto produk + gambar referensi.
+      const refMatch = body.referenceDataUri.match(/^data:(image\/\w+);base64,(.+)$/);
+      if (!refMatch) return fail("Gambar referensi tidak valid.", 400);
+      result = await editImageWithReference({
+        productBase64: imageBase64,
+        productMime: mimeType,
+        referenceBase64: refMatch[2],
+        referenceMime: refMatch[1],
+        aspectRatio: body.ratio,
+        prompt: buildReferencePrompt(profile, sourceImage.description ?? undefined, body.language),
+      });
+    } else {
+      result = await editImage({ imageBase64, mimeType, aspectRatio: body.ratio, prompt });
+    }
     if (!result.ok) return fail(result.error, 502);
     imageDataUri = result.dataUri;
   } else {

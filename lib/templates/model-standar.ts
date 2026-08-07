@@ -6,17 +6,30 @@
 import type { Template, TemplateLayout } from "@/lib/templates/types";
 import { defaultBrand } from "@/lib/templates/brand";
 
-function buildLayout(height: number, descCount: number): TemplateLayout {
+function buildLayout(height: number, descCount: number, titleText?: string): TemplateLayout {
   const W = 1080;
   const footerY = height - 80;
   const scrimH = Math.round(height * 0.44);
   const scrimY = height - scrimH;
   const titleY = scrimY + 32;
-  const titleH = Math.round(scrimH * 0.30);
   const descH = 66;
   const gap = 10;
 
   const count = Math.max(0, descCount);
+
+  // Tinggi kotak judul DINAMIS: ikut jumlah baris judul (72px), dibatasi agar
+  // deskripsi + footer tetap muat. Judul pendek -> kotak kecil; panjang -> tinggi.
+  const titleMaxFont = 72;
+  const titleCharsPerLine = Math.max(1, Math.floor((W - 120) / (titleMaxFont * 0.55)));
+  const titleLines = titleText && titleText.trim()
+    ? Math.max(1, Math.ceil(titleText.trim().length / titleCharsPerLine))
+    : 2;
+  const descsBlock = count > 0 ? count * descH + (count - 1) * gap + 12 : 0;
+  const maxTitleH = footerY - titleY - descsBlock - 16;
+  const titleH = Math.max(
+    Math.round(titleMaxFont * 1.15),
+    Math.min(Math.round(titleLines * titleMaxFont * 1.08) + 8, maxTitleH),
+  );
   const descSlots = Array.from({ length: count }, (_, i) => ({
     id: `desc-${i}`,
     type: "text" as const,
@@ -91,15 +104,15 @@ function buildLayout(height: number, descCount: number): TemplateLayout {
   };
 }
 
-export function createStandarTemplate(descCount: number): Template {
+export function createStandarTemplate(descCount: number, titleText?: string): Template {
   return {
     id: "standar",
     name: "Konten Standar",
     brand: { ...defaultBrand, backgroundColor: "#111111" },
     layouts: {
-      "4:5": buildLayout(1350, descCount),
-      "1:1": buildLayout(1080, descCount),
-      "9:16": buildLayout(1920, descCount),
+      "4:5": buildLayout(1350, descCount, titleText),
+      "1:1": buildLayout(1080, descCount, titleText),
+      "9:16": buildLayout(1920, descCount, titleText),
     },
   };
 }

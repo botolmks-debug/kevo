@@ -1,7 +1,7 @@
 "use client";
 
 import { getLang, type Lang } from "@/lib/i18n";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Textarea } from "@/components/ui/Input";
@@ -43,8 +43,9 @@ type GeneratedItem = {
 
 type Status = "idle" | "loading" | "error" | "success";
 
-const JENIS_OPTIONS: { value: GeneratedContentJenis; label: string; en: string; description: string; descEn: string }[] = [
+const JENIS_OPTIONS: { value: GeneratedContentJenis | "referensi"; label: string; en: string; description: string; descEn: string }[] = [
   { value: "produk", label: "Dari Foto", en: "From Photo", description: "Pakai foto (produk, ruangan, atau orang) yang sudah diupload. AI mempercantik sesuai kategori.", descEn: "Use an uploaded photo (product, space, or person). AI enhances it to match the category." },
+  { value: "referensi", label: "Referensi", en: "Reference", description: "Tiru gaya dari 1 contoh konten. Pilih 1 foto produk + unggah 1 gambar referensi.", descEn: "Copy the style from 1 example. Pick 1 product photo + upload 1 reference." },
   { value: "general", label: "General", en: "General", description: "AI generate gambar & isi konten dari nol.", descEn: "AI generates the image & content from scratch." },
   { value: "interaksi", label: "Interaksi", en: "Interaction", description: "AI tentukan sendiri isi konten (kuis/quote/tips).", descEn: "AI decides the content itself (quiz/quote/tips)." },
 ];
@@ -80,7 +81,7 @@ async function fetchWithAuthRetry(input: string, init?: RequestInit): Promise<Re
 }
 
 export function AutoGenerate() {
-  const [jenis, setJenis] = useState<GeneratedContentJenis>("produk");
+  const [jenis, setJenis] = useState<GeneratedContentJenis | "referensi">("produk");
   const [uiLang, setUiLang] = useState<Lang>("en");
   useEffect(() => setUiLang(getLang()), []);
   const L = (id: string, en: string) => (uiLang === "en" ? en : id);
@@ -166,11 +167,37 @@ export function AutoGenerate() {
     };
   }, []);
 
+  const [refDataUri, setRefDataUri] = useState<string | null>(null); // referensi gaya (konten manual)
+
+  function handleRefFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const img = new window.Image();
+    img.onload = () => {
+      const max = 1024;
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d")?.drawImage(img, 0, 0, w, h);
+      setRefDataUri(canvas.toDataURL("image/jpeg", 0.85));
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  }
+
   async function handleGenerate(ratioArg?: AspectRatio) {
     if (generatingRef.current) return; // sudah ada proses generate berjalan
-    if (jenis === "produk" && selectedImageIds.length === 0) {
+    if ((jenis === "produk" || jenis === "referensi") && selectedImageIds.length === 0) {
       setGenerateStatus("error");
       setGenerateError(L("Pilih minimal satu foto dulu.", "Pick at least one photo first."));
+      return;
+    }
+    if (jenis === "referensi" && !refDataUri) {
+      setGenerateStatus("error");
+      setGenerateError(L("Unggah 1 gambar referensi dulu.", "Upload 1 reference image first."));
       return;
     }
     generatingRef.current = true;
@@ -184,10 +211,11 @@ export function AutoGenerate() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            jenis,
+            jenis: jenis === "referensi" ? "produk" : jenis,
             ratio: ratioArg && RATIO_OPTIONS.some((o) => o.value === ratioArg) ? ratioArg : ratio,
-            imageIds: jenis === "produk" ? selectedImageIds : undefined,
+            imageIds: jenis === "produk" || jenis === "referensi" ? selectedImageIds : undefined,
             language: getLang(),
+            referenceDataUri: jenis === "referensi" ? (refDataUri ?? undefined) : undefined,
           }),
         });
       let res = await doPost();
@@ -380,9 +408,9 @@ export function AutoGenerate() {
         </div>
       </div>
 
-      {jenis === "produk" ? (
+      {jenis === "produk" || jenis === "referensi" ? (
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-navy">{L("Pilih foto produk (bisa 1–5, centang >1 untuk digabung)", "Select product photos (1–5, tick >1 to combine)")}</span>
+          <span className="text-sm font-medium text-navy">{jenis === "referensi" ? L("Pilih 1 foto produk", "Select 1 product photo") : L("Pilih foto produk (bisa 1–5, centang >1 untuk digabung)", "Select product photos (1–5, tick >1 to combine)")}</span>
           <div className="relative">
             <button
               type="button"
@@ -400,7 +428,7 @@ export function AutoGenerate() {
               <div className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-2xl border border-line bg-white p-1 shadow-lg">
                 {images.map((image) => {
                   const checked = selectedImageIds.includes(image.id);
-                  const atLimit = selectedImageIds.length >= 5 && !checked;
+                  const atLimit = (jenis === "referensi" ? selectedImageIds.length >= 1 : selectedImageIds.length >= 5) && !checked;
                   return (
                     <label
                       key={image.id}
@@ -411,15 +439,19 @@ export function AutoGenerate() {
                         className="mt-0.5 accent-primary"
                         checked={checked}
                         disabled={atLimit}
-                        onChange={() =>
+                        onChange={() => {
+                          if (jenis === "referensi") {
+                            setSelectedImageIds((prev) => (prev.includes(image.id) ? [] : [image.id]));
+                            return;
+                          }
                           setSelectedImageIds((prev) =>
                             prev.includes(image.id)
                               ? prev.filter((id) => id !== image.id)
                               : prev.length >= 5
                                 ? prev
                                 : [...prev, image.id],
-                          )
-                        }
+                          );
+                        }}
                       />
                       <span className="text-navy">
                         {(image.description || L("(tanpa deskripsi)", "(no description)"))} — <span className="text-navy/50">{image.category}</span>
@@ -437,6 +469,27 @@ export function AutoGenerate() {
             <p className="text-xs text-navy/50">
               {L("Belum ada foto (produk/ruangan/orang) yang boleh diolah AI. Unggah dulu di Database Gambar (pilih \"Boleh diolah AI\").", "No photos (product/space/person) are enabled for AI yet. Upload them first in the Image Database (choose \"Allow AI\").")}
             </p>
+          ) : null}
+
+          {jenis === "referensi" ? (
+          <div className="mt-1 rounded-2xl border border-dashed border-line bg-navy/[0.02] p-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-medium text-navy">{L("Gambar referensi (wajib)", "Reference image (required)")}</span>
+              {refDataUri ? (
+                <button type="button" onClick={() => setRefDataUri(null)} className="text-xs text-navy/50 hover:text-navy">{L("Hapus", "Remove")}</button>
+              ) : null}
+            </div>
+            <p className="mt-0.5 text-xs text-navy/50">{L("Unggah 1 contoh konten — AI meniru konsep, komposisi, dan mood-nya untuk fotomu (produk tetap sama).", "Upload 1 example — AI mimics its concept, composition, and mood for your photo (product stays the same).")}</p>
+            {refDataUri ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={refDataUri} alt="Referensi" className="mt-2 h-28 w-auto rounded-lg border border-line object-cover" />
+            ) : (
+              <label className="mt-2 inline-flex cursor-pointer items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-navy shadow-sm ring-1 ring-line transition hover:bg-navy/5">
+                {L("Pilih gambar referensi", "Choose reference image")}
+                <input type="file" accept="image/*" className="hidden" onChange={handleRefFile} />
+              </label>
+            )}
+          </div>
           ) : null}
         </div>
       ) : null}

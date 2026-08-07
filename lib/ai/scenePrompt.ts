@@ -189,6 +189,26 @@ ${localeSceneNote(lang)}`;
  * Untuk kategori MAKANAN / MINUMAN. Gaya food photography yang menggugah selera.
  * Dipakai HANYA di Otomatis (di manual, makanan = produk biasa).
  */
+export function buildReferencePrompt(profile: BusinessProfile, description?: string, lang?: Lang): string {
+  const desc = (description ?? "").trim();
+  const note = desc ? `\n\nProduct note from user: "${desc}".` : "";
+  return `You are given TWO images:
+- IMAGE 1 = the PRODUCT to feature (the real product to keep).
+- IMAGE 2 = a STYLE REFERENCE (an example of the look/composition/mood the user wants).
+
+Create ONE new, professional photograph of the PRODUCT from IMAGE 1, styled after the CONCEPT of IMAGE 2. Adopt from the reference: composition & framing, camera angle & distance, background style & surface, lighting direction & mood, colour palette, depth of field, and overall vibe. Recreate ONLY the decorative elements and props that ACTUALLY APPEAR in the reference (for example cobwebs, scattered fruit, sauce drips) and keep them at the SAME modest amount and placement. Do NOT invent extra props, smoke, sparkles, plants, or effects that are not in the reference, and do NOT make the scene busier than the reference. Place ALL props and decorations in the BACKGROUND and around the product ONLY — never on, over, inside, or covering the product itself.
+
+KEEP from IMAGE 1 (do not change): the exact product — its shape, colours, materials, and any label / logo / printed text on the product itself. The product must stay CLEAN and UNOBSTRUCTED: no cobwebs, smoke, sauce, sparkles, or props on top of, wrapped around, or covering it. Never swap it for a different product. The product is the clear hero; decorations only support it from the background.
+
+The ONLY things you must NOT copy from the reference are its TEXT, headline, price, date, caption, watermark, and brand LOGO (that is branding, not style). Everything else about its look — background, colours, props, and decorative effects (cobwebs, scattered items, splashes, sparkles) — SHOULD carry over. The output image itself must contain NO added text or watermark of its own.
+
+Business context: Industry ${profile.business.industry || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.${note}
+
+Fill the whole frame edge-to-edge; keep the bottom third a little calmer for later text overlay but never blank. The result must look like a real, high-quality photograph — clearly more polished than a phone snapshot.
+
+${localeSceneNote(lang)}`;
+}
+
 export function buildFoodPrompt(profile: BusinessProfile, description?: string, lang?: Lang): string {
   const desc = (description ?? "").trim();
   const dishNote = desc ? `\n\nThe user described this as: "${desc}". Keep it that exact dish/drink.` : "";

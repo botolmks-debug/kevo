@@ -146,7 +146,7 @@ export function StandarContent({
     ? { businessName: businessProfile.business.name, socials: buildFooterSocials(businessProfile) }
     : null;
 
-  const baseTemplate = createStandarTemplate(descCount);
+  const baseTemplate = createStandarTemplate(descCount, values.title ?? "");
   const withFooter = footerOverride?.socials?.length
     ? withFooterOverride(baseTemplate, footerOverride.businessName, footerOverride.socials)
     : baseTemplate;

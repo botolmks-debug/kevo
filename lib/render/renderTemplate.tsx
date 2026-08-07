@@ -5,7 +5,7 @@ import satori from "satori";
 import { Resvg } from "@resvg/resvg-js";
 import type { Decoration, RenderInput, Slot } from "../templates/types";
 import { FONT_OPTIONS } from "../templates/fonts";
-import { fitTextForDisplay } from "./fitText";
+import { fitFontSize, estimateLines } from "./fitText";
 import { renderFooterSocials } from "./renderFooter";
 import { renderDeliveryBadges } from "./renderDelivery";
 
@@ -138,22 +138,28 @@ async function renderSlotElement(slot: Slot, values: Record<string, string>) {
 
   if (slot.type === "text") {
     const rawValue = resolveSlotValue(slot, values) ?? "";
-    const fitted = fitTextForDisplay(rawValue, {
+    // Auto-shrink: judul/teks panjang MENGECIL agar muat, bukan dipotong "…".
+    const fittedFontSize = fitFontSize(rawValue, {
       boxWidth: slot.box.width,
-      fontSize: slot.maxFontSize,
-      maxLines: slot.maxLines,
+      boxHeight: slot.box.height,
+      maxFontSize: slot.maxFontSize,
+      minFontSize: slot.minFontSize ?? Math.round(slot.maxFontSize * 0.5),
+      lineHeight: 1,
     });
+    // lineClamp = jumlah baris yang DIBUTUHKAN teks (+headroom), SEPERTI editor Konva —
+    // jadi teks tampil utuh (tidak dipotong), walau user memperbesar font melebihi kotak.
+    const linesInBox = estimateLines(rawValue, slot.box.width, fittedFontSize) + 1;
+    const fitted = rawValue;
 
     const textStyle: SatoriStyle = {
       display: "block",
       width: "100%",
       fontFamily: slot.fontFamily,
-      // TODO v1.1: auto-shrink maxFontSize -> minFontSize sebelum clamp
-      fontSize: slot.maxFontSize,
+      fontSize: fittedFontSize,
       fontWeight: slot.fontWeight ?? 400,
       color: slot.color,
       textAlign: slot.align,
-      lineClamp: slot.maxLines,
+      lineClamp: linesInBox,
       // Samakan dengan editor Konva (default lineHeight = 1) supaya tinggi blok
       // teks & posisinya identik antara preview dan hasil export.
       lineHeight: 1,

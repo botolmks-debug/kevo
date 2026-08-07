@@ -9,6 +9,7 @@ import type { ImageSlot, TemplateLayout, TextSlot } from "@/lib/templates/types"
 import type { EditorOverrides, TextSlotOverride, FooterOverride } from "@/lib/editor/layoutOverrides";
 import { DELIVERY_PLATFORMS, DELIVERY_MAP } from "@/lib/social/delivery";
 import { useKonvaImage } from "./useKonvaImage";
+import { fitFontSize } from "@/lib/render/fitText";
 
 const PREVIEW_WIDTH = 340;
 const ALIGN_LABEL: Record<"left" | "center" | "right", string> = {
@@ -208,7 +209,15 @@ export function CanvasEditor({
       box: o?.box ?? slot.box,
       fontFamily: o?.fontFamily ?? slot.fontFamily,
       fontWeight: o?.fontWeight ?? slot.fontWeight ?? 400,
-      fontSize: o?.fontSize ?? slot.maxFontSize,
+      fontSize:
+        o?.fontSize ??
+        fitFontSize(values[slot.id] || slot.placeholder || "", {
+          boxWidth: (o?.box ?? slot.box).width,
+          boxHeight: (o?.box ?? slot.box).height,
+          maxFontSize: slot.maxFontSize,
+          minFontSize: slot.minFontSize ?? Math.round(slot.maxFontSize * 0.5),
+          lineHeight: 1,
+        }),
       color: o?.color ?? slot.color,
       align: o?.align ?? slot.align,
       shadow: o?.shadow ?? null,
