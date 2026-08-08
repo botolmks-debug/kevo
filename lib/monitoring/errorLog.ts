@@ -20,7 +20,7 @@ export async function logError({
     const message = error instanceof Error ? error.message : String(error);
     const stack = error instanceof Error ? error.stack : undefined;
 
-    await supabase.from("error_logs").insert({
+    const { error: insertError } = await supabase.from("error_logs").insert({
       business_id: businessId ?? null,
       route,
       provider: provider ?? null,
@@ -28,7 +28,11 @@ export async function logError({
       error_stack: stack?.slice(0, 4000) ?? null,
       metadata: metadata ?? null,
     });
-  } catch {
-    // Jangan bikin request user gagal hanya karena logging gagal
+
+    if (insertError) {
+      console.error("[logError] Failed to insert:", insertError.message, insertError);
+    }
+  } catch (err) {
+    console.error("[logError] Exception:", err);
   }
 }
