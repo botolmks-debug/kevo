@@ -5,6 +5,7 @@ import { consumeToken, refundToken } from "@/lib/supabase/tokens";
 import { checkSupabaseEnvPresence } from "@/lib/env";
 import { loadBusinessProfile } from "@/lib/supabase/businessProfile";
 import { listImages, publicImageUrl, type ImageRow } from "@/lib/supabase/images";
+import { logError } from "@/lib/monitoring/errorLog";
 import {
   insertGeneratedContent,
   listGeneratedContent,
@@ -138,10 +139,17 @@ export async function POST(request: NextRequest) {
   const token = await consumeToken(supabase, user.id, user.email, "Otomatis");
   if (!token.ok) return NextResponse.json({ error: token.error }, { status: 402 });
 
-  // Token sudah dipotong di atas. Kalau ada langkah berikutnya yang gagal,
+// Token sudah dipotong di atas. Kalau ada langkah berikutnya yang gagal,
   // kembalikan tokennya lewat helper ini alih-alih NextResponse langsung.
-  async function fail(error: string, status: number) {
+  async function fail(error: string, status: number, provider?: string) {
     await refundToken(supabase, user.id, user.email);
+    await logError({
+      businessId: user.id,
+      route: "generate-auto",
+      provider,
+      error: new Error(error),
+      metadata: { status, jenis: (body as RequestBody).jenis, ratio: (body as RequestBody).ratio },
+    });
     return NextResponse.json({ error }, { status });
   }
 
@@ -282,7 +290,13 @@ export async function POST(request: NextRequest) {
       values: { photo: imageDataUri, caption: content.onImageText },
       ratio: body.ratio,
     });
-  } catch (error) {
+ } catch (error) {
+    await logError({
+      businessId: user.id,
+      route: "generate-auto",
+      error,
+      metadata: { step: "render_template", jenis: body.jenis, ratio: body.ratio },
+    });
     return fail(error instanceof Error ? error.message : "Gagal merender konten.", 500);
   }
 
