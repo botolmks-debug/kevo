@@ -4,6 +4,7 @@ import { isAdmin } from "@/lib/supabase/tokens";
 import { Header } from "@/components/ui/Header";
 import { AdminOverview } from "./AdminOverview";
 import { OnboardingQuestions } from "./OnboardingQuestions";
+import MonitorSection from "@/components/admin/MonitorSection";
 
 export default async function AdminPage() {
   const supabase = await createClient();
@@ -21,6 +22,7 @@ export default async function AdminPage() {
           <h1 className="text-2xl font-bold text-navy">Admin</h1>
           <p className="mt-1 text-navy/60">Aktivitas user: login terakhir, sisa token, dan pemakaian token.</p>
         </div>
+        <MonitorSection />
         <AdminOverview />
         <OnboardingQuestions />
       </main>
