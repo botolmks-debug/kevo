@@ -22,11 +22,11 @@ jobs:
 
     - name: Dump database
         run: |
-          export PATH=/usr/lib/postgresql/17/bin:$PATH
-          pg_dump --version
+          PG_DUMP=/usr/lib/postgresql/17/bin/pg_dump
+          $PG_DUMP --version
           TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
           FILENAME="keposting-db-$TIMESTAMP.sql"
-          pg_dump "${{ secrets.SUPABASE_DB_URL }}" \
+          $PG_DUMP "${{ secrets.SUPABASE_DB_URL }}" \
             --no-owner --no-acl --clean --if-exists \
             --exclude-schema=storage --exclude-schema=auth \
             -f "$FILENAME"
