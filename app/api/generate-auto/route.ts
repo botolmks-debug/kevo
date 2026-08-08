@@ -141,10 +141,11 @@ export async function POST(request: NextRequest) {
 
 // Token sudah dipotong di atas. Kalau ada langkah berikutnya yang gagal,
   // kembalikan tokennya lewat helper ini alih-alih NextResponse langsung.
+  const authedUser = user;
   async function fail(error: string, status: number, provider?: string) {
-    await refundToken(supabase, user.id, user.email);
+    await refundToken(supabase, authedUser.id, authedUser.email);
     await logError({
-      businessId: user.id,
+      businessId: authedUser.id,
       route: "generate-auto",
       provider,
       error: new Error(error),
