@@ -50,8 +50,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-surface text-navy">{children}{children}
-  <SupportWidget /></body>
+      <body className="min-h-full flex flex-col bg-surface text-navy">
+        {children}
+        <SupportWidget />
+      </body>
     </html>
   );
 }
