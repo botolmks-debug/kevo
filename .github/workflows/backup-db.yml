@@ -20,8 +20,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client-17
 
-      - name: Dump database
+    - name: Dump database
         run: |
+          export PATH=/usr/lib/postgresql/17/bin:$PATH
+          pg_dump --version
           TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
           FILENAME="keposting-db-$TIMESTAMP.sql"
           pg_dump "${{ secrets.SUPABASE_DB_URL }}" \
