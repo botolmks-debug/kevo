@@ -228,6 +228,34 @@ const DICT: Record<string, Entry> = {
   "dash.social.saving": { id: "Menyimpan…", en: "Saving…" },
   "dash.social.save": { id: "Simpan Sosial Media", en: "Save Social Media" },
   "dash.social.saved": { id: "Tersimpan ✓", en: "Saved ✓" },
+
+  // ── Dashboard: Token & Refill ──
+  "token.title": { id: "Token AI", en: "AI Tokens" },
+  "token.desc": {
+    id: "Dipakai tiap pakai fitur AI (potong 1 per aksi).",
+    en: "Used with each AI feature (1 per action).",
+  },
+  "token.unlimited": { id: "Unlimited", en: "Unlimited" },
+  "token.unlimitedFull": { id: "Tak terbatas", en: "Unlimited" },
+  "token.out": { id: "Habis", en: "Out" },
+  "token.loading": { id: "Memuat...", en: "Loading..." },
+  "token.tokensLeft": { id: "token tersisa", en: "tokens left" },
+  "token.outMsg": {
+    id: "Token habis — fitur AI (generate & potong background) tidak bisa dipakai sampai diisi ulang.",
+    en: "Out of tokens — AI features (generate & background removal) are paused until refilled.",
+  },
+  "token.aiFeaturesInfo": {
+    id: "Fitur AI: potong background, Generate AI, Generate Otomatis, Generate caption.",
+    en: "AI features: background removal, Generate AI, Auto Generate, caption generator.",
+  },
+  "token.betaRefill": {
+    id: "Selama masa uji coba: +1 token gratis per hari (maks 5). Top-up akan aktif dalam beberapa minggu.",
+    en: "During beta: +1 free token per day (up to 5). Paid top-up coming in a few weeks.",
+  },
+  "token.refilledJustNow": {
+    id: "Kamu dapat +1 token gratis hari ini.",
+    en: "You got +1 free token today.",
+  },
 };
 
 /** Ambil teks terjemahan. Fallback: bahasa diminta -> Indonesia -> kunci mentah. */

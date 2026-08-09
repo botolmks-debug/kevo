@@ -198,16 +198,16 @@ export function Landing() {
           <div className="text-center md:text-left">
             <span className="inline-block rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Untuk UMKM Indonesia</span>
             <h1 className="mt-4 text-3xl font-extrabold leading-tight text-navy sm:text-4xl md:text-5xl">
-              Bikin konten jualan harian cuma dari <span className="text-primary">1 foto</span>
+              Setiap produk punya <span className="text-primary">cerita</span>
             </h1>
             <p className="mx-auto mt-4 max-w-md text-base text-muted md:mx-0">
-              Upload satu foto produk, dan Keposting bikin gambar konten, judul, dan caption siap posting—otomatis. Tanpa mikir ide, tanpa skill desain.
+              Upload foto produkmu, dapat gambar + caption Instagram siap posting. Cukup dari satu foto—dibantu AI.
             </p>
             <div className="mt-7 flex flex-col items-center gap-3 sm:flex-row md:items-start">
-              <LinkButton href="/signup" className="w-full px-7 py-3.5 sm:w-auto">Coba Gratis Sekarang</LinkButton>
+              <LinkButton href="/signup" className="w-full px-7 py-3.5 sm:w-auto">Coba 10 Konten Gratis</LinkButton>
               <LinkButton href="#cara-kerja" variant="secondary" className="w-full px-7 py-3.5 sm:w-auto">Lihat cara kerjanya</LinkButton>
             </div>
-            <p className="mt-3 text-xs text-muted">Gratis untuk dicoba · Tanpa kartu kredit</p>
+            <p className="mt-3 text-xs text-muted">10 token gratis + refill harian · Tanpa kartu kredit</p>
           </div>
           <HeroAnimation />
         </section>
@@ -269,12 +269,21 @@ export function Landing() {
 
         {/* ── Harga (teaser) ── */}
         <section className="mx-auto max-w-3xl px-5 py-16 text-center">
-          <h2 className="text-2xl font-bold text-navy sm:text-3xl">Mulai gratis</h2>
+          <h2 className="text-2xl font-bold text-navy sm:text-3xl">Coba gratis, tanpa risiko</h2>
           <p className="mx-auto mt-4 max-w-lg text-muted">
-            Coba dulu tanpa biaya. Kalau cocok, lanjut dengan paket token yang terjangkau—bayar sesuai pemakaian, tanpa langganan yang bikin berat.
+            Selama masa uji coba, semua fitur AI bisa dipakai tanpa biaya.
+          </p>
+          <ul className="mx-auto mt-6 flex max-w-md flex-col gap-2 text-left text-sm text-navy">
+            <li className="flex items-start gap-2"><span className="text-primary">✓</span> 10 token gratis saat daftar</li>
+            <li className="flex items-start gap-2"><span className="text-primary">✓</span> +1 token gratis per hari (maks 5)</li>
+            <li className="flex items-start gap-2"><span className="text-primary">✓</span> Semua fitur AI: generate konten, hapus background, caption</li>
+            <li className="flex items-start gap-2"><span className="text-primary">✓</span> Tanpa kartu kredit, tanpa langganan</li>
+          </ul>
+          <p className="mx-auto mt-4 max-w-md text-xs text-muted">
+            Top-up berbayar akan aktif dalam beberapa minggu untuk kamu yang butuh lebih banyak konten.
           </p>
           <div className="mt-7">
-            <LinkButton href="/signup" className="px-8 py-3.5">Buat akun gratis</LinkButton>
+            <LinkButton href="/signup" className="px-8 py-3.5">Coba 10 konten gratis</LinkButton>
           </div>
         </section>
 
@@ -285,7 +294,7 @@ export function Landing() {
             <div className="mt-8 flex flex-col gap-3">
               <Faq q="Perlu bisa desain?" a="Nggak. Cukup upload foto, sisanya Keposting yang kerjakan. Hasilnya tetap bisa kamu sesuaikan kalau mau." />
               <Faq q="Hasilnya bisa diedit?" a="Bisa. Kamu bisa menggeser teks, ganti ukuran, dan menyesuaikan konten sebelum menyimpannya." />
-              <Faq q="Berapa harganya?" a="Bisa dicoba gratis dulu. Setelah itu ada paket token terjangkau—kamu bayar sesuai jumlah konten yang dibuat." />
+              <Faq q="Berapa harganya?" a="Selama masa uji coba, semua fitur bisa dipakai gratis: 10 token saat daftar plus +1 token gratis per hari (maks 5). Top-up berbayar akan aktif dalam beberapa minggu untuk yang butuh lebih banyak konten." />
               <Faq q="Datanya aman?" a="Foto dan data usahamu hanya dipakai untuk membuat kontenmu. Kamu bisa hapus kapan saja." />
             </div>
           </div>
@@ -294,10 +303,10 @@ export function Landing() {
         {/* ── CTA penutup ── */}
         <section className="mx-auto max-w-5xl px-5 py-16">
           <div className="rounded-[24px] bg-primary px-6 py-12 text-center text-white sm:px-12">
-            <h2 className="text-2xl font-bold sm:text-3xl">Konten jualanmu, beres tiap hari</h2>
+            <h2 className="text-2xl font-bold sm:text-3xl">Ceritakan produkmu, mulai hari ini</h2>
             <p className="mx-auto mt-3 max-w-md text-white/85">Berhenti pusing mikirin ide. Mulai dari satu foto sekarang.</p>
             <div className="mt-7">
-              <LinkButton href="/signup" variant="cta" className="px-8 py-3.5">Coba Gratis Sekarang</LinkButton>
+              <LinkButton href="/signup" variant="cta" className="px-8 py-3.5">Coba 10 Konten Gratis</LinkButton>
             </div>
           </div>
         </section>
