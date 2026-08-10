@@ -87,6 +87,8 @@ function persona(lang?: Lang): string {
 const CAPTION_RULES_ID =
   "caption = caption Instagram yang HIDUP dan berempati, dalam Bahasa Indonesia:\n" +
   "- Variasikan gaya pembuka SETIAP kali. HINDARI klise: \"Pernah nggak sih\", \"Bikin panik\", \"Tenang saja\", \"Dijamin\", \"bosku\", \"gaskeun\". Jangan mengulang kata yang sama.\n" +
+  "- HINDARI struktur pembuka klise ini: pertanyaan retorik \"Pernah ngerasain...?\", \"Kesel ga sih kalo...?\", \"Kamu tim mana...?\"; opening angka \"Ini 3/5/7...\"; opening \"Rahasia...\", \"Trik...\", \"Cara agar...\".\n" +
+  "- PILIH salah satu gaya pembuka SEGAR ini (rotasi, JANGAN pakai gaya yang sama di dua caption berurutan): (1) fragmen momen keseharian (\"Jam 11 malam. Mesin masih nyala. Kamu belum tidur.\"), (2) pengakuan jujur (\"Aku hampir menyerah bulan lalu\"), (3) statement kontroversial (\"Followers banyak bukan berarti laris\"), (4) angka data spesifik (\"Dari 100 pengusaha, 87 mengaku pusing bikin konten\"), (5) sudut pandang orang ketiga (\"Kata teman aku, katanya...\"), (6) langsung ke inti tanpa basa-basi (\"Ini masalahnya. Ini solusinya.\").\n" +
   "- Gunakan perumpamaan/analogi yang relevan.\n" +
   "- Sentuh PERASAAN pembaca: tunjukkan empati terhadap apa yang mereka rasakan, khawatirkan, atau impikan.\n" +
   "- Boleh dari sudut pandang pembaca (\"aku/kita\"), menyuarakan keseharian mereka.\n" +
@@ -106,12 +108,32 @@ function captionRules(lang?: Lang): string {
 
 const ONIMAGE_RULE_ID =
   "onImageText = teks pendek DI ATAS gambar (maks 8 kata): headline menarik, segar, tidak klise. " +
-  "VARIASIKAN gaya & pilihan kata SETIAP kali — JANGAN mengulang frasa/judul yang sama atau mirip yang sudah umum dipakai.";
+  "VARIASIKAN gaya & pilihan kata SETIAP kali — JANGAN mengulang frasa/judul yang sama atau mirip yang sudah umum dipakai. " +
+  "HINDARI STRUKTUR KLISE INI (yang paling sering muncul di konten AI dan bikin judul terasa generic): " +
+  "\"3 kesalahan...\", \"5 tips...\", \"5 cara...\", \"7 hal yang wajib...\", \"Kenapa X harus Y\", \"Cara agar...\", " +
+  "\"Rahasia di balik...\", \"Trik supaya...\", \"Panduan lengkap...\", angka + kata benda + verb generik. " +
+  "PILIH salah satu struktur SEGAR ini (rotasi, JANGAN dua konten berurutan pakai struktur sama): " +
+  "(a) PERTANYAAN LANGSUNG ke pembaca (\"Kapan terakhir kali kamu ...?\", \"Berani jujur, ini masalah kamu?\"), " +
+  "(b) STATEMENT KONTROVERSIAL (\"Yang bilang X, salah\", \"Followers banyak = omzet? Belum tentu\"), " +
+  "(c) FRAGMEN CERITA (\"Jam 11 malam. Meja penuh. Dan kamu...\", \"Bulan lalu aku hampir menyerah\"), " +
+  "(d) INSIGHT TERSEMBUNYI (\"Yang tidak diajarkan soal jualan online\", \"Bukan diskon yang bikin orang balik\"), " +
+  "(e) PERBANDINGAN CURI PERHATIAN (\"Toko biasa vs toko yang laris\", \"Kamu yang ini, atau yang itu?\"), " +
+  "(f) KATA TUNGGAL/DUA KATA POWERFUL sebagai hook (\"Kelelahan.\", \"Cukup sudah.\", \"Bosan pusing.\").";
 
 const ONIMAGE_RULE_EN =
   "onImageText = short text ON the image (max 8 words): an engaging, fresh, non-cliché headline. " +
   "VARY the style & word choice EVERY time — DON'T repeat the same or similar phrases/titles that are commonly used. " +
-  "AVOID overused corporate words like \"Elevate\", \"Unlock\", \"Transform\", \"Discover\", \"Introducing\" as sentence openers.";
+  "AVOID overused corporate words like \"Elevate\", \"Unlock\", \"Transform\", \"Discover\", \"Introducing\" as sentence openers. " +
+  "AVOID these CLICHÉ STRUCTURES (most common in AI-generated content, makes titles feel generic): " +
+  "\"3 mistakes...\", \"5 tips...\", \"5 ways...\", \"7 things you must...\", \"Why X should Y\", \"How to...\", " +
+  "\"The secret behind...\", \"The trick to...\", \"Complete guide to...\", number + noun + generic verb. " +
+  "PICK one of these FRESH structures (rotate — don't use the same structure two contents in a row): " +
+  "(a) DIRECT QUESTION to reader (\"When was the last time you...?\", \"Honest question: is this your problem?\"), " +
+  "(b) CONTROVERSIAL STATEMENT (\"Whoever said X is wrong\", \"More followers ≠ more sales\"), " +
+  "(c) STORY FRAGMENT (\"11 PM. Desk full. And you...\", \"Last month I almost gave up\"), " +
+  "(d) HIDDEN INSIGHT (\"What nobody teaches about selling online\", \"It's not discounts that bring people back\"), " +
+  "(e) EYE-CATCHING COMPARISON (\"Average shop vs shop that sells out\", \"Are you this one, or that one?\"), " +
+  "(f) SINGLE/TWO-WORD POWERFUL hook (\"Exhausted.\", \"Enough is enough.\", \"Tired of struggling.\").";
 
 function onImageRule(lang?: Lang): string {
   return isEn(lang) ? ONIMAGE_RULE_EN : ONIMAGE_RULE_ID;

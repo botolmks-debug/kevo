@@ -1,54 +1,42 @@
-# Landing Update — Align dengan Bio + Refill Offer
+# Anti-Repeat Prompt Tweak
 
-Update `components/marketing/Landing.tsx` (landing page di `keposting.com`) supaya:
-1. Hero tagline align dengan bio IG baru ("Setiap produk punya cerita")
-2. Section Harga mention offer refill baru (10 token + 1/hari selama beta)
-3. FAQ pertanyaan harga di-update dengan info refill
-4. CTA button copy align dengan bio ("Coba 10 Konten Gratis")
+Update `lib/ai/autoContentPrompt.ts` — perkuat instruksi anti-pattern klise di prompt supaya AI tidak keluarkan judul & opening caption serupa.
 
-## Perubahan detail
+## Yang berubah
 
-### Hero
-- **Sebelum**: "Bikin konten jualan harian cuma dari 1 foto"
-- **Sesudah**: "Setiap produk punya cerita" (tagline sama seperti bio IG)
-- **Subheadline**: fokus di "gambar + caption Instagram siap posting"
-- **CTA primary**: "Coba Gratis Sekarang" → "Coba 10 Konten Gratis"
-- **Fine print**: "Gratis untuk dicoba · Tanpa kartu kredit" → "10 token gratis + refill harian · Tanpa kartu kredit"
+### `ONIMAGE_RULE_ID` & `ONIMAGE_RULE_EN` (judul di gambar)
+- **Blacklist struktur klise**: "3 kesalahan...", "5 tips...", "Kenapa X harus Y", "Cara agar...", "Rahasia di balik...", angka + kata benda + verb generik
+- **6 struktur segar** yang harus dipilih rotasi:
+  - Pertanyaan langsung
+  - Statement kontroversial
+  - Fragmen cerita
+  - Insight tersembunyi
+  - Perbandingan curi perhatian
+  - Kata tunggal/dua kata powerful
 
-### Section Harga
-- **Sebelum**: Copy generic soal "paket token terjangkau"
-- **Sesudah**: 4 bullet points yang jelas menerangkan offer beta:
-  - 10 token gratis saat daftar
-  - +1 token gratis per hari (maks 5)
-  - Semua fitur AI tersedia
-  - Tanpa kartu kredit, tanpa langganan
-- Ditutup dengan info: "Top-up berbayar akan aktif dalam beberapa minggu"
-
-### FAQ
-- Pertanyaan "Berapa harganya?" — jawaban baru mention refill + top-up soon
-
-### CTA penutup
-- Judul: "Konten jualanmu, beres tiap hari" → "Ceritakan produkmu, mulai hari ini"
-- Button: "Coba Gratis Sekarang" → "Coba 10 Konten Gratis"
-
-## Yang TIDAK diubah
-
-- Hero animation (before/after) tetap
-- Trust bar tetap
-- Section "Mikir ide & bikin konten..." tetap
-- Cara kerja 3 langkah tetap
-- 6 Feature cards tetap
-- Section "Cocok untuk berbagai usaha" tetap
-- Struktur DOM & class Tailwind tetap
-- Footer tetap
+### `CAPTION_RULES_ID` (opening caption)
+- **Blacklist opening klise**: "Pernah ngerasain...?", "Kesel ga sih...?", opening angka, "Rahasia...", "Trik..."
+- **6 gaya opening segar** yang rotasi:
+  - Fragmen momen keseharian
+  - Pengakuan jujur
+  - Statement kontroversial
+  - Angka data spesifik
+  - Sudut pandang orang ketiga
+  - Langsung ke inti tanpa basa-basi
 
 ## Setup
 
-1. Extract zip ke `D:\Kevo project\` — file `components/marketing/Landing.tsx` akan tertimpa
+1. Extract zip ke `D:\Kevo project\`
 2. Push:
-```powershell
-git add -A
-git commit -m "feat: landing page align with new IG bio + beta offer"
-git push
-```
-3. Verifikasi setelah Vercel deploy: buka `keposting.com`, cek hero + section Coba gratis
+   ```powershell
+   git add -A
+   git commit -m "feat: strengthen anti-cliché rules in prompt"
+   git push
+   ```
+3. Setelah deploy, minta rekan tes lagi generate 3-5 konten. Perhatikan:
+   - Judul (onImageText) harus beragam struktur — bukan semua "3 kesalahan..." atau "5 cara..."
+   - Opening caption harus beragam — bukan semua "Pernah ngerasain..." atau angka
+
+## Catatan
+
+Ini tweak **tanpa database**. Kalau setelah tweak ini masih repeat, baru pertimbangkan database tracking angle usage per user (2-3 jam build). Prinsip: fix cheapest & smallest first.

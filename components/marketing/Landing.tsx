@@ -196,7 +196,7 @@ export function Landing() {
         {/* ── Hero ── */}
         <section className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-12 md:grid-cols-2 md:py-20">
           <div className="text-center md:text-left">
-            <span className="inline-block rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Untuk UMKM Indonesia</span>
+            <span className="inline-block rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Beta · Gratis Diakses</span>
             <h1 className="mt-4 text-3xl font-extrabold leading-tight text-navy sm:text-4xl md:text-5xl">
               Setiap produk punya <span className="text-primary">cerita</span>
             </h1>
