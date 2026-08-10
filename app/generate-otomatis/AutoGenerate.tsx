@@ -19,6 +19,7 @@ import { interaksiTemplate } from "@/lib/templates/interaksi";
 import type { AspectRatio } from "@/lib/templates/types";
 import { FONT_OPTIONS } from "@/lib/templates/fonts";
 import { shareContent } from "@/lib/share";
+import { ReferenceTermsModal, hasAcceptedReferenceTerms } from "@/components/generate-otomatis/ReferenceTermsModal";
 
 type PickableImage = {
   id: string;
@@ -106,6 +107,10 @@ export function AutoGenerate() {
   // Kunci keras supaya generate tidak pernah jalan dobel (klik/efek beruntun),
   // apa pun kondisi state async-nya.
   const generatingRef = useRef(false);
+
+  // Modal T&C fitur Referensi — muncul saat user pertama kali generate dengan jenis "referensi"
+  const [showReferenceModal, setShowReferenceModal] = useState(false);
+  const pendingRatioRef = useRef<AspectRatio | undefined>(undefined);
 
   async function loadHistory() {
     setHistoryError(null);
@@ -198,6 +203,12 @@ export function AutoGenerate() {
     if (jenis === "referensi" && !refDataUri) {
       setGenerateStatus("error");
       setGenerateError(L("Unggah 1 gambar referensi dulu.", "Upload 1 reference image first."));
+      return;
+    }
+    // Cek T&C fitur Referensi — kalau belum accept, tampilkan modal dan tunggu
+    if (jenis === "referensi" && !hasAcceptedReferenceTerms()) {
+      pendingRatioRef.current = ratioArg;
+      setShowReferenceModal(true);
       return;
     }
     generatingRef.current = true;
@@ -622,6 +633,18 @@ export function AutoGenerate() {
           </div>
         )}
       </div>
+
+      <ReferenceTermsModal
+        open={showReferenceModal}
+        onCancel={() => setShowReferenceModal(false)}
+        onConfirm={() => {
+          setShowReferenceModal(false);
+          const pendingRatio = pendingRatioRef.current;
+          pendingRatioRef.current = undefined;
+          // Trigger ulang generate — sekarang hasAcceptedReferenceTerms() akan true
+          void handleGenerate(pendingRatio);
+        }}
+      />
     </Card>
   );
 }

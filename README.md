@@ -1,28 +1,35 @@
-# Anti-Repeat Prompt Tweak
+# T&C Fitur Referensi (Generate Otomatis)
 
-Update `lib/ai/autoContentPrompt.ts` — perkuat instruksi anti-pattern klise di prompt supaya AI tidak keluarkan judul & opening caption serupa.
+Menambahkan modal Terms & Conditions yang muncul saat user pertama kali klik "Generate Otomatis" dengan jenis konten **Referensi**.
 
-## Yang berubah
+## Perilaku
 
-### `ONIMAGE_RULE_ID` & `ONIMAGE_RULE_EN` (judul di gambar)
-- **Blacklist struktur klise**: "3 kesalahan...", "5 tips...", "Kenapa X harus Y", "Cara agar...", "Rahasia di balik...", angka + kata benda + verb generik
-- **6 struktur segar** yang harus dipilih rotasi:
-  - Pertanyaan langsung
-  - Statement kontroversial
-  - Fragmen cerita
-  - Insight tersembunyi
-  - Perbandingan curi perhatian
-  - Kata tunggal/dua kata powerful
+1. User pilih jenis "Referensi", upload produk + gambar referensi
+2. User klik **Generate Otomatis**
+3. Kalau belum pernah setuju T&C → modal muncul:
+   - 5 poin ketentuan tentang hak pakai referensi & tanggung jawab
+   - Checkbox "Saya mengerti dan setuju" (wajib centang untuk lanjut)
+   - Tombol Batal / Lanjut Generate
+4. Setelah user centang & klik **Lanjut Generate**:
+   - Preferensi tersimpan di `localStorage` (`keposting_reference_tc_v1`)
+   - Generate langsung jalan
+5. Generate berikutnya (dengan jenis Referensi) → **modal tidak muncul lagi**
 
-### `CAPTION_RULES_ID` (opening caption)
-- **Blacklist opening klise**: "Pernah ngerasain...?", "Kesel ga sih...?", opening angka, "Rahasia...", "Trik..."
-- **6 gaya opening segar** yang rotasi:
-  - Fragmen momen keseharian
-  - Pengakuan jujur
-  - Statement kontroversial
-  - Angka data spesifik
-  - Sudut pandang orang ketiga
-  - Langsung ke inti tanpa basa-basi
+## Bilingual
+
+Modal otomatis mengikuti bahasa app (Indonesia/English) via `getLang()`.
+
+## Files
+
+**Baru:**
+- `components/generate-otomatis/ReferenceTermsModal.tsx` — komponen modal + helper `hasAcceptedReferenceTerms()` & `markReferenceTermsAccepted()`
+
+**Direplace:**
+- `app/generate-otomatis/AutoGenerate.tsx` — 3 injection points minimal:
+  - Import di atas
+  - State `showReferenceModal` + `pendingRatioRef`
+  - Cek T&C di `handleGenerate` (kalau jenis="referensi" & belum accept → tampilkan modal)
+  - Render `<ReferenceTermsModal />` sebelum closing `</Card>`
 
 ## Setup
 
@@ -30,13 +37,19 @@ Update `lib/ai/autoContentPrompt.ts` — perkuat instruksi anti-pattern klise di
 2. Push:
    ```powershell
    git add -A
-   git commit -m "feat: strengthen anti-cliché rules in prompt"
+   git commit -m "feat: T&C modal for reference feature (auto generate)"
    git push
    ```
-3. Setelah deploy, minta rekan tes lagi generate 3-5 konten. Perhatikan:
-   - Judul (onImageText) harus beragam struktur — bukan semua "3 kesalahan..." atau "5 cara..."
-   - Opening caption harus beragam — bukan semua "Pernah ngerasain..." atau angka
+3. Tunggu Vercel deploy (~1-2 menit)
+4. Tes: buka `keposting.com/generate-otomatis` → pilih **Referensi** → upload produk + referensi → klik Generate → modal harus muncul
 
-## Catatan
+## Cara reset T&C (untuk testing)
 
-Ini tweak **tanpa database**. Kalau setelah tweak ini masih repeat, baru pertimbangkan database tracking angle usage per user (2-3 jam build). Prinsip: fix cheapest & smallest first.
+Kalau mau tes ulang modal setelah accept:
+- Buka DevTools Console
+- Jalankan: `localStorage.removeItem("keposting_reference_tc_v1")`
+- Refresh halaman
+
+## Kalau nanti perlu update ketentuan
+
+Edit array `T.points` di `components/generate-otomatis/ReferenceTermsModal.tsx`. Kalau ada perubahan yang signifikan, ganti nama `STORAGE_KEY` (misal `keposting_reference_tc_v2`) supaya user lama harus setuju versi baru.
