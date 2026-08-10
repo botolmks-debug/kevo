@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { LinkButton } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import PricingSection from "@/components/PricingSection";
 
 /* ── Data demo untuk hero: pakai GAMBAR ASLI hasil Keposting (di public/demo).
    Tambah entri baru di sini untuk merotasi lebih banyak contoh. ── */
@@ -279,13 +280,13 @@ export function Landing() {
             <li className="flex items-start gap-2"><span className="text-primary">✓</span> Semua fitur AI: generate konten, hapus background, caption</li>
             <li className="flex items-start gap-2"><span className="text-primary">✓</span> Tanpa kartu kredit, tanpa langganan</li>
           </ul>
-          <p className="mx-auto mt-4 max-w-md text-xs text-muted">
-            Top-up berbayar akan aktif dalam beberapa minggu untuk kamu yang butuh lebih banyak konten.
-          </p>
           <div className="mt-7">
             <LinkButton href="/signup" className="px-8 py-3.5">Coba 10 konten gratis</LinkButton>
           </div>
         </section>
+
+        {/* ── Harga top-up token ── */}
+        <PricingSection />
 
         {/* ── FAQ ── */}
         <section className="bg-white/60 py-16">
@@ -294,7 +295,7 @@ export function Landing() {
             <div className="mt-8 flex flex-col gap-3">
               <Faq q="Perlu bisa desain?" a="Nggak. Cukup upload foto, sisanya Keposting yang kerjakan. Hasilnya tetap bisa kamu sesuaikan kalau mau." />
               <Faq q="Hasilnya bisa diedit?" a="Bisa. Kamu bisa menggeser teks, ganti ukuran, dan menyesuaikan konten sebelum menyimpannya." />
-              <Faq q="Berapa harganya?" a="Selama masa uji coba, semua fitur bisa dipakai gratis: 10 token saat daftar plus +1 token gratis per hari (maks 5). Top-up berbayar akan aktif dalam beberapa minggu untuk yang butuh lebih banyak konten." />
+              <Faq q="Berapa harganya?" a="Kamu dapat 10 token gratis saat daftar (+1/hari, maks 5). Kalau butuh lebih, top-up mulai Rp 50.000 untuk 10 token, Rp 135.000 untuk 30 token, atau Rp 240.000 untuk 60 token. Sekali bayar, tanpa langganan, token tidak hangus." />
               <Faq q="Datanya aman?" a="Foto dan data usahamu hanya dipakai untuk membuat kontenmu. Kamu bisa hapus kapan saja." />
             </div>
           </div>
