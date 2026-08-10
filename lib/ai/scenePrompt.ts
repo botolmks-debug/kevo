@@ -202,6 +202,14 @@ KEEP from IMAGE 1 (do not change): the exact product — its shape, colours, mat
 
 The ONLY things you must NOT copy from the reference are its TEXT, headline, price, date, caption, watermark, and brand LOGO (that is branding, not style). Everything else about its look — background, colours, props, and decorative effects (cobwebs, scattered items, splashes, sparkles) — SHOULD carry over. The output image itself must contain NO added text or watermark of its own.
 
+CRITICAL — NO TEXT OVERLAY IN OUTPUT (this is the #1 mistake to avoid):
+The reference image (IMAGE 2) may contain large hero text or headlines at the top and/or bottom of the frame (for example "WHEN IT'S X" at the top, or "ONE IS NEVER ENOUGH" at the bottom, or any brand tagline). You MUST NOT copy this text LAYOUT PATTERN. Do NOT place ANY large text, headline, brand name overlay, tagline, or decorative typography in your output image — not at the top, not at the bottom, not anywhere in the frame.
+The ONLY text that is allowed to appear in your output is text that is PHYSICALLY PRINTED on the product's body from IMAGE 1 (like a product label on the packaging). Never re-use the product name, brand name, or any words from the product label as an overlay headline elsewhere in the frame — the label stays ONLY where it is on the product.
+If the reference has a bold hero headline in that position, LEAVE THAT AREA EMPTY of any overlay text in your output. Our system adds text separately later; do not pre-fill it.
+
+FINAL SANITY CHECK (before outputting):
+Scan the image top to bottom. Is there ANY text visible that is NOT physically printed on the product's body? Titles, headlines, brand names as overlays, taglines, phone/date stamps, watermarks — anything? If yes: REMOVE it. Output only the product with its own printed label + the new scene, with ZERO additional text overlays.
+
 Business context: Industry ${profile.business.industry || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.${note}
 
 Fill the whole frame edge-to-edge; keep the bottom third a little calmer for later text overlay but never blank. The result must look like a real, high-quality photograph — clearly more polished than a phone snapshot.
