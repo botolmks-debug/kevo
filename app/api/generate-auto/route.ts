@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/serviceRole";
-import { consumeToken, refundToken } from "@/lib/supabase/tokens";
+import { consumeToken, refundToken, isAdmin } from "@/lib/supabase/tokens";
 import { checkSupabaseEnvPresence } from "@/lib/env";
 import { loadBusinessProfile } from "@/lib/supabase/businessProfile";
 import { listImages, publicImageUrl, type ImageRow } from "@/lib/supabase/images";
@@ -20,6 +20,7 @@ import { renderTemplate } from "@/lib/render/renderTemplate";
 import { buildScenePrompt, buildRuanganPrompt, buildOrangPrompt, buildSoftwarePrompt, buildSkincarePrompt, buildFoodPrompt, buildGabungPrompt, buildReferencePrompt } from "@/lib/ai/scenePrompt";
 import { editImage, generateImage, composeProducts, editImageWithReference } from "@/lib/ai/geminiImage";
 import { generateJsonContent } from "@/lib/ai/geminiJson";
+import { notesPromptBlock } from "@/lib/ai/checkinPrompt";
 import {
   buildGeneralContentPrompt,
   buildInteraksiContentPrompt,
@@ -181,12 +182,32 @@ export async function POST(request: NextRequest) {
   // Gabung produk aktif kalau user memilih lebih dari satu foto produk.
   const isGabung = body.jenis === "produk" && sourceImages.length > 1;
 
+  // ── Catatan bisnis dari AI Check-in (tahap uji, khusus admin) ────────────
+  // Disuntik ke prompt teks sbg "kabar terbaru pemilik" agar topik konten
+  // mengikuti kondisi usaha terkini. Best-effort: tabel belum ada / kosong →
+  // blok kosong, generate jalan normal.
+  let notesBlock = "";
+  if (isAdmin(user.email)) {
+    try {
+      const { data: notesData } = await supabase
+        .from("business_notes")
+        .select("note, created_at")
+        .eq("business_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(7);
+      notesBlock = notesPromptBlock(notesData ?? []);
+    } catch {
+      // best-effort
+    }
+  }
+
   // ── Generate teks (headline + caption + fontId) ──────────────────────────
-  const contentPrompt =
+  const contentPrompt = (
     isGabung ? buildGabungContentPrompt(profile, sourceImages.map((s) => s.description ?? ""), body.language)
     : body.jenis === "produk" ? buildProdukContentPrompt(profile, sourceImage?.description ?? "", body.language)
     : body.jenis === "general" ? buildGeneralContentPrompt(profile, body.language)
-    : buildInteraksiContentPrompt(profile, body.language);
+    : buildInteraksiContentPrompt(profile, body.language)
+  ) + notesBlock;
 
   const contentResult = await generateJsonContent(contentPrompt);
   if (!contentResult.ok) return fail(contentResult.error, 502);

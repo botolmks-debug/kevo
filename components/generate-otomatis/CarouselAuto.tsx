@@ -422,7 +422,7 @@ export function CarouselAuto({
               </button>
             ))}
           </div>
-          <p className="text-xs font-medium text-navy/60">Preview slide {activeSlide + 1} — geser &amp; edit langsung</p>
+          <p className="text-xs font-medium text-navy/60">Preview slide {activeSlide + 1} — geser &amp; edit langsung. Posisi logo &amp; sosmed otomatis seragam di semua slide.</p>
           <div className="mx-auto">
             <CanvasEditor
               key={`carousel-${activeSlide}-${backgrounds[activeSlide]?.length ?? 0}`}
@@ -430,7 +430,23 @@ export function CarouselAuto({
               values={slideValues(activeSlide)}
               overrides={activeOverrides}
               onOverridesChange={(ov) =>
-                setOverridesPerSlide((all) => all.map((o, idx) => (idx === activeSlide ? ov : o)))
+                // MIRRORING antar slide: posisi LOGO, SOSMED (footer), badge
+                // delivery, dan versi logo diseragamkan ke SEMUA slide begitu
+                // salah satu slide diubah — menjaga konsistensi carousel.
+                // Posisi/gaya TEKS (slots) tetap bebas per slide.
+                setOverridesPerSlide((all) =>
+                  all.map((o, idx) =>
+                    idx === activeSlide
+                      ? ov
+                      : {
+                          ...o,
+                          logo: ov.logo,
+                          footer: ov.footer,
+                          logoVariant: ov.logoVariant,
+                          delivery: ov.delivery,
+                        },
+                  ),
+                )
               }
               onTextChange={(slotId, val) =>
                 setValuesPerSlide((all) =>
@@ -444,9 +460,8 @@ export function CarouselAuto({
               logoVariant={activeLogoVariant}
               canToggleLogo={!!(logoDark && logoLight)}
               onLogoVariantChange={(v) =>
-                setOverridesPerSlide((all) =>
-                  all.map((o, idx) => (idx === activeSlide ? { ...o, logoVariant: v } : o)),
-                )
+                // Versi logo (terang/gelap) juga diseragamkan ke semua slide.
+                setOverridesPerSlide((all) => all.map((o) => ({ ...o, logoVariant: v })))
               }
             />
           </div>
