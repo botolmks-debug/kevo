@@ -1,4 +1,4 @@
-import type { AspectRatio, Box, DeliveryBadges, LogoLayout, Template } from "@/lib/templates/types";
+import type { AspectRatio, Box, CertBadgesLayout, DeliveryBadges, LogoLayout, Template } from "@/lib/templates/types";
 
 export type TextSlotOverride = {
   box?: Box;
@@ -29,6 +29,8 @@ export type EditorOverrides = {
   logoVariant?: "dark" | "light";
   /** Badge pesan-antar (ShopeeFood/GoFood/GrabFood) — di luar sosmed. */
   delivery?: DeliveryBadges;
+  /** Badge sertifikasi (Halal/SNI/BPOM). */
+  badges?: CertBadgesLayout;
 };
 
 export function applyEditorOverrides(
@@ -81,6 +83,7 @@ export function applyEditorOverrides(
         footerLayout,
         logo,
         ...(overrides.delivery ? { deliveryBadges: overrides.delivery } : {}),
+        ...(overrides.badges ? { certBadges: overrides.badges } : {}),
       },
     },
   };

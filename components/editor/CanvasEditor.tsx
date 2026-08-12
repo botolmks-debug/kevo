@@ -8,6 +8,7 @@ import { FONT_OPTIONS } from "@/lib/templates/fonts";
 import type { ImageSlot, TemplateLayout, TextSlot } from "@/lib/templates/types";
 import type { EditorOverrides, TextSlotOverride, FooterOverride } from "@/lib/editor/layoutOverrides";
 import { DELIVERY_PLATFORMS, DELIVERY_MAP } from "@/lib/social/delivery";
+import { CERT_BADGES, CERT_BADGE_MAP, CERT_BADGE_H, CERT_BADGE_GAP } from "@/lib/social/badges";
 import { useKonvaImage } from "./useKonvaImage";
 import { fitFontSize } from "@/lib/render/fitText";
 
@@ -81,6 +82,22 @@ function DeliveryChipKonva({ id, w, h, scale }: { id: string; w: number; h: numb
       <Rect width={pw} height={ph} fill="#ffffff" cornerRadius={ph * 0.18} />
       <KonvaText text={p?.label ?? id} width={pw} height={ph} align="center" verticalAlign="middle"
         fontSize={ph * 0.22} fontStyle="bold" fill={p?.color ?? "#333"} listening={false} />
+    </Group>
+  );
+}
+
+function CertBadgeKonva({ id, h, scale }: { id: string; h: number; scale: number }) {
+  const img = useKonvaImage(`/badges/${id}.png`);
+  const b = CERT_BADGE_MAP[id];
+  const ph = h * scale;
+  const pw = ph * (b?.aspect ?? 1);
+  if (img) return <KonvaImage image={img} width={pw} height={ph} listening={false} />;
+  // Fallback (gambar belum termuat): kartu putih + label.
+  return (
+    <Group listening={false}>
+      <Rect width={pw} height={ph} fill="#ffffff" cornerRadius={ph * 0.14} />
+      <KonvaText text={b?.label ?? id} width={pw} height={ph} align="center" verticalAlign="middle"
+        fontSize={ph * 0.2} fontStyle="bold" fill="#333" listening={false} />
     </Group>
   );
 }
@@ -341,6 +358,48 @@ export function CanvasEditor({
     onOverridesChange({ ...overrides, delivery: { ...overrides.delivery, align: a } });
   }
 
+  // ── Badge sertifikasi (Halal/SNI/BPOM) — pola sama delivery, tanpa heading ──
+  const bScale = overrides.badges?.scale ?? 1;
+  const BADGE_H = CERT_BADGE_H * bScale;
+  const BADGE_GAP = CERT_BADGE_GAP * bScale;
+  const badgeIds = (overrides.badges?.ids ?? []).filter((id) => CERT_BADGE_MAP[id]);
+  const badgeDefaultY = Math.round(layout.canvas.height * 0.62);
+  const badgeX = (overrides.badges?.x ?? 60) * scale;
+  const badgeY = (overrides.badges?.y ?? badgeDefaultY) * scale;
+  let badgeCursor = 0;
+  const badgeItems = badgeIds.map((id) => {
+    const item = { id, offsetX: badgeCursor };
+    badgeCursor += BADGE_H * (CERT_BADGE_MAP[id]?.aspect ?? 1) + BADGE_GAP;
+    return item;
+  });
+  const badgeW = badgeIds.length > 0 ? badgeCursor - BADGE_GAP : 0;
+
+  function toggleBadge(id: string) {
+    const cur = overrides.badges;
+    const curIds = cur?.ids ?? [];
+    const nextIds = curIds.includes(id) ? curIds.filter((x) => x !== id) : [...curIds, id];
+    if (nextIds.length === 0) {
+      const next = { ...overrides };
+      delete next.badges;
+      onOverridesChange(next);
+      return;
+    }
+    onOverridesChange({
+      ...overrides,
+      badges: { ids: nextIds, x: cur?.x ?? 60, y: cur?.y ?? badgeDefaultY, scale: cur?.scale },
+    });
+  }
+
+  function updateBadges(p: { x: number; y: number }) {
+    if (!overrides.badges) return;
+    onOverridesChange({ ...overrides, badges: { ...overrides.badges, x: p.x, y: p.y } });
+  }
+
+  function setBadgeScale(s: number) {
+    if (!overrides.badges) return;
+    onOverridesChange({ ...overrides, badges: { ...overrides.badges, scale: s } });
+  }
+
   // Panel teks mengikuti slot teks yang SEDANG dipilih (klik teksnya dulu),
   // fallback ke slot teks pertama. Ini yang membuat tiap deskripsi bisa diatur
   // font/ukuran/warna/shadow-nya, bukan cuma judul.
@@ -481,6 +540,25 @@ export function CanvasEditor({
               </Group>
             ) : null}
 
+            {/* Badge sertifikasi (Halal/SNI/BPOM) */}
+            {badgeIds.length > 0 ? (
+              <Group x={badgeX} y={badgeY} opacity={ghostUrl ? (dragging ? 1 : 0) : 1} draggable dragBoundFunc={clampDrag}
+                onClick={() => setSelectedId("__badges__")} onTap={() => setSelectedId("__badges__")}
+                onDragMove={handleSnapDragMove}
+                onDragEnd={(e) => { const n = e.target; updateBadges({ x: n.x() / scale, y: n.y() / scale }); clearGuides(); }}>
+                <Rect x={-8} y={-8} width={(badgeW + 16) * scale} height={(BADGE_H + 16) * scale} fill="transparent" />
+                {selectedId === "__badges__" ? (
+                  <Rect x={-4} y={-4} width={(badgeW + 8) * scale} height={(BADGE_H + 8) * scale}
+                    stroke="#0FB6A6" strokeWidth={2} dash={[4, 3]} listening={false} />
+                ) : null}
+                {badgeItems.map((it) => (
+                  <Group key={it.id} x={it.offsetX * scale} y={0} listening={false}>
+                    <CertBadgeKonva id={it.id} h={BADGE_H} scale={scale} />
+                  </Group>
+                ))}
+              </Group>
+            ) : null}
+
             {/* Logo */}
             {logoImg ? (
               <Group x={logoPos.x * scale} y={logoPos.y * scale} opacity={ghostUrl ? (dragging ? 1 : 0) : 1} draggable dragBoundFunc={clampLogoDrag}
@@ -585,6 +663,47 @@ export function CanvasEditor({
               ))}
             </div>
           </div>
+        ) : null}
+      </div>
+
+      {/* Panel badge sertifikasi (Halal/SNI/BPOM) */}
+      <div className="flex flex-col gap-2 rounded-2xl border border-line bg-white p-3 text-xs">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-medium text-navy">Badge sertifikasi:</span>
+          {CERT_BADGES.map((b) => {
+            const on = badgeIds.includes(b.id);
+            return (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => toggleBadge(b.id)}
+                className={`rounded-full border px-3 py-1 font-medium transition ${on ? "border-primary bg-primary text-white" : "border-line text-navy/60 hover:bg-navy/5"}`}
+              >
+                {b.label}
+              </button>
+            );
+          })}
+          <HelpTip title="Badge sertifikasi" align="left" text={
+            <span className="flex flex-col gap-1.5">
+              <span>Tampilkan logo <b>Halal Indonesia</b>, <b>SNI</b>, atau <b>BPOM</b> di konten — untuk produk yang memang sudah bersertifikat.</span>
+              <span>Geser badge di gambar untuk memindahkan posisinya, atur besar-kecilnya dengan slider <b>Ukuran</b>.</span>
+            </span>
+          } />
+        </div>
+        {badgeIds.length > 0 ? (
+          <label className="flex items-center gap-2">
+            <span className="text-navy/60">Ukuran:</span>
+            <input
+              type="range"
+              min={0.5}
+              max={2}
+              step={0.1}
+              value={bScale}
+              onChange={(e) => setBadgeScale(Number(e.target.value))}
+              className="w-40 accent-primary"
+            />
+            <span className="w-10 text-navy/60">{Math.round(bScale * 100)}%</span>
+          </label>
         ) : null}
       </div>
 

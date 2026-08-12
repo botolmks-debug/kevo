@@ -88,6 +88,9 @@ export type AspectRatio = "4:5" | "1:1" | "9:16";
  */
 export type DeliveryBadges = { ids: string[]; x: number; y: number; label?: string; scale?: number; align?: "left" | "center" | "right" };
 
+/** Badge sertifikasi produk Indonesia (Halal/SNI/BPOM) — tanpa heading. */
+export type CertBadgesLayout = { ids: string[]; x: number; y: number; scale?: number };
+
 export type TemplateLayout = {
   canvas: Canvas;
   logo: LogoLayout;
@@ -96,6 +99,8 @@ export type TemplateLayout = {
   decorations?: Decoration[];
   /** Badge pesan-antar (ShopeeFood/GoFood/GrabFood) opsional. */
   deliveryBadges?: DeliveryBadges;
+  /** Badge sertifikasi (Halal/SNI/BPOM) opsional. */
+  certBadges?: CertBadgesLayout;
   slots: Slot[];
 };
 

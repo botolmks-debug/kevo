@@ -8,6 +8,7 @@ import { FONT_OPTIONS } from "../templates/fonts";
 import { fitFontSize, estimateLines } from "./fitText";
 import { renderFooterSocials } from "./renderFooter";
 import { renderDeliveryBadges } from "./renderDelivery";
+import { renderCertBadges } from "./renderBadges";
 
 // satori punya properti style non-standar (lineClamp) di luar React.CSSProperties.
 type SatoriStyle = CSSProperties & { lineClamp?: number };
@@ -445,6 +446,8 @@ export async function renderTemplate(input: RenderInput): Promise<Buffer> {
       {renderFooterSocials(template.brand.footer.socials, footerLayout)}
 
       {layout.deliveryBadges ? renderDeliveryBadges(layout.deliveryBadges) : null}
+
+      {layout.certBadges ? renderCertBadges(layout.certBadges) : null}
 
       {logoDataUri ? (
         // eslint-disable-next-line @next/next/no-img-element -- node JSX untuk satori, bukan DOM browser; next/image tidak berlaku di sini
