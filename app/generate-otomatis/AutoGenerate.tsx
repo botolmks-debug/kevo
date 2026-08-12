@@ -20,6 +20,8 @@ import type { AspectRatio } from "@/lib/templates/types";
 import { FONT_OPTIONS } from "@/lib/templates/fonts";
 import { shareContent } from "@/lib/share";
 import { ReferenceTermsModal, hasAcceptedReferenceTerms } from "@/components/generate-otomatis/ReferenceTermsModal";
+import { CarouselAuto } from "@/components/generate-otomatis/CarouselAuto";
+import { EmptyGalleryNotice } from "@/components/ui/EmptyGalleryNotice";
 
 type PickableImage = {
   id: string;
@@ -44,11 +46,12 @@ type GeneratedItem = {
 
 type Status = "idle" | "loading" | "error" | "success";
 
-const JENIS_OPTIONS: { value: GeneratedContentJenis | "referensi"; label: string; en: string; description: string; descEn: string }[] = [
+const JENIS_OPTIONS: { value: GeneratedContentJenis | "referensi" | "carousel"; label: string; en: string; description: string; descEn: string }[] = [
   { value: "produk", label: "Dari Foto", en: "From Photo", description: "Pakai foto (produk, ruangan, atau orang) yang sudah diupload. AI mempercantik sesuai kategori.", descEn: "Use an uploaded photo (product, space, or person). AI enhances it to match the category." },
   { value: "referensi", label: "Referensi", en: "Reference", description: "Tiru gaya dari 1 contoh konten. Pilih 1 foto produk + unggah 1 gambar referensi.", descEn: "Copy the style from 1 example. Pick 1 product photo + upload 1 reference." },
   { value: "general", label: "General", en: "General", description: "AI generate gambar & isi konten dari nol.", descEn: "AI generates the image & content from scratch." },
   { value: "interaksi", label: "Interaksi", en: "Interaction", description: "AI tentukan sendiri isi konten (kuis/quote/tips).", descEn: "AI decides the content itself (quiz/quote/tips)." },
+  { value: "carousel", label: "Carousel (4 Slide)", en: "Carousel (4 Slides)", description: "Pilih 1 fotomu (jadi slide penutup). AI buat teks 4 slide + 3 gambar yang mengalir ke fotomu.", descEn: "Pick 1 of your photos (final slide). AI writes 4 slides + 3 images flowing into your photo." },
 ];
 
 const RATIO_OPTIONS: { value: AspectRatio; label: string; en: string }[] = [
@@ -82,12 +85,14 @@ async function fetchWithAuthRetry(input: string, init?: RequestInit): Promise<Re
 }
 
 export function AutoGenerate() {
-  const [jenis, setJenis] = useState<GeneratedContentJenis | "referensi">("produk");
+  const [jenis, setJenis] = useState<GeneratedContentJenis | "referensi" | "carousel">("produk");
   const [uiLang, setUiLang] = useState<Lang>("en");
   useEffect(() => setUiLang(getLang()), []);
   const L = (id: string, en: string) => (uiLang === "en" ? en : id);
   const [ratio, setRatio] = useState<AspectRatio>("4:5");
   const [images, setImages] = useState<PickableImage[]>([]);
+  // Untuk banner "galeri kosong" — tampil hanya SETELAH daftar gambar selesai dimuat.
+  const [imagesLoaded, setImagesLoaded] = useState(false);
   const [selectedImageIds, setSelectedImageIds] = useState<string[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [generateStatus, setGenerateStatus] = useState<Status>("idle");
@@ -132,7 +137,10 @@ export function AutoGenerate() {
         if (cancelled) return;
         setImages((data?.images ?? []).filter((image) => image.usage === "olah_ai" && ["Produk", "Makanan/Minuman", "Kecantikan/Skincare", "Software/Website", "Wajah/Orang", "Suasana/Fasilitas"].includes(image.category)));
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setImagesLoaded(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -194,6 +202,7 @@ export function AutoGenerate() {
   }
 
   async function handleGenerate(ratioArg?: AspectRatio) {
+    if (jenis === "carousel") return; // carousel punya alur generate sendiri (CarouselAuto)
     if (generatingRef.current) return; // sudah ada proses generate berjalan
     if ((jenis === "produk" || jenis === "referensi") && selectedImageIds.length === 0) {
       setGenerateStatus("error");
@@ -419,6 +428,14 @@ export function AutoGenerate() {
         </div>
       </div>
 
+      {imagesLoaded && images.length === 0 && (jenis === "produk" || jenis === "referensi" || jenis === "carousel") ? (
+        <EmptyGalleryNotice />
+      ) : null}
+
+      {jenis === "carousel" ? (
+        <CarouselAuto businessProfile={businessProfile} images={images} />
+      ) : null}
+
       {jenis === "produk" || jenis === "referensi" ? (
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-navy">{jenis === "referensi" ? L("Pilih 1 foto produk", "Select 1 product photo") : L("Pilih foto produk (bisa 1–5, centang >1 untuk digabung)", "Select product photos (1–5, tick >1 to combine)")}</span>
@@ -505,6 +522,8 @@ export function AutoGenerate() {
         </div>
       ) : null}
 
+      {jenis !== "carousel" ? (
+      <>
       <div className="flex flex-col gap-2">
         <span className="text-sm font-medium text-navy">{L("Ukuran", "Size")}</span>
         <div className="flex flex-wrap gap-2">
@@ -535,6 +554,8 @@ export function AutoGenerate() {
       </Button>
 
       {generateError ? <p className="text-sm text-red-600">{generateError}</p> : null}
+      </>
+      ) : null}
 
       {result && editTemplate ? (
         <div className="flex flex-col gap-4 rounded-[20px] border border-line bg-surface/50 p-5">

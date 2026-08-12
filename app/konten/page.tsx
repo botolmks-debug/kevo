@@ -17,6 +17,7 @@ import { interaksiTemplate } from "@/lib/templates/interaksi";
 import { createProdukLatarTemplate } from "@/lib/templates/model-produk-latar";
 import { createStandarTemplate } from "@/lib/templates/model-standar";
 import { createTeksSajaTemplate } from "@/lib/templates/teks-saja";
+import { createCarouselTemplate } from "@/lib/templates/carousel";
 import type { ContentLayoutState } from "@/lib/content/saveContent";
 import { shareContent } from "@/lib/share";
 import { FONT_OPTIONS } from "@/lib/templates/fonts";
@@ -248,6 +249,7 @@ export default function KontenPage() {
     editTemplateId === "produk-latar" ? createProdukLatarTemplate(editBgColor)
     : editTemplateId === "standar" ? createStandarTemplate(editDescCount ?? 1)
     : editTemplateId === "teks-saja" ? createTeksSajaTemplate(editDescCount ?? 1)
+    : editTemplateId === "carousel" ? createCarouselTemplate()
     : editTemplateId === "interaksi" ? interaksiTemplate
     : polosTemplate;
   // Logo: default versi TERANG saat konten muncul (fallback gelap). User bisa

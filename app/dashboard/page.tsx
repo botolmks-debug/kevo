@@ -47,14 +47,17 @@ export default async function DashboardPage() {
           <LogoSettings />
         </section>
 
-        <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-navy/50">{t("dash.sec.social", lang)}</h2>
-          <SocialLinks />
-        </section>
-
+        {/* Urutan: Logo -> Upload foto produk -> Sosmed. Galeri dinaikkan ke
+            atas sosmed karena banyak user tidak sadar harus upload foto produk
+            dulu — padahal itu bahan utama Generate Otomatis. */}
         <section className="flex flex-col gap-3">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-navy/50">{t("dash.sec.assets", lang)}</h2>
           <ImageLibrary />
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-navy/50">{t("dash.sec.social", lang)}</h2>
+          <SocialLinks />
         </section>
       </main>
     </>

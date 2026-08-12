@@ -182,6 +182,8 @@ Business context: Industry ${profile.business.industry || "-"}, Target customers
 
 Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding to the scene. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.
 
+RESULT CHECK — both must be true: (1) the dish is pixel-recognizably the SAME dish as the input, and (2) the background, lighting, and composition are CLEARLY improved — returning the input unchanged or nearly unchanged is also a FAILED result.
+
 ${localeSceneNote(lang)}`;
 }
 
@@ -222,7 +224,7 @@ export function buildFoodPrompt(profile: BusinessProfile, description?: string, 
   const dishNote = desc ? `\n\nThe user described this as: "${desc}". Keep it that exact dish/drink.` : "";
   return `This image is FOOD or a DRINK. RE-SHOOT it as a professional, mouth-watering FOOD PHOTOGRAPH. The result MUST look clearly and noticeably more polished than the original phone snapshot — this is a professional makeover, NOT a copy of the input.
 
-KEEP (the dish identity): the actual food/drink itself — same dish, same ingredients, same portions and real colors. Do NOT invent a different food or add/remove ingredients. Preserve any packaging/label text on the product.
+KEEP (the dish identity) — HARDEST RULE, never break it: the actual food/drink itself must stay EXACTLY the same dish — same ingredients, same toppings and their placement, same portions, same bowl/plate/packaging, same real colors. Do NOT swap it for a different or "nicer" version of the dish, do NOT add/remove/rearrange ingredients or garnish, do NOT change the container. If you are ever unsure whether something belongs to the dish, KEEP it unchanged. Preserve any packaging/label text on the product. A result showing different food than the input is a FAILED result.
 
 TRANSFORM (make it look professionally shot):
 - Background: REPLACE or clean away any distracting, messy, or cluttered surroundings (bottles, signage, random objects, busy kitchen/warung background) with a clean, tasteful food-photography setting — rustic wood, marble, or a soft neutral surface with a gently blurred, cohesive backdrop. The background should never compete with the food.
@@ -234,6 +236,8 @@ TRANSFORM (make it look professionally shot):
 Business context: Industry ${profile.business.industry || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.${dishNote}
 
 Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding to the scene. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.
+
+RESULT CHECK — both must be true: (1) the dish is pixel-recognizably the SAME dish as the input, and (2) the background, lighting, and composition are CLEARLY improved — returning the input unchanged or nearly unchanged is also a FAILED result.
 
 ${localeSceneNote(lang)}`;
 }

@@ -13,6 +13,7 @@ import { withLogoOverride } from "@/app/generate/withLogoOverride";
 import { buildRenderInput } from "@/app/generate/buildRenderInput";
 import { saveManualContent } from "@/lib/content/saveContent";
 import { HelpTip } from "@/components/ui/HelpTip";
+import { EmptyGalleryNotice } from "@/components/ui/EmptyGalleryNotice";
 import { createProdukLatarTemplate } from "@/lib/templates/model-produk-latar";
 import { StandarContent } from "@/components/generate/StandarContent";
 import { TeksSajaContent } from "@/components/generate/TeksSajaContent";
@@ -168,6 +169,9 @@ export default function GeneratePage() {
   const [blurRadius, setBlurRadius] = useState(20);
   const [ratio, setRatio] = useState<AspectRatio>("4:5");
   const [images, setImages] = useState<PickableImage[]>([]);
+  // Untuk banner "galeri kosong" — tampil hanya SETELAH daftar gambar selesai
+  // dimuat, supaya tidak berkedip saat loading.
+  const [imagesLoaded, setImagesLoaded] = useState(false);
   const [selectedImage, setSelectedImage] = useState<PickableImage | null>(null);
   const [overrides, setOverrides] = useState<EditorOverrides>({ slots: {} });
   const [values, setValues] = useState<Record<string, string>>({});
@@ -193,7 +197,7 @@ export default function GeneratePage() {
 
   useEffect(() => {
     fetch("/api/business-profile").then(r => r.json()).then(d => setBusinessProfile(d.profile ?? null)).catch(() => {});
-    fetch("/api/images").then(r => r.json()).then(d => setImages(d.images ?? [])).catch(() => {});
+    fetch("/api/images").then(r => r.json()).then(d => setImages(d.images ?? [])).catch(() => {}).finally(() => setImagesLoaded(true));
   }, []);
 
   // Setiap kali warna/blur/opacity/ratio berubah, rebuild composite (kalau sudah ada produk)
@@ -350,6 +354,7 @@ export default function GeneratePage() {
             </div>
             <p className="mt-1 text-navy/60">{L("Pilih tampilan yang ingin kamu buat.", "Pick the look you want to create.")}</p>
           </div>
+          {imagesLoaded && images.length === 0 ? <EmptyGalleryNotice /> : null}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {CONTENT_MODELS.map((model) => (
               <button key={model.id} type="button" disabled={!model.available}

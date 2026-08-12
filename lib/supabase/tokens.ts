@@ -101,3 +101,79 @@ export async function refundToken(
     // best-effort — jangan sampai kegagalan refund menutupi error asli
   }
 }
+
+/**
+ * Potong BEBERAPA token sekaligus secara atomik (dipakai fitur Carousel =
+ * CAROUSEL_TOKEN_COST). Lewat RPC consume_tokens (lihat migration
+ * 0009_consume_tokens.sql): update ... set tokens = tokens - p_amount
+ * where tokens >= p_amount returning tokens; null/-1 = token kurang.
+ * Unlimited -> tidak dipotong.
+ */
+export async function consumeTokens(
+  client: SupabaseClient,
+  businessId: string,
+  amount: number,
+  email?: string | null,
+  action?: string,
+): Promise<ConsumeResult> {
+  const logUsage = async () => {
+    try {
+      await client.from("token_usage").insert({ business_id: businessId, action: action ?? null });
+    } catch {
+      // best-effort
+    }
+  };
+
+  if (isUnlimited(email)) {
+    await logUsage();
+    return { ok: true, unlimited: true, remaining: null };
+  }
+
+  const { data, error } = await client.rpc("consume_tokens", {
+    p_business_id: businessId,
+    p_amount: amount,
+  });
+  if (error) {
+    console.error(`consumeTokens rpc failed: ${error.message}`);
+    return {
+      ok: false,
+      error:
+        "Gagal memproses token. Kalau ini terus terjadi, RPC consume_tokens kemungkinan belum dibuat (jalankan migration 0009).",
+    };
+  }
+  const remaining = typeof data === "number" ? data : -1;
+  if (remaining < 0) {
+    return {
+      ok: false,
+      error: `Token AI tidak cukup (butuh ${amount}). Isi ulang token dulu untuk memakai fitur ini.`,
+    };
+  }
+  await logUsage();
+  return { ok: true, unlimited: false, remaining };
+}
+
+/**
+ * Kembalikan BEBERAPA token — pasangan consumeTokens untuk jalur gagal
+ * (AI teks/gambar gagal setelah token terpotong). Unlimited -> tidak perlu.
+ */
+export async function refundTokens(
+  client: SupabaseClient,
+  businessId: string,
+  amount: number,
+  email?: string | null,
+): Promise<void> {
+  if (isUnlimited(email)) return;
+  try {
+    const { data } = await client
+      .from("business_profile")
+      .select("tokens")
+      .eq("business_id", businessId)
+      .maybeSingle();
+    const current = typeof (data as { tokens?: number } | null)?.tokens === "number"
+      ? (data as { tokens: number }).tokens
+      : 0;
+    await client.from("business_profile").update({ tokens: current + amount }).eq("business_id", businessId);
+  } catch {
+    // best-effort — jangan sampai kegagalan refund menutupi error asli
+  }
+}

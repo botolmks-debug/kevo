@@ -7,13 +7,16 @@ import type { AspectRatio } from "@/lib/templates/types";
  * Sengaja TANPA values.photo (gambar besar) — foto diambil dari background_path.
  */
 export type ContentLayoutState = {
-  templateId: "produk-latar" | "standar" | "polos" | "interaksi" | "teks-saja";
+  templateId: "produk-latar" | "standar" | "polos" | "interaksi" | "teks-saja" | "carousel";
   ratio: AspectRatio;
   values: Record<string, string>; // hanya slot teks (tanpa "photo")
   overrides: EditorOverrides;
   logoVariant?: "dark" | "light";
   bgColor?: string; // untuk produk-latar
   descCount?: number; // untuk standar
+  overlayColor?: string; // untuk carousel
+  overlayOpacity?: number; // untuk carousel (0-100)
+  slideIndex?: number; // untuk carousel (0-3)
 };
 
 /**

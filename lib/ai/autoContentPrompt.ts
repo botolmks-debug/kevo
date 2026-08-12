@@ -234,7 +234,50 @@ const PERSPECTIVE_ANGLES_EN = [
   "BEFORE/AFTER CONTRAST — paint a clear picture of the customer's life/business before and after this product",
 ];
 
+/**
+ * Topik NON-JUALAN untuk mode Dari Foto — perbaikan keluhan "judulnya selalu
+ * jualan dan temanya itu-itu saja (mis. selalu soal stok habis)". Separuh
+ * generate memakai daftar ini: konten yang MEMBERI NILAI dulu (edukasi, tips
+ * pemakaian, mitos, di balik layar), bukan menjual. Produk tetap muncul
+ * sebagai konteks, tapi pesannya bukan ajakan beli.
+ */
+const VALUE_TOPICS_ID = [
+  "CARA PAKAI / IDE PENGGUNAAN produk ini yang jarang kepikiran orang — praktis dan bisa langsung dicoba",
+  "TIPS MERAWAT / MENYIMPAN produk atau hasil pakainya supaya awet dan maksimal",
+  "EDUKASI SINGKAT seputar bahan, jenis, atau istilah di industri ini yang sering bikin orang bingung",
+  "MITOS vs FAKTA yang beredar seputar produk/industri ini — luruskan dengan santai",
+  "KESALAHAN UMUM yang sering dilakukan orang terkait produk/kebutuhan ini, dan cara menghindarinya",
+  "DI BALIK LAYAR — proses, ketelitian, atau detail kecil dalam usaha ini yang jarang dilihat pelanggan",
+  "PERTANYAAN YANG PALING SERING DITANYAKAN pelanggan — jawab satu dengan jelas",
+  "TREN / KEBIASAAN BARU di kalangan target pelanggan yang berkaitan dengan produk ini",
+  "PERBANDINGAN JENIS/VARIAN — bantu pembaca memilih yang cocok untuk kebutuhannya (netral, bukan menjual)",
+  "CERITA/MOMEN KESEHARIAN target pelanggan yang berhubungan dengan produk ini — relatable, tanpa ajakan beli",
+];
+
+const VALUE_TOPICS_EN = [
+  "USAGE IDEAS for this product people rarely think of — practical and instantly try-able",
+  "CARE / STORAGE TIPS so the product or its results last longer and perform better",
+  "QUICK EDUCATION about materials, types, or industry terms that often confuse people",
+  "MYTH vs FACT circulating about this product/industry — set it straight casually",
+  "COMMON MISTAKES people make with this product/need, and how to avoid them",
+  "BEHIND THE SCENES — the process, care, or small details of this business customers rarely see",
+  "MOST FREQUENTLY ASKED customer question — answer one clearly",
+  "TRENDS / NEW HABITS among the target audience related to this product",
+  "TYPE/VARIANT COMPARISON — help readers pick what suits them (neutral, not selling)",
+  "A RELATABLE everyday moment of the target customer connected to this product — no sales pitch",
+];
+
 function pickPerspectiveNote(lang?: Lang): string {
+  // 50% konten NILAI (tidak menjual), 50% sudut manfaat — supaya feed tidak
+  // terasa "jualan terus dengan kata-kata diganti".
+  if (Math.random() < 0.5) {
+    const topics = isEn(lang) ? VALUE_TOPICS_EN : VALUE_TOPICS_ID;
+    const topic = topics[Math.floor(Math.random() * topics.length)];
+    if (isEn(lang)) {
+      return `IMPORTANT topic note: For THIS content, do NOT sell and do NOT restate the "customer problem" from the profile. Make pure-VALUE content the target audience finds genuinely useful or fun. The product may appear as context, but the message is not a pitch and there is no buying invitation in the title/description. Topic for this content: ${topic}.`;
+    }
+    return `CATATAN PENTING soal topik: Untuk konten KALI INI, JANGAN berjualan dan JANGAN mengulang "masalah pelanggan" dari profil. Buat konten NILAI murni yang berguna atau menghibur untuk target pasar. Produk boleh muncul sebagai konteks, tapi pesannya bukan promosi dan tidak ada ajakan beli di judul/deskripsi. Topik konten kali ini: ${topic}.`;
+  }
   const arr = isEn(lang) ? PERSPECTIVE_ANGLES_EN : PERSPECTIVE_ANGLES_ID;
   const angle = arr[Math.floor(Math.random() * arr.length)];
   if (isEn(lang)) {
