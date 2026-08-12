@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+﻿import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { langFromCookie, t } from "@/lib/i18n";
 import { Header } from "@/components/ui/Header";
