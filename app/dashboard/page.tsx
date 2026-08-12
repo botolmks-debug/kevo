@@ -9,7 +9,6 @@ import { SocialLinks } from "@/components/dashboard/SocialLinks";
 import { ContentReminderBell } from "@/components/dashboard/ContentReminderBell";
 import { LogoSettings } from "./LogoSettings";
 import { ImageLibrary } from "./ImageLibrary";
-import { CheckinCard } from "@/components/dashboard/CheckinCard";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
 
 export default async function DashboardPage() {
@@ -42,9 +41,6 @@ export default async function DashboardPage() {
         <TokenSlot />
 
         <LanguageToggle />
-
-        {/* Tahap uji: hanya tampil utk akun admin (cek di dalam komponen). */}
-        <CheckinCard />
 
         <section className="flex flex-col gap-3">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-navy/50">{t("dash.logo.section", lang)}</h2>

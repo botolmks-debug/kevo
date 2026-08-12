@@ -180,7 +180,7 @@ const DICT: Record<string, Entry> = {
 
   // ── Dashboard: Database Gambar ──
   "dash.img.title": { id: "Database Gambar", en: "Image Library" },
-  "dash.img.desc": { id: "Unggah gambar bisnis (logo, produk, suasana, dll) untuk dipakai nanti saat generate konten.", en: "Upload your business images (logo, products, scenes, etc.) to use later when generating content." },
+  "dash.img.desc": { id: "Unggah gambar bisnis (lproduk, suasana, dll) untuk dipakai nanti saat generate konten.", en: "Upload your business images (logo, products, scenes, etc.) to use later when generating content." },
   "dash.img.choose": { id: "Pilih Gambar", en: "Choose Image" },
   "dash.img.chooseAria": { id: "Pilih file gambar", en: "Choose an image file" },
   "dash.img.description": { id: "Deskripsi", en: "Description" },
