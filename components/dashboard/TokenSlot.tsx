@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { t, getLang, type Lang } from "@/lib/i18n";
 
@@ -86,6 +87,16 @@ export function TokenSlot() {
           ) : (
             <p className="text-xs text-navy/50">{t("token.aiFeaturesInfo", lang)}</p>
           )}
+          <Link
+            href="/topup"
+            className={`mt-1 w-fit rounded-full px-4 py-2 text-sm font-semibold transition ${
+              habis
+                ? "bg-coral text-white hover:opacity-90"
+                : "border border-primary text-primary hover:bg-primary/5"
+            }`}
+          >
+            {lang === "en" ? "Top Up Tokens" : "Top Up Token"} →
+          </Link>
         </>
       )}
     </Card>
