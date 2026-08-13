@@ -1,8 +1,7 @@
 "use client";
 
 /**
- * /video — halaman utama menu Video (ADMIN ONLY; proxy.ts redirect /video* utk non-admin).
- * Menggantikan halaman Video Avatar (beta) lama yang tidak dilanjutkan.
+ * /video/veo — ADMIN ONLY (proxy.ts sudah redirect /video* utk non-admin).
  * Alur: pilih foto produk + target market -> OpenAI bikin naskah/storyboard/
  * prompt (murah) -> review/edit -> Generate Veo (BIAYA NYATA ±$1.5-6/klip,
  * 8 detik) -> poll tiap 10 dtk -> tonton & unduh.
@@ -21,7 +20,7 @@ type Storyboard = {
   negativePrompt: string;
 };
 
-export default function VideoPage() {
+export default function VeoPage() {
   const [images, setImages] = useState<PickableImage[]>([]);
   const [selected, setSelected] = useState<PickableImage | null>(null);
   const [productDesc, setProductDesc] = useState("");
@@ -38,72 +37,10 @@ export default function VideoPage() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Pasang logo (watermark kanan bawah) — diproses di browser via ffmpeg.wasm.
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [logoSize, setLogoSize] = useState<number>(150); // lebar px pada video 720p
-  const [logoBusy, setLogoBusy] = useState(false);
-  const [logoError, setLogoError] = useState<string | null>(null);
-  const [logoVideoUrl, setLogoVideoUrl] = useState<string | null>(null);
-
   useEffect(() => {
     fetch("/api/images").then((r) => r.json()).then((d) => setImages(d.images ?? [])).catch(() => {});
-    // Logo bisnis dari profil (coba beberapa bentuk respons; kalau gagal, admin bisa pilih file manual).
-    fetch("/api/business-profile")
-      .then((r) => r.json())
-      .then((d) => {
-        const p = d?.profile ?? d;
-        const url =
-          p?.logoLight?.url ?? p?.logo?.url ?? p?.logoLight ?? p?.logo ?? null;
-        if (typeof url === "string" && url.startsWith("http")) setLogoUrl(url);
-      })
-      .catch(() => {});
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, []);
-
-  async function pasangLogo() {
-    if (!videoUrl || !logoUrl) return;
-    setLogoBusy(true);
-    setLogoError(null);
-    try {
-      // ffmpeg.wasm single-thread (tanpa SharedArrayBuffer) dari CDN —
-      // webpackIgnore supaya Next tidak mencoba mem-bundle URL eksternal.
-      const mod = (await import(
-        /* webpackIgnore: true */ "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js"
-      )) as { FFmpeg: new () => {
-        load: (o: { coreURL: string; wasmURL: string }) => Promise<void>;
-        writeFile: (n: string, d: Uint8Array) => Promise<void>;
-        exec: (a: string[]) => Promise<number>;
-        readFile: (n: string) => Promise<Uint8Array | string>;
-      } };
-      const ffmpeg = new mod.FFmpeg();
-      await ffmpeg.load({
-        coreURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.js",
-        wasmURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.wasm",
-      });
-      const vid = new Uint8Array(await (await fetch(videoUrl)).arrayBuffer());
-      const logo = new Uint8Array(await (await fetch(logoUrl)).arrayBuffer());
-      await ffmpeg.writeFile("in.mp4", vid);
-      await ffmpeg.writeFile("logo.png", logo);
-      const code = await ffmpeg.exec([
-        "-i", "in.mp4",
-        "-i", "logo.png",
-        "-filter_complex", `[1]scale=${logoSize}:-1[lg];[0][lg]overlay=W-w-24:H-h-24`,
-        "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
-        "-c:a", "copy",
-        "out.mp4",
-      ]);
-      if (code !== 0) throw new Error("Proses ffmpeg gagal.");
-      const out = await ffmpeg.readFile("out.mp4");
-      if (typeof out === "string") throw new Error("Output tidak valid.");
-      setLogoVideoUrl(URL.createObjectURL(new Blob([out.buffer as ArrayBuffer], { type: "video/mp4" })));
-    } catch (e) {
-      setLogoError(
-        e instanceof Error ? `${e.message} (butuh internet ke unpkg.com utk memuat ffmpeg)` : "Gagal memasang logo.",
-      );
-    } finally {
-      setLogoBusy(false);
-    }
-  }
 
   function pickImage(img: PickableImage) {
     setSelected(img);
@@ -136,8 +73,6 @@ export default function VideoPage() {
     setGenStatus("loading");
     setGenError(null);
     setVideoUrl(null);
-    setLogoVideoUrl(null);
-    setLogoError(null);
     try {
       const res = await fetch("/api/video/veo/generate", {
         method: "POST",
@@ -192,7 +127,7 @@ export default function VideoPage() {
       <Header />
       <main className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-10">
         <div>
-          <h1 className="text-2xl font-bold text-navy">Video Produk (AI)</h1>
+          <h1 className="text-2xl font-bold text-navy">Video Produk (Veo) — Eksperimen Admin</h1>
           <p className="mt-1 text-sm text-navy/60">
             OpenAI menyusun naskah & storyboard, Veo (Gemini) membuat videonya dari foto produk.
             Maks 8 detik, biaya nyata per klip, butuh Gemini API paid tier.
@@ -274,40 +209,6 @@ export default function VideoPage() {
             <a href={videoUrl} download={`keposting-veo-${Date.now()}.mp4`}
               className="text-sm font-medium text-primary hover:underline">Unduh MP4</a>
             <p className="text-xs text-navy/40">Video belum disimpan ke Riwayat (beta) — unduh sebelum menutup halaman.</p>
-
-            {/* Pasang logo kanan bawah (watermark) — logo asli ditempel di atas
-                video, BUKAN digambar AI, jadi tidak mungkin terdistorsi. */}
-            <div className="mt-2 flex w-full flex-col gap-2 border-t border-line pt-3">
-              <h4 className="text-sm font-semibold text-navy">Pasang Logo (kanan bawah)</h4>
-              {logoUrl ? (
-                <div className="flex flex-wrap items-center gap-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={logoUrl} alt="Logo" className="h-10 rounded bg-navy/5 p-1" />
-                  <div className="flex gap-2">
-                    {[110, 150, 200].map((s) => (
-                      <button key={s} type="button" onClick={() => setLogoSize(s)}
-                        className={`rounded-full border px-3 py-1 text-xs ${logoSize === s ? "border-primary bg-primary/10 text-primary" : "border-line text-navy"}`}>
-                        {s === 110 ? "Kecil" : s === 150 ? "Sedang" : "Besar"}
-                      </button>
-                    ))}
-                  </div>
-                  <Button type="button" variant="secondary" onClick={pasangLogo} disabled={logoBusy}
-                    className="px-3 py-1.5 text-xs">
-                    {logoBusy ? "Memproses (\u00b130-60 dtk)..." : "Pasang Logo"}
-                  </Button>
-                </div>
-              ) : (
-                <p className="text-xs text-navy/50">Logo bisnis tidak ditemukan di profil — upload logo dulu di Dashboard, lalu refresh halaman ini.</p>
-              )}
-              {logoError ? <p className="text-xs text-red-600">{logoError}</p> : null}
-              {logoVideoUrl ? (
-                <div className="flex flex-col items-start gap-2">
-                  <video src={logoVideoUrl} controls playsInline className="w-full max-w-sm rounded-2xl border border-line" />
-                  <a href={logoVideoUrl} download={`keposting-veo-logo-${Date.now()}.mp4`}
-                    className="text-sm font-medium text-primary hover:underline">Unduh MP4 (dengan logo)</a>
-                </div>
-              ) : null}
-            </div>
           </Card>
         ) : null}
       </main>
