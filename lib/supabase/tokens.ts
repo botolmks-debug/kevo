@@ -15,6 +15,33 @@ export function isAdmin(email?: string | null): boolean {
   return !!email && ADMIN_EMAILS.has(email.trim().toLowerCase());
 }
 
+/** Tanggal "hari ini" dalam zona Indonesia (WIB/WITA ~ UTC+8 dipakai sebagai
+ *  patokan tengah) — format YYYY-MM-DD untuk kolom activity_days.day.
+ *  Server (Vercel) berjalan di UTC; tanpa offset ini, generate jam 01.00 WITA
+ *  tercatat sebagai "kemarin". */
+function todayLocalDate(): string {
+  return new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
+/**
+ * Catat 1 hari aktif untuk sistem achievement (tabel activity_days, lihat
+ * migration 0012). Idempoten: (business_id, day) primary key — generate ke-2
+ * di hari yang sama tidak menambah baris. Best-effort: kegagalan di sini
+ * tidak boleh menggagalkan aksi AI-nya.
+ */
+async function recordActivityDay(client: SupabaseClient, businessId: string): Promise<void> {
+  try {
+    await client
+      .from("activity_days")
+      .upsert(
+        { business_id: businessId, day: todayLocalDate() },
+        { onConflict: "business_id,day", ignoreDuplicates: true },
+      );
+  } catch {
+    // best-effort
+  }
+}
+
 export type TokenState = { unlimited: boolean; tokens: number | null };
 
 /** Baca sisa token (untuk ditampilkan). unlimited → tokens null. */
@@ -55,6 +82,8 @@ export async function consumeToken(
     } catch {
       // best-effort — jangan gagalkan aksi kalau logging error
     }
+    // Achievement: setiap aksi AI menandai hari ini sebagai hari aktif.
+    await recordActivityDay(client, businessId);
   };
 
   if (isUnlimited(email)) {
@@ -122,6 +151,8 @@ export async function consumeTokens(
     } catch {
       // best-effort
     }
+    // Achievement: setiap aksi AI menandai hari ini sebagai hari aktif.
+    await recordActivityDay(client, businessId);
   };
 
   if (isUnlimited(email)) {

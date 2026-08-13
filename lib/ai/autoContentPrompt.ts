@@ -507,11 +507,20 @@ function jsonTail(lang?: Lang): string {
     : "Balas HANYA dengan JSON valid, tanpa penjelasan dan tanpa pembungkus markdown.";
 }
 
+/**
+ * Blok tambahan opsional dari route (anti-repetisi, kalender momen, dst).
+ * Disisipkan menjelang akhir prompt, sebelum instruksi "balas hanya JSON".
+ */
+function extraBlocks(extra?: string): string {
+  return extra && extra.trim() ? `${extra.trim()}\n` : "";
+}
+
+
 // ═══════════════════════════════════════════════════════════════════════════
 // BUILDERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-export function buildProdukContentPrompt(profile: BusinessProfile, productDescription: string, lang?: Lang): string {
+export function buildProdukContentPrompt(profile: BusinessProfile, productDescription: string, lang?: Lang, extra?: string): string {
   if (isEn(lang)) {
     return `${persona(lang)}
 ${outputLangDirective(lang)}
@@ -530,7 +539,7 @@ JSON format: {"onImageText": "...", "caption": "...", "fontId": "..."}
 ${onImageRule(lang)}
 ${captionRules(lang)}
 ${fontRule(lang)}
-${jsonTail(lang)}`;
+${extraBlocks(extra)}${jsonTail(lang)}`;
   }
 
   return `${persona(lang)}
@@ -550,10 +559,10 @@ Format JSON: {"onImageText": "...", "caption": "...", "fontId": "..."}
 ${onImageRule(lang)}
 ${captionRules(lang)}
 ${fontRule(lang)}
-${jsonTail(lang)}`;
+${extraBlocks(extra)}${jsonTail(lang)}`;
 }
 
-export function buildGeneralContentPrompt(profile: BusinessProfile, lang?: Lang): string {
+export function buildGeneralContentPrompt(profile: BusinessProfile, lang?: Lang, extra?: string): string {
   const topic = pickTopicAngleGeneral(lang);
   if (isEn(lang)) {
     return `${persona(lang)}
@@ -574,7 +583,7 @@ ${onImageRule(lang)}
 ${captionRules(lang)}
 imageScene = one English sentence, a realistic photo scene that reflects the TOPIC above. Specific, not generic. No text/logo in the scene.
 ${fontRule(lang)}
-${jsonTail(lang)}`;
+${extraBlocks(extra)}${jsonTail(lang)}`;
   }
 
   return `${persona(lang)}
@@ -595,10 +604,10 @@ ${onImageRule(lang)}
 ${captionRules(lang)}
 imageScene = satu kalimat Bahasa Indonesia, adegan foto realistis yang mencerminkan TOPIK di atas. Spesifik, bukan umum. Tanpa teks/logo di adegan.
 ${fontRule(lang)}
-${jsonTail(lang)}`;
+${extraBlocks(extra)}${jsonTail(lang)}`;
 }
 
-export function buildInteraksiContentPrompt(profile: BusinessProfile, lang?: Lang): string {
+export function buildInteraksiContentPrompt(profile: BusinessProfile, lang?: Lang, extra?: string): string {
   const format = pickInteraksiFormat(lang);
   if (isEn(lang)) {
     return `${persona(lang)}
@@ -618,7 +627,7 @@ ${interaksiCaptionRules(lang)}
 jawaban = a SHORT note for the BUSINESS OWNER (NOT posted to customers): explain the answer/intent of this content and the points covered, so you understand it & can reply to comments. For QUIZ/GUESS: clearly write the correct answer. Max 1-2 sentences, plain language.
 imageScene = 1-2 English sentences. ${format.scene} The scene MUST fill the ENTIRE frame from top to bottom (no empty/blank areas). Illustration, cartoon, or semi-realistic style is fine. Specific & relatable to the audience, not generic. NO text/letters/numbers/logos in the scene.
 ${fontRule(lang)}
-${jsonTail(lang)}`;
+${extraBlocks(extra)}${jsonTail(lang)}`;
   }
 
   return `${persona(lang)}
@@ -638,10 +647,10 @@ ${interaksiCaptionRules(lang)}
 jawaban = penjelasan SINGKAT khusus untuk PEMILIK BISNIS (TIDAK ikut diposting ke pelanggan): jelaskan jawaban/maksud konten ini dan poin yang dibahas, supaya kamu paham isinya & siap membalas komentar. Untuk KUIS/TEBAK: tulis jawaban benarnya dengan jelas. Maksimal 1-2 kalimat, bahasa gampang.
 imageScene = 1-2 kalimat Bahasa Indonesia. ${format.scene} Adegan WAJIB mengisi PENUH seluruh bingkai dari atas sampai bawah (tanpa area kosong/polos). Boleh gaya ilustrasi, kartun, atau semi-realistis. Spesifik & relatable ke target pasar, bukan generik. TANPA teks/huruf/angka/logo di dalam adegan.
 ${fontRule(lang)}
-${jsonTail(lang)}`;
+${extraBlocks(extra)}${jsonTail(lang)}`;
 }
 
-export function buildGabungContentPrompt(profile: BusinessProfile, descriptions: string[], lang?: Lang): string {
+export function buildGabungContentPrompt(profile: BusinessProfile, descriptions: string[], lang?: Lang, extra?: string): string {
   if (isEn(lang)) {
     const list = descriptions
       .map((d, i) => `  ${i + 1}. ${d && d.trim() ? d.trim() : "(no description)"}`)
@@ -666,7 +675,7 @@ JSON format: {"onImageText": "...", "caption": "...", "fontId": "..."}
 ${onImageRule(lang)}
 ${captionRules(lang)}
 ${fontRule(lang)}
-${jsonTail(lang)}`;
+${extraBlocks(extra)}${jsonTail(lang)}`;
   }
 
   const list = descriptions
@@ -692,5 +701,5 @@ Format JSON: {"onImageText": "...", "caption": "...", "fontId": "..."}
 ${onImageRule(lang)}
 ${captionRules(lang)}
 ${fontRule(lang)}
-${jsonTail(lang)}`;
+${extraBlocks(extra)}${jsonTail(lang)}`;
 }

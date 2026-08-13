@@ -1,0 +1,631 @@
+"use client";
+
+import { getLang, type Lang } from "@/lib/i18n";
+import { useRef, useEffect, useState } from "react";
+import { Header } from "@/components/ui/Header";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { CanvasEditor } from "@/components/editor/CanvasEditor";
+import { applyEditorOverrides, type EditorOverrides } from "@/lib/editor/layoutOverrides";
+import { buildFooterSocials } from "@/lib/onboarding/profileStorage";
+import { withFooterOverride } from "@/app/generate/withFooterOverride";
+import { withLogoOverride } from "@/app/generate/withLogoOverride";
+import { buildRenderInput } from "@/app/generate/buildRenderInput";
+import { saveManualContent } from "@/lib/content/saveContent";
+import { HelpTip } from "@/components/ui/HelpTip";
+import { EmptyGalleryNotice } from "@/components/ui/EmptyGalleryNotice";
+import { createProdukLatarTemplate } from "@/lib/templates/model-produk-latar";
+import { StandarContent } from "@/components/generate/StandarContent";
+import { TeksSajaContent } from "@/components/generate/TeksSajaContent";
+import type { BusinessProfile } from "@/lib/onboarding/businessProfile";
+import type { AspectRatio } from "@/lib/templates/types";
+
+type Status = "idle" | "loading" | "success" | "error";
+type PickableImage = { id: string; description: string; category: string; publicUrl: string };
+
+const RATIO_OPTIONS: { value: AspectRatio; label: string; en: string; w: number; h: number }[] = [
+  { value: "4:5", label: "Feed (4:5)", en: "Feed (4:5)", w: 1080, h: 1350 },
+  { value: "1:1", label: "Kotak (1:1)", en: "Square (1:1)", w: 1080, h: 1080 },
+  { value: "9:16", label: "Story (9:16)", en: "Story (9:16)", w: 1080, h: 1920 },
+];
+
+const BG_PRESETS = [
+  { label: "Orange", en: "Orange", value: "#F97316" },
+  { label: "Merah", en: "Red", value: "#EF4444" },
+  { label: "Biru Tua", en: "Dark Blue", value: "#1D4ED8" },
+  { label: "Hijau", en: "Green", value: "#16A34A" },
+  { label: "Ungu", en: "Purple", value: "#7C3AED" },
+  { label: "Kuning", en: "Yellow", value: "#CA8A04" },
+  { label: "Coklat", en: "Brown", value: "#78350F" },
+  { label: "Teal", en: "Teal", value: "#0F766E" },
+  { label: "Hitam", en: "Black", value: "#111111" },
+  { label: "Abu", en: "Gray", value: "#374151" },
+];
+
+const CONTENT_MODELS = [
+  { id: "standar", label: "Konten Standar", en: "Standard Content", desc: "Isi judul & deskripsi, pilih gambar (bisa diolah AI), lalu atur di editor.", descEn: "Fill in a title & description, pick an image (AI-editable), then arrange it in the editor.", emoji: "📝", available: true },
+  { id: "produk-latar", label: "Produk + Latar Buram", en: "Product + Blurred Background", desc: "AI potong background produk, lalu gabungkan dengan latar warna & efek blur pilihanmu.", descEn: "AI cuts out the product, then combines it with your chosen colour background & blur.", emoji: "🟧", available: true },
+  { id: "gabungan-2", label: "Gabungan 2 Gambar", en: "Combine 2 Images", desc: "Foto produk + foto latar dikombinasikan.", descEn: "Product photo + background photo combined.", emoji: "🖼️", available: false },
+  { id: "teks-saja", label: "Teks Saja", en: "Text Only", desc: "Background warna solid dengan teks besar.", descEn: "Solid colour background with big text.", emoji: "✍️", available: true },
+  { id: "perbandingan", label: "Perbandingan 2 Produk", en: "Compare 2 Products", desc: "Split kiri-kanan, bandingkan dua produk.", descEn: "Left-right split, compare two products.", emoji: "⚖️", available: false },
+  { id: "kolase", label: "Kolase 2–4 Produk", en: "Collage 2–4 Products", desc: "Grid foto beberapa produk sekaligus.", descEn: "Grid of several product photos at once.", emoji: "🔲", available: false },
+];
+
+/** Load gambar dari URL jadi HTMLImageElement via blob (bebas CORS) */
+function loadImgFromUrl(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    fetch(url, { cache: "no-store" })
+      .then(r => r.blob())
+      .then(b => {
+        const objUrl = URL.createObjectURL(b);
+        const el = new window.Image();
+        el.onload = () => { resolve(el); setTimeout(() => URL.revokeObjectURL(objUrl), 5000); };
+        el.onerror = reject;
+        el.src = objUrl;
+      })
+      .catch(reject);
+  });
+}
+
+/** Load gambar dari data URI jadi HTMLImageElement */
+function loadImgFromDataUri(dataUri: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const el = new window.Image();
+    el.onload = () => resolve(el);
+    el.onerror = reject;
+    el.src = dataUri;
+  });
+}
+
+function hexRgb(hex: string): [number, number, number] {
+  const h = hex.replace("#", "");
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+
+/**
+ * Gabungkan 2 layer di canvas:
+ * Layer 1 (bawah): foto asli → blur + overlay warna + vignette
+ * Layer 2 (atas): produk PNG transparan (background sudah dihapus AI) → tajam
+ */
+async function buildComposite(
+  originalUrl: string,      // foto asli untuk latar
+  productDataUri: string,   // produk PNG transparan dari Gemini
+  bgColor: string,
+  overlayOpacity: number,
+  blurRadius: number,
+  outW: number,
+  outH: number,
+): Promise<string> {
+  const [bgImg, productImg] = await Promise.all([
+    loadImgFromUrl(originalUrl),
+    loadImgFromDataUri(productDataUri),
+  ]);
+
+  // === Layer 1: Latar (foto asli + blur + overlay + vignette) ===
+  const bgCanvas = document.createElement("canvas");
+  bgCanvas.width = outW; bgCanvas.height = outH;
+  const bgCtx = bgCanvas.getContext("2d")!;
+
+  // Gambar foto asli dengan blur, pad supaya tepi tidak potongan
+  const pad = blurRadius * 3;
+  const sx = (outW + pad * 2) / bgImg.naturalWidth;
+  const sy = (outH + pad * 2) / bgImg.naturalHeight;
+  const s = Math.max(sx, sy);
+  bgCtx.filter = `blur(${blurRadius}px)`;
+  bgCtx.drawImage(bgImg,
+    -pad + (outW + pad * 2 - bgImg.naturalWidth * s) / 2,
+    -pad + (outH + pad * 2 - bgImg.naturalHeight * s) / 2,
+    bgImg.naturalWidth * s, bgImg.naturalHeight * s,
+  );
+  bgCtx.filter = "none";
+
+  // Overlay warna
+  const [r, g, b] = hexRgb(bgColor);
+  bgCtx.globalAlpha = overlayOpacity;
+  bgCtx.fillStyle = `rgb(${r},${g},${b})`;
+  bgCtx.fillRect(0, 0, outW, outH);
+  bgCtx.globalAlpha = 1;
+
+  // Vignette radial gelap di pinggir
+  const vig = bgCtx.createRadialGradient(
+    outW / 2, outH / 2, Math.min(outW, outH) * 0.2,
+    outW / 2, outH / 2, Math.max(outW, outH) * 0.75,
+  );
+  vig.addColorStop(0, "rgba(0,0,0,0)");
+  vig.addColorStop(1, "rgba(0,0,0,0.45)");
+  bgCtx.fillStyle = vig;
+  bgCtx.fillRect(0, 0, outW, outH);
+
+  // === Layer 2: Produk tajam di atas ===
+  const out = document.createElement("canvas");
+  out.width = outW; out.height = outH;
+  const ctx = out.getContext("2d")!;
+
+  // Tempel latar
+  ctx.drawImage(bgCanvas, 0, 0);
+
+  // Produk PNG (tajam) digambar dengan transform COVER yang SAMA seperti latar,
+  // memakai dimensinya sendiri — jadi produk tetap di posisi & ukuran aslinya,
+  // menyatu dengan latar blur (bukan mengambang di ukuran berbeda).
+  const sPr = Math.max((outW + pad * 2) / productImg.naturalWidth, (outH + pad * 2) / productImg.naturalHeight);
+  const pw = productImg.naturalWidth * sPr;
+  const ph = productImg.naturalHeight * sPr;
+  const px = -pad + (outW + pad * 2 - pw) / 2;
+  const py = -pad + (outH + pad * 2 - ph) / 2;
+
+  ctx.drawImage(productImg, px, py, pw, ph);
+
+  return out.toDataURL("image/jpeg", 0.93);
+}
+
+export default function GeneratePage() {
+  const [uiLang, setUiLang] = useState<Lang>("en");
+  useEffect(() => setUiLang(getLang()), []);
+  const L = (id: string, en: string) => (uiLang === "en" ? en : id);
+  const [showModelPicker, setShowModelPicker] = useState(true);
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [bgColor, setBgColor] = useState("#F97316");
+  const [overlayOpacity, setOverlayOpacity] = useState(0.42);
+  const [blurRadius, setBlurRadius] = useState(20);
+  const [ratio, setRatio] = useState<AspectRatio>("4:5");
+  const [images, setImages] = useState<PickableImage[]>([]);
+  // Untuk banner "galeri kosong" — tampil hanya SETELAH daftar gambar selesai
+  // dimuat, supaya tidak berkedip saat loading.
+  const [imagesLoaded, setImagesLoaded] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<PickableImage | null>(null);
+  const [overrides, setOverrides] = useState<EditorOverrides>({ slots: {} });
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(null);
+
+  // State proses AI (hapus background)
+  const [removeBgStatus, setRemoveBgStatus] = useState<Status>("idle");
+  const [removeBgError, setRemoveBgError] = useState<string | null>(null);
+  const [productDataUri, setProductDataUri] = useState<string | null>(null);
+
+  // State composite (gabungkan latar + produk)
+  const [compositeDataUri, setCompositeDataUri] = useState<string | null>(null);
+  const [compositeStatus, setCompositeStatus] = useState<Status>("idle");
+
+  const [renderStatus, setRenderStatus] = useState<Status>("idle");
+  const [renderError, setRenderError] = useState<string | null>(null);
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const [caption, setCaption] = useState("");
+  const [captionStatus, setCaptionStatus] = useState<Status>("idle");
+  const [copiedCaption, setCopiedCaption] = useState(false);
+
+  const compositeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    fetch("/api/business-profile").then(r => r.json()).then(d => setBusinessProfile(d.profile ?? null)).catch(() => {});
+    fetch("/api/images").then(r => r.json()).then(d => setImages(d.images ?? [])).catch(() => {}).finally(() => setImagesLoaded(true));
+  }, []);
+
+  // Setiap kali warna/blur/opacity/ratio berubah, rebuild composite (kalau sudah ada produk)
+  useEffect(() => {
+    if (!selectedImage || !productDataUri) return;
+    if (compositeTimer.current) clearTimeout(compositeTimer.current);
+    setCompositeStatus("loading");
+    compositeTimer.current = setTimeout(async () => {
+      const ratioOpt = RATIO_OPTIONS.find(o => o.value === ratio) ?? RATIO_OPTIONS[0];
+      try {
+        const uri = await buildComposite(
+          selectedImage.publicUrl, productDataUri,
+          bgColor, overlayOpacity, blurRadius,
+          ratioOpt.w, ratioOpt.h,
+        );
+        setCompositeDataUri(uri);
+        setCompositeStatus("success");
+      } catch {
+        setCompositeStatus("error");
+      }
+    }, 300);
+    return () => { if (compositeTimer.current) clearTimeout(compositeTimer.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bgColor, overlayOpacity, blurRadius, ratio, productDataUri]);
+
+  // Sync composite ke values.photo
+  useEffect(() => {
+    if (compositeDataUri) {
+      setValues(v => ({ ...v, photo: compositeDataUri }));
+    }
+  }, [compositeDataUri]);
+
+  /** Langkah 1: Pilih foto → langsung hapus background via AI */
+  async function handleSelectImage(img: PickableImage) {
+    setSelectedImage(img);
+    setSavedId(null);
+    setProductDataUri(null);
+    setCompositeDataUri(null);
+    setRemoveBgStatus("loading");
+    setRemoveBgError(null);
+
+    try {
+      const res = await fetch("/api/remove-background", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: img.publicUrl }),
+      });
+      const d = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(d?.error ?? L("Gagal hapus background.", "Failed to remove background."));
+      setProductDataUri(d.dataUri);
+      setRemoveBgStatus("success");
+    } catch (e) {
+      setRemoveBgStatus("error");
+      setRemoveBgError(e instanceof Error ? e.message : L("Gagal hapus background.", "Failed to remove background."));
+      // Fallback: pakai foto asli kalau AI gagal
+      setProductDataUri(null);
+    }
+  }
+
+  const footerOverride = businessProfile?.socials?.entries?.length
+    ? { businessName: businessProfile.business.name, socials: buildFooterSocials(businessProfile) }
+    : null;
+
+  const baseTemplate = createProdukLatarTemplate(bgColor);
+  const withFooter = footerOverride?.socials?.length
+    ? withFooterOverride(baseTemplate, footerOverride.businessName, footerOverride.socials)
+    : baseTemplate;
+  // Logo: versi TERANG jadi default saat konten muncul (permintaan user);
+  // fallback ke versi gelap kalau terang belum diupload. User bisa ganti versi
+  // lewat editor (dobel-klik logo / tombol Terang-Gelap) → tersimpan di
+  // overrides.logoVariant sehingga PNG hasil render ikut versi yang dipilih.
+  const logoDark = businessProfile?.logo ?? null;
+  const logoLight = businessProfile?.logoLight ?? null;
+  const defaultLogoVariant: "dark" | "light" = logoLight ? "light" : "dark";
+  const activeLogoVariant = overrides.logoVariant ?? defaultLogoVariant;
+  const activeLogo = activeLogoVariant === "dark" ? (logoDark ?? logoLight) : (logoLight ?? logoDark);
+  const template = withLogoOverride(withFooter, activeLogo);
+  const editTemplate = applyEditorOverrides(template, ratio, overrides);
+  const layout = editTemplate.layouts[ratio];
+
+  async function handleSimpanPng() {
+    setRenderStatus("loading"); setRenderError(null);
+    try {
+      const res = await fetch("/api/render", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildRenderInput(editTemplate, values, ratio)),
+      });
+      if (!res.ok) { const d = await res.json().catch(() => null); throw new Error(d?.error ?? L("Gagal merender.", "Failed to render.")); }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = `kevo-produk-${Date.now()}.png`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+      // Simpan ke Riwayat (hanya saat Simpan) — update baris sama kalau sudah pernah.
+      const { photo: _photo, ...textValues } = values;
+      const saved = await saveManualContent({
+        pngBlob: blob,
+        backgroundSrc: compositeDataUri ?? _photo ?? "",
+        layoutState: { templateId: "produk-latar", ratio, values: textValues, overrides, logoVariant: activeLogoVariant, bgColor },
+        onImageText: values.title ?? "",
+        caption,
+        ratio,
+        jenis: "produk",
+        existingId: savedId,
+      });
+      if (saved.ok) setSavedId(saved.id);
+      else setRenderError(L("PNG terunduh, tapi gagal simpan ke Riwayat: ", "PNG downloaded, but failed to save to History: ") + saved.error);
+      setRenderStatus("success");
+    } catch (e) { setRenderStatus("error"); setRenderError(e instanceof Error ? e.message : L("Gagal.", "Failed.")); }
+  }
+
+  async function handleGenerateCaption() {
+    if (!businessProfile) return;
+    setCaptionStatus("loading");
+    try {
+      const res = await fetch("/api/generate-caption", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          templateName: "Produk + Latar Warna",
+          values: { Judul: values.title ?? "", Deskripsi: values.subtitle ?? "" },
+          profile: businessProfile,
+          language: getLang(),
+        }),
+      });
+      const d = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(d?.error ?? L("Gagal.", "Failed."));
+      setCaption(d.caption ?? ""); setCaptionStatus("success");
+    } catch { setCaptionStatus("error"); }
+  }
+
+  // === STATUS KESELURUHAN ===
+  const isProcessing = removeBgStatus === "loading" || compositeStatus === "loading";
+  const isReady = compositeDataUri !== null;
+
+  if (showModelPicker) {
+    return (
+      <>
+        <Header />
+        <main className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-10">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-navy">{L("Pilih Model Konten", "Choose a Content Model")}</h1>
+              <HelpTip
+                title={L("Panduan & saran", "Guide & tips")}
+                align="left"
+                text={
+                  <span className="flex flex-col gap-1.5">
+                    <span>{L("Produk + Latar Warna — untuk 1 produk jelas dengan latar sederhana (mis. botol di meja polos). AI memotong produk lalu menaruhnya di latar warna pilihanmu.", "Product + Colour Background — for one clear product on a simple background (e.g. a bottle on a plain table). AI cuts out the product and places it on your chosen colour.")}</span>
+                    <span>{L("Konten Standar — paling fleksibel: isi judul & deskripsi, pilih gambar (bisa diolah AI atau dipakai apa adanya). Cocok untuk hampir semua foto.", "Standard Content — the most flexible: fill in a title & description, pick an image (AI-edited or used as-is). Works for almost any photo.")}</span>
+                    <span>{L("Otomatis — AI membuat gambar + caption otomatis dari data bisnismu.", "Auto — AI creates the image + caption automatically from your business data.")}</span>
+                    <span className="mt-1 rounded-lg bg-amber-50 p-2 text-amber-800">{L("💡 Saran: kalau fotomu ramai / banyak objek / produk kecil, jangan pakai \"Produk + Latar Warna\" — hasil potongnya kurang rapi. Pakai Konten Standar (Generate AI) atau opsi \"Pakai Gambar Asli\".", "💡 Tip: if your photo is busy / has many objects / a small product, avoid \"Product + Colour Background\" — the cutout gets messy. Use Standard Content (AI Generate) or the \"Use Original Image\" option.")}</span>
+                  </span>
+                }
+              />
+            </div>
+            <p className="mt-1 text-navy/60">{L("Pilih tampilan yang ingin kamu buat.", "Pick the look you want to create.")}</p>
+          </div>
+          {imagesLoaded && images.length === 0 ? <EmptyGalleryNotice /> : null}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {CONTENT_MODELS.map((model) => (
+              <button key={model.id} type="button" disabled={!model.available}
+                onClick={() => { setSelectedModel(model.id); setShowModelPicker(false); }}
+                className={`flex flex-col items-start gap-2 rounded-2xl border p-5 text-left transition ${
+                  model.available ? "border-line hover:border-primary/60 hover:bg-primary/5 active:scale-[0.98]"
+                  : "border-line bg-navy/[0.02] opacity-50 cursor-not-allowed"}`}>
+                <span className="text-3xl">{model.emoji}</span>
+                <div>
+                  <p className="font-semibold text-navy">{uiLang === "en" ? model.en : model.label}</p>
+                  <p className="mt-0.5 text-xs text-navy/60">{uiLang === "en" ? model.descEn : model.desc}</p>
+                </div>
+                <span className={`mt-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                  model.available ? "bg-primary/15 text-primary" : "bg-navy/10 text-navy/50"
+                }`}>{model.available ? L("Tersedia", "Available") : L("Segera hadir", "Coming soon")}</span>
+              </button>
+            ))}
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  if (selectedModel === "standar") {
+    return (
+      <>
+        <Header />
+        <StandarContent
+          businessProfile={businessProfile}
+          onBack={() => { setShowModelPicker(true); setSelectedModel(null); }}
+        />
+      </>
+    );
+  }
+
+  if (selectedModel === "teks-saja") {
+    return (
+      <>
+        <Header />
+        <TeksSajaContent
+          businessProfile={businessProfile}
+          onBack={() => { setShowModelPicker(true); setSelectedModel(null); }}
+        />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Header />
+      <main className="mx-auto flex max-w-5xl flex-col gap-6 px-6 py-10">
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={() => { setShowModelPicker(true); setSelectedModel(null); }}
+            className="text-sm font-medium text-navy/60 hover:text-navy">{L("← Ganti Model", "← Change Model")}</button>
+          <span className="text-navy/30">|</span>
+          <h1 className="text-xl font-bold text-navy">{L("Produk + Latar Warna", "Product + Colour Background")}</h1>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+          <div className="flex flex-col gap-5">
+
+            {/* Ukuran */}
+            <Card className="flex flex-col gap-3">
+              <h3 className="text-sm font-semibold text-navy">{L("Ukuran", "Size")}</h3>
+              <div className="flex flex-wrap gap-2">
+                {RATIO_OPTIONS.map((opt) => (
+                  <button key={opt.value} type="button" onClick={() => setRatio(opt.value)}
+                    className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                      ratio === opt.value ? "border-primary bg-primary/10 text-primary" : "border-line text-navy hover:bg-navy/5"
+                    }`}>{uiLang === "en" ? opt.en : opt.label}</button>
+                ))}
+              </div>
+            </Card>
+
+            {/* Foto Produk — pilih dulu, AI langsung proses */}
+            <Card className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-navy">{L("Foto Produk", "Product Photo")}</h3>
+                {removeBgStatus === "loading" && (
+                  <span className="flex items-center gap-1.5 text-xs text-primary animate-pulse">
+                    <span className="h-2 w-2 rounded-full bg-primary animate-bounce" />
+                    {L("AI memotong background... (~30 detik)", "AI cutting out the background... (~30s)")}
+                  </span>
+                )}
+                {removeBgStatus === "success" && (
+                  <span className="text-xs font-medium text-primary">{L("✓ Background berhasil dipotong", "✓ Background removed")}</span>
+                )}
+                {removeBgStatus === "error" && (
+                  <span className="text-xs text-red-500">{L("Gagal potong background", "Failed to remove background")}</span>
+                )}
+              </div>
+              <p className="text-xs text-navy/50">
+                {L("Pilih foto → AI otomatis memotong background produk (~30 detik), lalu efek latar diterapkan.", "Pick a photo → AI removes the product background (~30s), then the background effect is applied.")}
+              </p>
+              {images.length > 0 ? (
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {images.map((img) => (
+                    <button key={img.id} type="button"
+                      onClick={() => handleSelectImage(img)}
+                      disabled={removeBgStatus === "loading"}
+                      className={`group relative overflow-hidden rounded-xl border-2 transition ${
+                        selectedImage?.id === img.id ? "border-primary" : "border-line hover:border-primary/40"
+                      } disabled:opacity-60 disabled:cursor-not-allowed`}>
+                      <img src={img.publicUrl} alt={img.description} className="aspect-square w-full object-cover" />
+                      {selectedImage?.id === img.id && removeBgStatus === "success" ? (
+                        <div className="absolute inset-0 flex items-center justify-center bg-primary/20">
+                          <span className="text-white text-lg font-bold">✓</span>
+                        </div>
+                      ) : null}
+                      {selectedImage?.id === img.id && removeBgStatus === "loading" ? (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                          <span className="text-white text-xs">{L("Memproses...", "Processing...")}</span>
+                        </div>
+                      ) : null}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-navy/60">{L("Belum ada gambar. Upload dulu di Database Gambar.", "No images yet. Upload some in the Image Database first.")}</p>
+              )}
+              {removeBgError ? <p className="text-xs text-red-600">{removeBgError}</p> : null}
+            </Card>
+
+            {/* Warna & Efek — hanya aktif kalau produk sudah dipotong */}
+            <Card className={`flex flex-col gap-4 transition ${!productDataUri ? "opacity-50 pointer-events-none" : ""}`}>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-navy">{L("Warna & Efek Latar", "Background Colour & Effects")}</h3>
+                {compositeStatus === "loading" ? (
+                  <span className="text-xs text-primary animate-pulse">{L("⏳ Memperbarui...", "⏳ Updating...")}</span>
+                ) : compositeStatus === "success" ? (
+                  <span className="text-xs text-primary">{L("✓ Diperbarui", "✓ Updated")}</span>
+                ) : null}
+              </div>
+              {!productDataUri && (
+                <p className="text-xs text-navy/40">{L("Pilih foto produk dulu untuk mengaktifkan pengaturan warna.", "Pick a product photo first to enable colour settings.")}</p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {BG_PRESETS.map((c) => (
+                  <button key={c.value} type="button" title={uiLang === "en" ? c.en : c.label} onClick={() => setBgColor(c.value)}
+                    className={`h-9 w-9 rounded-xl border-2 transition hover:scale-110 ${bgColor === c.value ? "border-primary scale-110" : "border-transparent"}`}
+                    style={{ background: c.value }} />
+                ))}
+                <label className="flex items-center gap-1.5 text-xs text-navy/60">
+                  <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)}
+                    className="h-9 w-9 rounded-xl border border-line cursor-pointer" />
+                  {L("Custom", "Custom")}
+                </label>
+              </div>
+              <div className="flex flex-col gap-3 rounded-2xl bg-navy/[0.03] p-4">
+                <p className="text-xs font-medium text-navy/60">{L("Sesuaikan efek latar:", "Adjust background effect:")}</p>
+                <label className="flex items-center gap-3 text-xs">
+                  <span className="w-28 shrink-0 text-navy/60">{L("Overlay warna", "Colour overlay")}</span>
+                  <input type="range" min={5} max={80} step={5} value={Math.round(overlayOpacity * 100)}
+                    onChange={(e) => setOverlayOpacity(Number(e.target.value) / 100)} className="flex-1" />
+                  <span className="tabular-nums w-8 text-navy/60">{Math.round(overlayOpacity * 100)}%</span>
+                </label>
+                <label className="flex items-center gap-3 text-xs">
+                  <span className="w-28 shrink-0 text-navy/60">{L("Blur latar", "Background blur")}</span>
+                  <input type="range" min={0} max={40} step={2} value={blurRadius}
+                    onChange={(e) => setBlurRadius(Number(e.target.value))} className="flex-1" />
+                  <span className="tabular-nums w-8 text-navy/60">{blurRadius}px</span>
+                </label>
+              </div>
+            </Card>
+
+            {/* Teks */}
+            <Card className="flex flex-col gap-3">
+              <h3 className="text-sm font-semibold text-navy">{L("Teks", "Text")}</h3>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium text-navy/70">{L("Judul", "Title")}</span>
+                <input type="text" value={values.title ?? ""}
+                  onChange={(e) => setValues(v => ({ ...v, title: e.target.value }))}
+                  placeholder={L("Nama produk / headline", "Product name / headline")}
+                  className="rounded-2xl border border-line px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15" />
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium text-navy/70">{L("Tagline / Deskripsi", "Tagline / Description")}</span>
+                <textarea value={values.subtitle ?? ""} rows={2}
+                  onChange={(e) => setValues(v => ({ ...v, subtitle: e.target.value }))}
+                  placeholder={L("Tagline atau harga", "Tagline or price")}
+                  className="rounded-2xl border border-line px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 resize-none" />
+              </label>
+            </Card>
+
+            {/* Caption */}
+            <Card className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-navy">{L("Caption Instagram", "Instagram Caption")}</h3>
+                <Button type="button" variant="secondary" onClick={handleGenerateCaption}
+                  disabled={captionStatus === "loading"} className="text-xs px-3 py-1.5">
+                  {captionStatus === "loading" ? L("Membuat...", "Creating...") : L("✨ Generate", "✨ Generate")}
+                </Button>
+              </div>
+              <textarea value={caption} onChange={(e) => setCaption(e.target.value)} rows={4}
+                placeholder={L("Caption di sini, atau generate otomatis", "Caption here, or generate automatically")}
+                className="rounded-2xl border border-line px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15 resize-none" />
+              {caption ? (
+                <button type="button" onClick={async () => {
+                  await navigator.clipboard.writeText(caption).catch(() => {});
+                  setCopiedCaption(true); setTimeout(() => setCopiedCaption(false), 2000);
+                }} className="self-start text-xs font-medium text-primary hover:underline">
+                  {copiedCaption ? L("Tersalin! ✓", "Copied! ✓") : L("Salin Caption", "Copy Caption")}
+                </button>
+              ) : null}
+            </Card>
+
+            {/* Simpan */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" variant="cta" onClick={handleSimpanPng}
+                disabled={renderStatus === "loading" || !isReady || isProcessing}>
+                {renderStatus === "loading" ? L("Merender...", "Rendering...") : L("Simpan Gambar", "Save Image")}
+              </Button>
+              {renderStatus === "success" ? <span className="text-sm font-medium text-primary">{L("PNG Terunduh ✓", "PNG Downloaded ✓")}</span> : null}
+              {renderError ? <p className="text-sm text-red-600">{renderError}</p> : null}
+              {!isReady && !isProcessing ? <p className="text-xs text-navy/50">{L("Pilih foto produk dulu.", "Pick a product photo first.")}</p> : null}
+              {isProcessing ? <p className="text-xs text-navy/50">{L("Menunggu proses selesai...", "Waiting for processing to finish...")}</p> : null}
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div className="flex flex-col gap-2 lg:sticky lg:top-24 lg:self-start">
+            <p className="text-xs font-medium text-navy/60">{L("Preview — geser & edit langsung", "Preview — drag & edit directly")}</p>
+
+            {/* Status step */}
+            <div className="rounded-2xl border border-line bg-white p-3 text-xs flex flex-col gap-1.5">
+              <div className="flex items-center gap-2">
+                <span className={`h-2 w-2 rounded-full ${removeBgStatus === "success" ? "bg-primary" : removeBgStatus === "loading" ? "bg-amber-400 animate-pulse" : "bg-slate-300"}`} />
+                <span className={removeBgStatus === "success" ? "text-primary font-medium" : "text-navy/50"}>
+                  {removeBgStatus === "loading" ? L("AI memotong background produk...", "AI removing product background...") : removeBgStatus === "success" ? L("Background berhasil dipotong", "Background removed") : L("Langkah 1: Pilih foto produk", "Step 1: Pick a product photo")}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`h-2 w-2 rounded-full ${compositeStatus === "success" ? "bg-primary" : compositeStatus === "loading" ? "bg-amber-400 animate-pulse" : "bg-slate-300"}`} />
+                <span className={compositeStatus === "success" ? "text-primary font-medium" : "text-navy/50"}>
+                  {compositeStatus === "loading" ? L("Menggabungkan latar + produk...", "Combining background + product...") : compositeStatus === "success" ? L("Preview siap diedit", "Preview ready to edit") : L("Langkah 2: Pilih warna & efek latar", "Step 2: Pick colour & background effect")}
+                </span>
+              </div>
+            </div>
+
+            {!compositeDataUri ? (
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-line bg-navy/[0.02] gap-3 p-8"
+                style={{ minHeight: 300 }}>
+                {removeBgStatus === "loading" ? (
+                  <>
+                    <div className="h-10 w-10 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+                    <p className="text-xs text-navy/60 text-center">{L("AI sedang memotong background produk...", "AI is removing the product background...")}<br/>{L("Mohon tunggu ~30 detik", "Please wait ~30s")}</p>
+                  </>
+                ) : (
+                  <p className="text-xs text-navy/40 text-center">{L("Pilih foto produk untuk memulai", "Pick a product photo to start")}</p>
+                )}
+              </div>
+            ) : (
+              <CanvasEditor
+                key={compositeDataUri.slice(-20)}
+                layout={layout}
+                values={{ ...values, photo: compositeDataUri }}
+                overrides={overrides}
+                onOverridesChange={setOverrides}
+                onTextChange={(slotId, val) => setValues(v => ({ ...v, [slotId]: val }))}
+                footerPreviewText={footerOverride?.socials?.[0]?.value}
+                socials={footerOverride?.socials ?? []}
+                businessName={businessProfile?.business.name}
+                logoUrl={activeLogo?.url ?? null}
+                logoVariant={activeLogoVariant}
+                canToggleLogo={!!(logoDark && logoLight)}
+                onLogoVariantChange={(v) => setOverrides((o) => ({ ...o, logoVariant: v }))}
+              />
+            )}
+          </div>
+        </div>
+      </main>
+    </>
+  );
+}

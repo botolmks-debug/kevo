@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Header } from "@/components/ui/Header";
 import { Card } from "@/components/ui/Card";
-import { momenForDate, type MomenInfo } from "@/lib/ai/momenKalender";
 
 type Item = {
   id: string;
@@ -23,12 +22,6 @@ const BULAN = [
 
 function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-/** Momen untuk string tanggal YYYY-MM-DD (sumber data: lib/ai/momenKalender). */
-function momenForYmd(dateStr: string): MomenInfo | null {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return momenForDate(new Date(y, m - 1, d));
 }
 
 export default function JadwalPage() {
@@ -89,7 +82,6 @@ export default function JadwalPage() {
   }
 
   const selectedItems = selectedDate ? byDate[selectedDate] ?? [] : [];
-  const selectedMomen = selectedDate ? momenForYmd(selectedDate) : null;
 
   function fmtLong(dateStr: string): string {
     const [y, m, d] = dateStr.split("-").map(Number);
@@ -126,7 +118,6 @@ export default function JadwalPage() {
               if (!date) return <div key={`b${idx}`} />;
               const dayNum = Number(date.split("-")[2]);
               const list = byDate[date] ?? [];
-              const momen = momenForYmd(date);
               const isToday = date === today;
               const isSelected = date === selectedDate;
               return (
@@ -134,21 +125,13 @@ export default function JadwalPage() {
                   key={date}
                   type="button"
                   onClick={() => setSelectedDate(date)}
-                  title={momen ? `${momen.emoji} ${momen.label}` : undefined}
                   className={`flex min-h-[64px] flex-col rounded-xl border p-1 text-left transition ${
                     isSelected ? "border-primary ring-2 ring-primary/20"
                     : isToday ? "border-amber-300 bg-amber-50"
-                    : momen ? "border-primary/30 bg-primary/[0.04] hover:border-primary/50"
                     : "border-line hover:border-primary/40"
                   }`}
                 >
                   <span className={`text-xs font-semibold ${isToday ? "text-amber-700" : "text-navy/70"}`}>{dayNum}</span>
-                  {/* Penanda momen: emoji + nama singkat (hover utk nama lengkap) */}
-                  {momen ? (
-                    <span className="mt-0.5 truncate text-[9px] font-medium leading-tight text-primary">
-                      {momen.emoji} {momen.label}
-                    </span>
-                  ) : null}
                   <div className="mt-0.5 flex flex-wrap gap-0.5">
                     {list.slice(0, 3).map((it) => (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -174,19 +157,6 @@ export default function JadwalPage() {
               </h3>
               <button type="button" onClick={() => setSelectedDate(null)} className="text-xs text-navy/50 hover:text-navy">Tutup</button>
             </div>
-
-            {/* Info momen di tanggal ini + saran angle konten */}
-            {selectedMomen ? (
-              <div className="rounded-xl bg-primary/10 px-4 py-3">
-                <p className="text-sm font-semibold text-primary">
-                  {selectedMomen.emoji} {selectedMomen.label}
-                </p>
-                <p className="mt-0.5 text-xs text-navy/70">
-                  Ide angle konten: {selectedMomen.angle}.
-                </p>
-              </div>
-            ) : null}
-
             {selectedItems.length === 0 ? (
               <p className="text-sm text-navy/50">Belum ada konten dijadwalkan di tanggal ini.</p>
             ) : (

@@ -7,7 +7,7 @@ import type { AspectRatio } from "@/lib/templates/types";
  * Sengaja TANPA values.photo (gambar besar) — foto diambil dari background_path.
  */
 export type ContentLayoutState = {
-  templateId: "produk-latar" | "standar" | "polos" | "interaksi" | "teks-saja" | "carousel";
+  templateId: "produk-latar" | "standar" | "polos" | "interaksi" | "teks-saja" | "carousel" | "testimoni";
   ratio: AspectRatio;
   values: Record<string, string>; // hanya slot teks (tanpa "photo")
   overrides: EditorOverrides;
@@ -17,6 +17,11 @@ export type ContentLayoutState = {
   overlayColor?: string; // untuk carousel
   overlayOpacity?: number; // untuk carousel (0-100)
   slideIndex?: number; // untuk carousel (0-3)
+  /** Untuk testimoni: rating per testimoni (1-5) atau null = tanpa bintang.
+      Panjang array = jumlah testimoni; dipakai membangun ulang template
+      yang persis sama di Edit Konten. Overlay warna tidak perlu disimpan
+      terpisah karena sudah dibake ke background yang tersimpan. */
+  testimoniStars?: (number | null)[];
 };
 
 /**

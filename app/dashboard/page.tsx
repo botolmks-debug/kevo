@@ -10,6 +10,7 @@ import { ContentReminderBell } from "@/components/dashboard/ContentReminderBell"
 import { LogoSettings } from "./LogoSettings";
 import { ImageLibrary } from "./ImageLibrary";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
+import { AchievementCard } from "@/components/dashboard/AchievementCard";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -39,6 +40,9 @@ export default async function DashboardPage() {
         </header>
 
         <TokenSlot />
+
+        {/* Achievement: peringkat hari aktif + hadiah token (lihat /api/achievements). */}
+        <AchievementCard />
 
         <LanguageToggle />
 
