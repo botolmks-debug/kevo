@@ -77,9 +77,16 @@ export function AchievementCard() {
             {next ? ` — ${next.sisa} hari lagi menuju ${next.label}${next.reward > 0 ? ` (+${next.reward} token)` : ""}` : " — peringkat tertinggi tercapai! 🏆"}
           </p>
           {next ? (
-            <div className="mt-1 h-1.5 w-full max-w-[240px] overflow-hidden rounded-full bg-navy/10">
-              <div className="h-full rounded-full bg-primary" style={{ width: `${progressPct}%` }} />
-            </div>
+            <>
+              <div className="mt-1 h-1.5 w-full max-w-[240px] overflow-hidden rounded-full bg-navy/10">
+                <div className="h-full rounded-full bg-primary" style={{ width: `${progressPct}%` }} />
+              </div>
+              <p className="mt-1 text-[11px] text-navy/50">
+                {next.reward > 0
+                  ? `Hadiah ${next.label}: +${next.reward} token gratis \u{1F381}`
+                  : `${next.label} = badge pertama di akunmu \u{1F6E1}\uFE0F`}
+              </p>
+            </>
           ) : null}
         </div>
       </div>
@@ -89,10 +96,22 @@ export function AchievementCard() {
         {data.tiers.map((t) => {
           const tier = tierById(t.id);
           return (
-            <div key={t.id} className="flex flex-col items-center gap-1" style={{ opacity: t.achieved ? 1 : 0.35 }}>
+            <div key={t.id} className="flex flex-col items-center gap-0.5" style={{ opacity: t.achieved ? 1 : 0.45 }}>
               <AchievementBadge tier={tier} size={36} />
               <span className="text-[10px] font-medium text-navy/60">{t.label}</span>
               <span className="text-[9px] text-navy/40">{t.days} hari</span>
+              {/* Hadiah di tiap peringkat, terlihat langsung di deretan badge */}
+              {t.reward > 0 ? (
+                <span
+                  className={`rounded-full px-1.5 py-px text-[9px] font-semibold ${
+                    t.achieved ? "bg-primary/15 text-primary" : "bg-navy/5 text-navy/50"
+                  }`}
+                >
+                  {t.achieved ? "\u2713 " : ""}+{t.reward} token
+                </span>
+              ) : (
+                <span className="text-[9px] text-navy/30">badge</span>
+              )}
             </div>
           );
         })}
