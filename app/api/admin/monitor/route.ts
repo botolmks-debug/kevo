@@ -89,16 +89,24 @@ export async function GET() {
   const DB_LIMIT_BYTES = 500 * 1024 * 1024; // 500 MB free tier
   let storageBytes: number | null = null;
   try {
-    const { data: objRows } = await service
-      .schema("storage")
-      .from("objects")
-      .select("metadata");
-    if (objRows) {
-      storageBytes = objRows.reduce((sum, r) => {
+    // PostgREST default maks 1000 baris per permintaan — paginasi supaya
+    // jumlah tetap benar saat file sudah ribuan (maks 20rb file dihitung).
+    let total = 0;
+    const PAGE = 1000;
+    for (let page = 0; page < 20; page++) {
+      const { data: objRows } = await service
+        .schema("storage")
+        .from("objects")
+        .select("metadata")
+        .range(page * PAGE, page * PAGE + PAGE - 1);
+      if (!objRows || objRows.length === 0) break;
+      for (const r of objRows) {
         const size = Number((r.metadata as { size?: number | string } | null)?.size ?? 0);
-        return sum + (Number.isFinite(size) ? size : 0);
-      }, 0);
+        if (Number.isFinite(size)) total += size;
+      }
+      if (objRows.length < PAGE) break;
     }
+    storageBytes = total;
   } catch { /* biarkan null — UI tampilkan "tidak tersedia" */ }
   let dbBytes: number | null = null;
   try {

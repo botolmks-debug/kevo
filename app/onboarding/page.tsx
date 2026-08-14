@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { OnboardingWelcome } from "@/components/onboarding/OnboardingWelcome";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -198,7 +199,7 @@ export default function OnboardingPage() {
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error ?? L("Gagal menyimpan profil bisnis.", "Failed to save business profile."));
-      router.push("/dashboard");
+      router.push("/gambar"); // user baru: langsung ke Upload Produk (alur baru 14 Agu)
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : L("Gagal menyimpan profil bisnis.", "Failed to save business profile."));
     } finally {
@@ -208,6 +209,9 @@ export default function OnboardingPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-6 px-6 py-12">
+      {/* Popup sambutan: jelaskan TUJUAN pertanyaan onboarding (komponen sudah
+          lama dibuat tapi belum pernah di-mount — akar bug "popup tidak muncul") */}
+      <OnboardingWelcome />
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <p className="text-sm font-medium text-primary">{L("Langkah", "Step")} {step}/{TOTAL_STEPS}</p>

@@ -58,6 +58,7 @@ export async function generateOpenAIImage(input: {
         model: OPENAI_IMAGE_MODEL,
         prompt: input.prompt,
         size: sizeForAspect(input.aspectRatio),
+        quality: "medium", // patok biaya fallback (~$0.04-0.06/gambar, bukan auto/high $0.17-0.25)
         n: 1,
       }),
       signal: controller.signal,
@@ -93,6 +94,7 @@ export async function editOpenAIImage(input: {
     form.append("model", OPENAI_IMAGE_MODEL);
     form.append("prompt", input.prompt);
     form.append("size", sizeForAspect(input.aspectRatio));
+    form.append("quality", "medium"); // patok biaya fallback (bukan auto/high)
     const buffer = Buffer.from(input.imageBase64, "base64");
     form.append("image", new Blob([buffer], { type: input.mimeType }), "source.png");
 

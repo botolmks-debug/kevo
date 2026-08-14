@@ -51,9 +51,15 @@ export function TokenSlot() {
     const id = setInterval(() => setNowMs(Date.now()), 1000);
     return () => clearInterval(id);
   }, [nextRefillMs]);
+  const [claimedAt, setClaimedAt] = useState<number | null>(null);
   useEffect(() => {
-    if (nextRefillMs && nowMs >= nextRefillMs) loadRefill();
-  }, [nextRefillMs, nowMs]);
+    // Guard: klaim sekali per target waktu — tanpa ini, tiap tick detik
+    // memanggil API lagi sampai respons server datang.
+    if (nextRefillMs && nowMs >= nextRefillMs && claimedAt !== nextRefillMs) {
+      setClaimedAt(nextRefillMs);
+      loadRefill();
+    }
+  }, [nextRefillMs, nowMs, claimedAt]);
   const countdownText = nextRefillMs && nextRefillMs > nowMs ? formatCountdown(nextRefillMs - nowMs) : null;
 
   const unlimited = state?.unlimited === true;
