@@ -14,7 +14,7 @@ export default function PricingSection() {
             <div className="text-4xl font-bold mb-1">Rp 50.000</div>
             <div className="text-gray-500 mb-6">10 token · Rp 5.000/konten</div>
             <ul className="text-left text-sm text-gray-600 space-y-2 mb-8">
-              <li>✓ 10 konten siap posting</li>
+              <li>✓ 5 konten siap posting</li>
               <li>✓ Semua fitur AI</li>
               <li>✓ Token tidak hangus</li>
             </ul>

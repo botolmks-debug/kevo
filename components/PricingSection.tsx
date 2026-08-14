@@ -26,7 +26,7 @@ export default function PricingSection() {
           <div className="mt-2 text-3xl font-extrabold text-navy">Rp 50.000</div>
           <div className="mt-1 text-sm text-muted">10 token · Rp 5.000/konten</div>
           <ul className="mt-5 flex flex-col gap-2 text-sm text-navy">
-            <li className="flex items-start gap-2"><span className="text-primary">✓</span> 10 konten siap posting</li>
+            <li className="flex items-start gap-2"><span className="text-primary">✓</span> 5 konten siap posting</li>
             <li className="flex items-start gap-2"><span className="text-primary">✓</span> Semua fitur AI</li>
             <li className="flex items-start gap-2"><span className="text-primary">✓</span> Token tidak hangus</li>
           </ul>

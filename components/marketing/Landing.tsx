@@ -205,7 +205,7 @@ export function Landing() {
               Upload foto produkmu, dapat gambar + caption Instagram siap posting. Cukup dari satu foto—dibantu AI.
             </p>
             <div className="mt-7 flex flex-col items-center gap-3 sm:flex-row md:items-start">
-              <LinkButton href="/signup" className="w-full px-7 py-3.5 sm:w-auto">Coba 10 Konten Gratis</LinkButton>
+              <LinkButton href="/signup" className="w-full px-7 py-3.5 sm:w-auto">Coba 5 Konten Gratis</LinkButton>
               <LinkButton href="#cara-kerja" variant="secondary" className="w-full px-7 py-3.5 sm:w-auto">Lihat cara kerjanya</LinkButton>
             </div>
             <p className="mt-3 text-xs text-muted">5 token gratis + refill harian · Tanpa kartu kredit</p>
@@ -307,7 +307,7 @@ export function Landing() {
             <h2 className="text-2xl font-bold sm:text-3xl">Ceritakan produkmu, mulai hari ini</h2>
             <p className="mx-auto mt-3 max-w-md text-white/85">Berhenti pusing mikirin ide. Mulai dari satu foto sekarang.</p>
             <div className="mt-7">
-              <LinkButton href="/signup" variant="cta" className="px-8 py-3.5">Coba 10 Konten Gratis</LinkButton>
+              <LinkButton href="/signup" variant="cta" className="px-8 py-3.5">Coba 5 Konten Gratis</LinkButton>
             </div>
           </div>
         </section>

@@ -20,7 +20,7 @@ export const TOPUP_PACKAGES: TopupPackage[] = [
     tokens: 10,
     priceIdr: 50_000,
     pricePerToken: 5_000,
-    description: "10 konten siap posting",
+    description: "5 konten siap posting",
   },
   {
     id: "pkg_30",

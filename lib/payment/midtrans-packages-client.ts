@@ -21,7 +21,7 @@ export const MIDTRANS_PACKAGES: MidtransPackageView[] = [
     label: "Paket Mulai",
     perKonten: 5000,
     highlight: false,
-    benefits: ["10 konten siap posting", "Semua fitur AI", "Token tidak hangus"],
+    benefits: ["5 konten siap posting", "Semua fitur AI", "Token tidak hangus"],
   },
   {
     id: "rutin",
