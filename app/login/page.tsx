@@ -16,16 +16,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  // Default English. Kalau user sudah pernah memilih, pakai pilihannya.
-  const [lang, setLangLocal] = useState<Lang>("en");
+  // Default BAHASA INDONESIA (pre-launch pasar Indonesia). Kalau user sudah
+  // pernah memilih, pakai pilihannya.
+  const [lang, setLangLocal] = useState<Lang>("id");
 
   useEffect(() => {
     const stored = getStoredLang();
     if (stored) {
       setLangLocal(stored);
     } else {
-      setLangLocal("en");
-      setLang("en"); // simpan default supaya konsisten sampai ke dashboard
+      setLangLocal("id");
+      setLang("id"); // simpan default supaya konsisten sampai ke dashboard
     }
   }, []);
 

@@ -160,7 +160,7 @@ async function buildComposite(
 }
 
 export default function GeneratePage() {
-  const [uiLang, setUiLang] = useState<Lang>("en");
+  const [uiLang, setUiLang] = useState<Lang>("id");
   useEffect(() => setUiLang(getLang()), []);
   const L = (id: string, en: string) => (uiLang === "en" ? en : id);
   const [showModelPicker, setShowModelPicker] = useState(true);

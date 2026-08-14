@@ -86,7 +86,7 @@ async function fetchWithAuthRetry(input: string, init?: RequestInit): Promise<Re
 
 export function AutoGenerate() {
   const [jenis, setJenis] = useState<GeneratedContentJenis | "referensi" | "carousel">("produk");
-  const [uiLang, setUiLang] = useState<Lang>("en");
+  const [uiLang, setUiLang] = useState<Lang>("id");
   useEffect(() => setUiLang(getLang()), []);
   const L = (id: string, en: string) => (uiLang === "en" ? en : id);
   const [ratio, setRatio] = useState<AspectRatio>("4:5");

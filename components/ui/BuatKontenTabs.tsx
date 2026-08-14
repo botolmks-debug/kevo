@@ -18,7 +18,7 @@ const TABS = [
 
 export function BuatKontenTabs() {
   const pathname = usePathname();
-  const [lang, setLangState] = useState<Lang>("en");
+  const [lang, setLangState] = useState<Lang>("id");
   useEffect(() => { setLangState(getLang()); }, []);
 
   return (

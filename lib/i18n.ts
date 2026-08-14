@@ -12,10 +12,10 @@ export const LANG_LABELS: Record<Lang, string> = { id: "Indonesia", en: "English
 const STORAGE_KEY = "kevo_lang"; // key internal — jangan diubah (backward-compat)
 
 export function getLang(): Lang {
-  // Default English kalau user belum memilih.
-  if (typeof window === "undefined") return "en";
+  // Default BAHASA INDONESIA (pre-launch fokus pasar Indonesia).
+  if (typeof window === "undefined") return "id";
   const v = window.localStorage.getItem(STORAGE_KEY);
-  return (LANGS as string[]).includes(v ?? "") ? (v as Lang) : "en";
+  return (LANGS as string[]).includes(v ?? "") ? (v as Lang) : "id";
 }
 
 /**
@@ -38,8 +38,8 @@ export function setLang(lang: Lang): void {
 
 /** Untuk server component: baca Lang dari nilai cookie "lang". */
 export function langFromCookie(value: string | undefined | null): Lang {
-  // Default English kalau cookie belum ada.
-  return value === "id" ? "id" : "en";
+  // Default BAHASA INDONESIA kalau cookie belum ada (pre-launch pasar Indonesia).
+  return value === "en" ? "en" : "id";
 }
 
 // Entri minimal wajib punya "id"; bahasa lain opsional (fallback ke id).

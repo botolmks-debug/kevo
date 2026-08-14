@@ -31,7 +31,7 @@ export function Header() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isAdminUser, setIsAdminUser] = useState(false);
-  const [lang, setLangState] = useState<Lang>("en");
+  const [lang, setLangState] = useState<Lang>("id");
   const [panduanOpen, setPanduanOpen] = useState(false);
 
   useEffect(() => {
