@@ -15,6 +15,8 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [showResend, setShowResend] = useState(false);
+  const [resendMsg, setResendMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   // Default BAHASA INDONESIA (pre-launch pasar Indonesia). Kalau user sudah
   // pernah memilih, pakai pilihannya.
@@ -43,7 +45,14 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      setError("login.error");
+      // Supabase mengembalikan error khusus saat email belum dikonfirmasi.
+      // Tanpa ini, user yang lupa klik link email lihat pesan "password salah"
+      // (menyesatkan -> user frustrasi -> pergi). Pisahkan jadi pesannya sendiri.
+      const notConfirmed =
+        error.code === "email_not_confirmed" ||
+        /email not confirmed|not confirmed/i.test(error.message ?? "");
+      setError(notConfirmed ? "login.notConfirmed" : "login.error");
+      setShowResend(notConfirmed);
       return;
     }
     // Arah setelah login:
@@ -60,6 +69,13 @@ export default function LoginPage() {
     } catch {}
     router.push(dest);
     router.refresh();
+  }
+
+  async function handleResend() {
+    setResendMsg(null);
+    const supabase = createClient();
+    const { error } = await supabase.auth.resend({ type: "signup", email });
+    setResendMsg(error ? "login.resendFail" : "login.resendOk");
   }
 
   return (
@@ -112,7 +128,21 @@ export default function LoginPage() {
               {t("login.forgot", lang)}
             </Link>
           </div>
-          {error && <p className="text-sm text-red-500">{t(error, lang)}</p>}
+          {error && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <p>{t(error, lang)}</p>
+              {showResend && (
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  className="mt-1.5 font-semibold text-primary underline underline-offset-2 hover:opacity-80"
+                >
+                  {t("login.resendBtn", lang)}
+                </button>
+              )}
+              {resendMsg && <p className="mt-1 text-xs text-navy/60">{t(resendMsg, lang)}</p>}
+            </div>
+          )}
           <Button type="submit" disabled={loading || !email || !password} className="w-full">
             {loading ? t("login.processing", lang) : t("login.submit", lang)}
           </Button>
