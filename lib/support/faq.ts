@@ -9,10 +9,10 @@ User isi profil bisnis sekali (onboarding), lalu sistem bisa generate feed + cap
 
 # Sistem Token
 
-- User baru dapat 10 token gratis
+- User baru dapat 5 token gratis (masa pre-launch)
 - 1 aksi AI = 1 token (generate konten, hapus background, generate caption)
 - Kalau generate GAGAL, token otomatis dikembalikan (refund) — user tidak rugi
-- Untuk sekarang, fitur beli token BELUM tersedia — sedang dalam persiapan
+- Beli token SUDAH TERSEDIA: buka halaman Top Up (tombol "Top Up Token" di Dashboard, atau /topup), bayar via Midtrans (QRIS, transfer bank, e-wallet). Token bertambah otomatis setelah pembayaran sukses
 - Kalau token habis dan butuh tambahan, hubungi admin lewat tombol "Butuh bantuan manusia"
 - Beberapa akun khusus punya token unlimited
 
@@ -44,7 +44,7 @@ User isi profil bisnis sekali (onboarding), lalu sistem bisa generate feed + cap
 
 # Troubleshooting Umum
 
-- **"Token habis"**: fitur beli token belum tersedia untuk sekarang — hubungi admin lewat tombol "Butuh bantuan manusia" untuk request tambahan
+- **"Token habis"**: arahkan user beli token di halaman Top Up (/topup, atau tombol "Top Up Token" di Dashboard). Kalau sudah bayar tapi token belum masuk, minta user tunggu 1-2 menit lalu refresh; kalau tetap belum, eskalasi lewat tombol "Butuh bantuan manusia"
 - **"Gambar tidak muncul"**: refresh halaman; kalau masih tidak muncul, kemungkinan generate gagal — coba ulang
 - **"Generate lama"**: normal — AI butuh 30-90 detik untuk gambar
 - **"Caption tidak sesuai"**: edit manual di halaman Edit Konten atau regenerate

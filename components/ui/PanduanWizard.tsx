@@ -11,7 +11,7 @@ const STEPS: Step[] = [
   { key: "s1", href: "/dashboard", target: "/dashboard" },
   { key: "s2", href: "/dashboard", target: "/dashboard" },
   { key: "s3", href: "/dashboard", target: "/dashboard" },
-  { key: "s4", href: "/generate", target: "/generate" },
+  { key: "s4", href: "/generate", target: "/generate-otomatis" },
   { key: "s5", href: "/generate-otomatis", target: "/generate-otomatis" },
   { key: "s6", href: "/konten", target: "/konten" },
   { key: "s7", href: "/jadwal", target: "/jadwal" },

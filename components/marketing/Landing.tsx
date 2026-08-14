@@ -208,7 +208,7 @@ export function Landing() {
               <LinkButton href="/signup" className="w-full px-7 py-3.5 sm:w-auto">Coba 10 Konten Gratis</LinkButton>
               <LinkButton href="#cara-kerja" variant="secondary" className="w-full px-7 py-3.5 sm:w-auto">Lihat cara kerjanya</LinkButton>
             </div>
-            <p className="mt-3 text-xs text-muted">10 token gratis + refill harian · Tanpa kartu kredit</p>
+            <p className="mt-3 text-xs text-muted">5 token gratis + refill harian · Tanpa kartu kredit</p>
           </div>
           <HeroAnimation />
         </section>
@@ -275,13 +275,13 @@ export function Landing() {
             Selama masa uji coba, semua fitur AI bisa dipakai tanpa biaya.
           </p>
           <ul className="mx-auto mt-6 flex max-w-md flex-col gap-2 text-left text-sm text-navy">
-            <li className="flex items-start gap-2"><span className="text-primary">✓</span> 10 token gratis saat daftar</li>
+            <li className="flex items-start gap-2"><span className="text-primary">✓</span> 5 token gratis saat daftar</li>
             <li className="flex items-start gap-2"><span className="text-primary">✓</span> +1 token gratis per hari (maks 5)</li>
             <li className="flex items-start gap-2"><span className="text-primary">✓</span> Semua fitur AI: generate konten, hapus background, caption</li>
             <li className="flex items-start gap-2"><span className="text-primary">✓</span> Tanpa kartu kredit, tanpa langganan</li>
           </ul>
           <div className="mt-7">
-            <LinkButton href="/signup" className="px-8 py-3.5">Coba 10 konten gratis</LinkButton>
+            <LinkButton href="/signup" className="px-8 py-3.5">Coba 5 konten gratis</LinkButton>
           </div>
         </section>
 
@@ -295,7 +295,7 @@ export function Landing() {
             <div className="mt-8 flex flex-col gap-3">
               <Faq q="Perlu bisa desain?" a="Nggak. Cukup upload foto, sisanya Keposting yang kerjakan. Hasilnya tetap bisa kamu sesuaikan kalau mau." />
               <Faq q="Hasilnya bisa diedit?" a="Bisa. Kamu bisa menggeser teks, ganti ukuran, dan menyesuaikan konten sebelum menyimpannya." />
-              <Faq q="Berapa harganya?" a="Kamu dapat 10 token gratis saat daftar (+1/hari, maks 5). Kalau butuh lebih, top-up mulai Rp 50.000 untuk 10 token, Rp 135.000 untuk 30 token, atau Rp 240.000 untuk 60 token. Sekali bayar, tanpa langganan, token tidak hangus." />
+              <Faq q="Berapa harganya?" a="Kamu dapat 5 token gratis saat daftar (+1/hari, maks 5). Kalau butuh lebih, top-up mulai Rp 50.000 untuk 10 token, Rp 135.000 untuk 30 token, atau Rp 240.000 untuk 60 token. Sekali bayar, tanpa langganan, token tidak hangus." />
               <Faq q="Datanya aman?" a="Foto dan data usahamu hanya dipakai untuk membuat kontenmu. Kamu bisa hapus kapan saja." />
             </div>
           </div>

@@ -3,6 +3,7 @@
 import { getLang, type Lang } from "@/lib/i18n";
 import { useRef, useEffect, useState } from "react";
 import { Header } from "@/components/ui/Header";
+import { BuatKontenTabs } from "@/components/ui/BuatKontenTabs";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { CanvasEditor } from "@/components/editor/CanvasEditor";
@@ -230,9 +231,22 @@ export default function GeneratePage() {
     }
   }, [compositeDataUri]);
 
-  /** Langkah 1: Pilih foto → langsung hapus background via AI */
-  async function handleSelectImage(img: PickableImage) {
+  /** Langkah 1: Pilih foto — TIDAK langsung generate (permintaan user 14 Agu):
+      AI baru jalan saat tombol "Generate" ditekan, supaya salah klik foto
+      tidak membuang token & retry gampang kalau AI timeout. */
+  function handleSelectImage(img: PickableImage) {
     setSelectedImage(img);
+    setSavedId(null);
+    setProductDataUri(null);
+    setCompositeDataUri(null);
+    setRemoveBgStatus("idle");
+    setRemoveBgError(null);
+  }
+
+  /** Langkah 2: Tombol Generate → hapus background via AI (1 token) */
+  async function handleGenerateProduk() {
+    const img = selectedImage;
+    if (!img) return;
     setSavedId(null);
     setProductDataUri(null);
     setCompositeDataUri(null);
@@ -336,6 +350,7 @@ export default function GeneratePage() {
       <>
         <Header />
         <main className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-10">
+          <BuatKontenTabs />
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold text-navy">{L("Pilih Model Konten", "Choose a Content Model")}</h1>
@@ -447,7 +462,7 @@ export default function GeneratePage() {
                 )}
               </div>
               <p className="text-xs text-navy/50">
-                {L("Pilih foto → AI otomatis memotong background produk (~30 detik), lalu efek latar diterapkan.", "Pick a photo → AI removes the product background (~30s), then the background effect is applied.")}
+                {L("Pilih foto, lalu klik Generate → AI memotong background produk (~30-60 detik), lalu efek latar diterapkan.", "Pick a photo, then click Generate → AI removes the product background (~30-60s), then the background effect is applied.")}
               </p>
               {images.length > 0 ? (
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -475,7 +490,20 @@ export default function GeneratePage() {
               ) : (
                 <p className="text-sm text-navy/60">{L("Belum ada gambar. Upload dulu di Database Gambar.", "No images yet. Upload some in the Image Database first.")}</p>
               )}
-              {removeBgError ? <p className="text-xs text-red-600">{removeBgError}</p> : null}
+              <div className="flex flex-col gap-1.5">
+                <Button type="button" variant="cta" className="w-fit"
+                  onClick={handleGenerateProduk}
+                  disabled={!selectedImage || removeBgStatus === "loading"}>
+                  {removeBgStatus === "loading" ? L("Memproses...", "Processing...") : "Generate"}
+                </Button>
+                <p className="text-xs text-navy/50">{L("Setiap klik Generate memakai 1 token.", "Each Generate uses 1 token.")}</p>
+              </div>
+              {removeBgError ? (
+                <p className="text-xs text-red-600">
+                  {removeBgError}{" "}
+                  {L("Token otomatis dikembalikan — klik Generate untuk coba lagi.", "Your token was refunded — click Generate to try again.")}
+                </p>
+              ) : null}
             </Card>
 
             {/* Warna & Efek — hanya aktif kalau produk sudah dipotong */}

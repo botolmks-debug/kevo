@@ -7,8 +7,6 @@ import { loadBusinessProfile } from "@/lib/supabase/businessProfile";
 import { TokenSlot } from "@/components/dashboard/TokenSlot";
 import { SocialLinks } from "@/components/dashboard/SocialLinks";
 import { ContentReminderBell } from "@/components/dashboard/ContentReminderBell";
-import { LogoSettings } from "./LogoSettings";
-import { ImageLibrary } from "./ImageLibrary";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
 import { AchievementCard } from "@/components/dashboard/AchievementCard";
 
@@ -45,19 +43,6 @@ export default async function DashboardPage() {
         <AchievementCard />
 
         <LanguageToggle />
-
-        <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-navy/50">{t("dash.logo.section", lang)}</h2>
-          <LogoSettings />
-        </section>
-
-        {/* Urutan: Logo -> Upload foto produk -> Sosmed. Galeri dinaikkan ke
-            atas sosmed karena banyak user tidak sadar harus upload foto produk
-            dulu — padahal itu bahan utama Generate Otomatis. */}
-        <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-navy/50">{t("dash.sec.assets", lang)}</h2>
-          <ImageLibrary />
-        </section>
 
         <section className="flex flex-col gap-3">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-navy/50">{t("dash.sec.social", lang)}</h2>

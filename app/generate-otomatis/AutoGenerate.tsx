@@ -549,9 +549,12 @@ export function AutoGenerate() {
         ) : null}
       </div>
 
-      <Button type="button" variant="cta" onClick={() => handleGenerate()} disabled={isGenerating} className="w-fit">
-        {isGenerating ? L("Sedang membuat...", "Generating...") : L("Generate Otomatis", "Auto Generate")}
-      </Button>
+      <div className="flex flex-col gap-1.5">
+        <Button type="button" variant="cta" onClick={() => handleGenerate()} disabled={isGenerating} className="w-fit">
+          {isGenerating ? L("Sedang membuat...", "Generating...") : L("Generate Otomatis", "Auto Generate")}
+        </Button>
+        <span className="text-xs text-navy/50">{L("Setiap klik Generate memakai 1 token.", "Each Generate uses 1 token.")}</span>
+      </div>
 
       {generateError ? <p className="text-sm text-red-600">{generateError}</p> : null}
       </>

@@ -9,16 +9,19 @@ import { getLang, t, type Lang } from "@/lib/i18n";
 import { PanduanWizard } from "./PanduanWizard";
 import SupportWidget from "@/components/support/SupportWidget";
 
-const navLinks = [
-  { href: "/dashboard", key: "nav.dashboard" },
-  { href: "/generate", key: "nav.buatKonten" },
-  { href: "/generate-otomatis", key: "nav.otomatis" },
+// "Buat Konten" = SATU menu (default /generate-otomatis — nilai jual Keposting).
+// Sub-menu Otomatis/Manual ada DI DALAM halaman (BuatKontenTabs), bukan di header.
+// match: prefix path yang bikin menu ini aktif (mis. /generate & /generate-otomatis).
+const navLinks: { href: string; key: string; match?: string }[] = [
+  { href: "/generate-otomatis", key: "nav.buatKonten", match: "/generate" },
+  { href: "/gambar", key: "nav.gambar" },
   { href: "/konten", key: "nav.editKonten" },
   { href: "/jadwal", key: "nav.jadwal" },
 ];
+// Menu Dashboard DIHAPUS dari nav — klik logo Keposting sudah mengarah ke /dashboard.
 
 // Menu khusus admin (botolmakassar).
-const adminLinks = [
+const adminLinks: { href: string; key: string; match?: string }[] = [
   { href: "/video", key: "nav.video" },
   { href: "/admin", key: "nav.admin" },
 ];
@@ -55,8 +58,8 @@ export function Header() {
     router.refresh();
   }
 
-  function linkClass(href: string) {
-    const active = pathname === href;
+  function linkClass(href: string, match?: string) {
+    const active = match ? pathname.startsWith(match) : pathname === href;
     return `rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
       active ? "bg-primary/10 text-primary" : "text-navy/60 hover:bg-navy/5 hover:text-navy"
     }`;
@@ -66,7 +69,7 @@ export function Header() {
     <>
       <header className="sticky top-0 z-20 border-b border-line bg-surface/80 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-5 py-3.5 sm:px-6">
-          <Link href="/dashboard" className="flex items-center gap-2" onClick={() => setOpen(false)}>
+          <Link href="/dashboard" data-tour="/dashboard" className="flex items-center gap-2" onClick={() => setOpen(false)}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/keposty-icon.png" alt="Keposting" className="h-8 w-8" />
             <span className="text-lg font-bold text-navy">Keposting</span>
@@ -76,7 +79,7 @@ export function Header() {
           <div className="hidden items-center gap-1 md:flex">
             <nav className="flex items-center gap-1">
               {links.map((link) => (
-                <Link key={link.href} href={link.href} data-tour={link.href} className={linkClass(link.href)}>
+                <Link key={link.href} href={link.href} data-tour={link.href} className={linkClass(link.href, link.match)}>
                   {t(link.key, lang)}
                 </Link>
               ))}
@@ -124,7 +127,7 @@ export function Header() {
         {open ? (
           <div className="flex flex-col gap-1 border-t border-line bg-surface px-5 py-2 md:hidden">
             {links.map((link) => (
-              <Link key={link.href} href={link.href} className={linkClass(link.href)} onClick={() => setOpen(false)}>
+              <Link key={link.href} href={link.href} className={linkClass(link.href, link.match)} onClick={() => setOpen(false)}>
                 {t(link.key, lang)}
               </Link>
             ))}

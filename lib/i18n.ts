@@ -56,6 +56,11 @@ const DICT: Record<string, Entry> = {
   "nav.admin": { id: "Admin", en: "Admin" },
   "nav.panduan": { id: "Panduan", en: "Guide" },
   "nav.keluar": { id: "Keluar", en: "Log out" },
+  "nav.gambar": { id: "Upload Produk", en: "Upload Produk" },
+  "buat.tab.otomatis": { id: "Otomatis", en: "Auto" },
+  "buat.tab.manual": { id: "Manual", en: "Manual" },
+  "gambar.continue": { id: "Lanjut Buat Konten →", en: "Continue to Create →" },
+  "dash.img.goto": { id: "Kelola & upload gambar di menu Gambar", en: "Manage & upload images in the Images menu" },
 
   // ── Pemilih bahasa ──
   "lang.title": { id: "Bahasa", en: "Language" },

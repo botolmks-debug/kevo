@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Header } from "@/components/ui/Header";
+import { LogoSettings } from "@/app/dashboard/LogoSettings";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Input";
@@ -404,6 +405,13 @@ export default function KontenPage() {
             </div>
           )}
         </Card>
+
+        {/* Logo bisnis dipindah ke sini (dulu di Dashboard) — dekat dengan
+            tempat logo dipakai: saat mengedit konten. */}
+        <section className="flex flex-col gap-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-navy/50">Logo Bisnis</h2>
+          <LogoSettings />
+        </section>
       </main>
     </>
   );

@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 /** Email yang mendapat token TAK TERBATAS (tidak pernah dipotong). */
 const UNLIMITED_EMAILS = new Set(["botolmks@gmail.com"]);
 /** Jatah token default untuk user baru. */
-export const DEFAULT_TOKENS = 10;
+export const DEFAULT_TOKENS = 5; // pre-launch: user baru dapat 5 token (dulu 10)
 
 export function isUnlimited(email?: string | null): boolean {
   return !!email && UNLIMITED_EMAILS.has(email.trim().toLowerCase());

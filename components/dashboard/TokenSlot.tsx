@@ -13,19 +13,48 @@ type RefillState = {
   nextRefillAt: string | null;
 };
 
-const START_TOKENS = 10;
+const START_TOKENS = 5; // pre-launch: user baru mulai dari 5 token
+
+/** Format sisa waktu ke "HH:MM:SS" untuk countdown refill harian. */
+function formatCountdown(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(h)}:${pad(m)}:${pad(s)}`;
+}
 
 export function TokenSlot() {
   const [state, setState] = useState<RefillState | null>(null);
   const [lang, setLang] = useState<Lang>("id");
+  // "Jam" internal untuk countdown — di-tick tiap detik selama nextRefillAt ada.
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
-  useEffect(() => {
-    setLang(getLang());
+  function loadRefill() {
     fetch("/api/refill-check", { method: "POST" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setState(d))
       .catch(() => {});
+  }
+
+  useEffect(() => {
+    setLang(getLang());
+    loadRefill();
   }, []);
+
+  // Countdown token harian: tick per detik; saat mencapai 0, cek ulang ke
+  // server (refill +1 diklaim otomatis oleh /api/refill-check).
+  const nextRefillMs = state?.nextRefillAt ? Date.parse(state.nextRefillAt) : null;
+  useEffect(() => {
+    if (!nextRefillMs) return;
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [nextRefillMs]);
+  useEffect(() => {
+    if (nextRefillMs && nowMs >= nextRefillMs) loadRefill();
+  }, [nextRefillMs, nowMs]);
+  const countdownText = nextRefillMs && nextRefillMs > nowMs ? formatCountdown(nextRefillMs - nowMs) : null;
 
   const unlimited = state?.unlimited === true;
   const tokens = state?.tokens ?? null;
@@ -87,6 +116,15 @@ export function TokenSlot() {
           ) : (
             <p className="text-xs text-navy/50">{t("token.aiFeaturesInfo", lang)}</p>
           )}
+          {countdownText ? (
+            <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
+              <span aria-hidden>⏳</span>
+              <p className="text-xs font-medium text-navy/70">
+                {lang === "en" ? "+1 free token in" : "+1 token gratis dalam"}{" "}
+                <span className="font-mono text-sm font-bold tabular-nums text-primary">{countdownText}</span>
+              </p>
+            </div>
+          ) : null}
           <Link
             href="/topup"
             className={`mt-1 w-fit rounded-full px-4 py-2 text-sm font-semibold transition ${

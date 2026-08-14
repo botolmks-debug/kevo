@@ -370,6 +370,7 @@ export function StandarContent({
                 </Button>
               ) : null}
             </div>
+            <p className="text-xs text-navy/50">Setiap klik &quot;Generate dengan AI&quot; memakai 1 token (Pakai Gambar Asli gratis).</p>
             {!selectedImage ? <p className="text-xs text-navy/50">Pilih gambar dulu.</p> : null}
             {isAiImage && !canGenerateAI && selectedImage ? (
               <p className="text-xs text-navy/50">Untuk olah AI: isi judul & minimal 1 deskripsi.</p>

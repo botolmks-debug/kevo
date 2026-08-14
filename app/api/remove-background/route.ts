@@ -5,9 +5,12 @@
  * 3. Return data URI PNG transparan
  */
 import { NextRequest, NextResponse } from "next/server";
+import sharp from "sharp";
 import { createClient } from "@/lib/supabase/server";
 import { removeChromaBackground } from "@/lib/images/backgroundRemoval";
 import { consumeToken, refundToken } from "@/lib/supabase/tokens";
+import { editOpenAIImage } from "@/lib/ai/openaiImage";
+import type { AspectRatio } from "@/lib/templates/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -70,7 +73,8 @@ RULES:
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 110_000);
 
-  let response: Response;
+  let response: Response | null = null;
+  let geminiFailReason = "Gemini gagal.";
   try {
     response = await fetch(
       `${GEMINI_API_BASE}/models/${MODEL}:generateContent?key=${apiKey}`,
@@ -93,39 +97,71 @@ RULES:
     );
   } catch (e) {
     clearTimeout(timeoutId);
-    await refundToken(supabase, user.id, user.email);
-    if (e instanceof Error && e.name === "AbortError") {
-      return NextResponse.json({ error: "AI terlalu lama merespons. Coba lagi." }, { status: 504 });
-    }
-    return NextResponse.json({ error: "Gagal menghubungi AI." }, { status: 502 });
+    response = null;
+    geminiFailReason =
+      e instanceof Error && e.name === "AbortError"
+        ? "Gemini terlalu lama merespons."
+        : "Gagal menghubungi Gemini.";
   }
   clearTimeout(timeoutId);
 
-  if (!response.ok) {
-    const errBody = await response.json().catch(() => null);
-    const msg = (errBody as { error?: { message?: string } } | null)?.error?.message ?? `Status ${response.status}`;
-    await refundToken(supabase, user.id, user.email);
-    return NextResponse.json({ error: msg }, { status: 502 });
+  // Ambil hasil Gemini (kalau ada)
+  let cutoutBase64: string | null = null;
+  let cutoutMime = "image/png";
+  if (response) {
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => null);
+      geminiFailReason =
+        (errBody as { error?: { message?: string } } | null)?.error?.message ?? `Gemini status ${response.status}`;
+    } else {
+      const data = await response.json().catch(() => null);
+      const parts = (data as {
+        candidates?: { content?: { parts?: { inlineData?: { mimeType?: string; data?: string } }[] } }[]
+      } | null)?.candidates?.[0]?.content?.parts;
+      const imgPart = parts?.find(p => p.inlineData?.data);
+      if (imgPart?.inlineData?.data) {
+        cutoutBase64 = imgPart.inlineData.data;
+        cutoutMime = imgPart.inlineData.mimeType ?? "image/png";
+      } else {
+        geminiFailReason = "Gemini tidak mengembalikan gambar.";
+      }
+    }
   }
 
-  const data = await response.json().catch(() => null);
-  const parts = (data as {
-    candidates?: { content?: { parts?: { inlineData?: { mimeType?: string; data?: string } }[] } }[]
-  } | null)?.candidates?.[0]?.content?.parts;
-  const imgPart = parts?.find(p => p.inlineData?.data);
-  if (!imgPart?.inlineData?.data) {
-    await refundToken(supabase, user.id, user.email);
-    return NextResponse.json({ error: "AI tidak mengembalikan gambar." }, { status: 502 });
+  // FALLBACK OPENAI: kalau Gemini gagal (timeout / error / tanpa gambar),
+  // lempar ke OpenAI dengan prompt magenta yang sama — pola yang sama dengan
+  // fallback di Generate Otomatis (lib/ai/geminiImage.ts).
+  // CAVEAT: ukuran output OpenAI terbatas (1024x1024 / 1024x1536), jadi
+  // framing bisa sedikit bergeser dari foto asli — lebih baik daripada gagal.
+  if (!cutoutBase64) {
+    console.warn(`remove-background: Gemini gagal (${geminiFailReason}), mencoba fallback OpenAI...`);
+    let aspect: AspectRatio = "1:1";
+    try {
+      const meta = await sharp(Buffer.from(imageBase64, "base64")).metadata();
+      if ((meta.height ?? 0) > (meta.width ?? 0) * 1.2) aspect = "4:5"; // potret → 1024x1536
+    } catch {}
+    const fb = await editOpenAIImage({ imageBase64, mimeType, aspectRatio: aspect, prompt });
+    if (fb.ok) {
+      const comma = fb.dataUri.indexOf(",");
+      cutoutBase64 = fb.dataUri.slice(comma + 1);
+      cutoutMime = "image/png";
+    } else {
+      await refundToken(supabase, user.id, user.email);
+      return NextResponse.json(
+        { error: `AI gagal memotong background (${geminiFailReason}; fallback OpenAI: ${fb.error}). Token dikembalikan — coba lagi.` },
+        { status: 502 },
+      );
+    }
   }
 
-  // Langkah 2: Hapus background putih (flood-fill) → PNG transparan
+  // Langkah 2: Key-out magenta → PNG transparan
   let transparentBuffer: Buffer;
   try {
-    const geminiBuffer = Buffer.from(imgPart.inlineData.data, "base64");
-    transparentBuffer = await removeChromaBackground(geminiBuffer);
+    const cutoutBuffer = Buffer.from(cutoutBase64, "base64");
+    transparentBuffer = await removeChromaBackground(cutoutBuffer);
   } catch {
-    // Kalau gagal, kembalikan gambar Gemini apa adanya
-    const fallbackUri = `data:${imgPart.inlineData.mimeType ?? "image/png"};base64,${imgPart.inlineData.data}`;
+    // Kalau gagal, kembalikan gambar hasil AI apa adanya
+    const fallbackUri = `data:${cutoutMime};base64,${cutoutBase64}`;
     return NextResponse.json({ dataUri: fallbackUri });
   }
 

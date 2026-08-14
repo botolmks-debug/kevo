@@ -45,7 +45,19 @@ export default function LoginPage() {
       setError("login.error");
       return;
     }
-    router.push("/dashboard");
+    // Arah setelah login:
+    //   sudah punya gambar  -> langsung Buat Konten (Otomatis)
+    //   belum punya gambar  -> halaman Gambar (upload dulu)
+    //   gagal cek           -> Dashboard (fallback aman; onboarding tetap tertangani di sana)
+    let dest = "/dashboard";
+    try {
+      const res = await fetch("/api/images");
+      const data = await res.json().catch(() => null);
+      if (res.ok) {
+        dest = (data?.images?.length ?? 0) > 0 ? "/generate-otomatis" : "/gambar";
+      }
+    } catch {}
+    router.push(dest);
     router.refresh();
   }
 
