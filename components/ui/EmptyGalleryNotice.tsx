@@ -7,8 +7,8 @@ import { useEffect, useState } from "react";
 /**
  * Banner ajakan saat GALERI KOSONG — dipasang di halaman Generate Otomatis
  * dan Buat Konten (manual). Banyak user langsung ke halaman generate tanpa
- * sadar harus upload foto produk dulu di Dashboard; banner ini mencegat
- * mereka persis saat butuh, dengan link langsung ke Dashboard.
+ * sadar harus upload foto produk dulu di halaman Upload Produk (/gambar);
+ * banner ini mencegat mereka persis saat butuh, dengan link ke sana.
  *
  * Caller yang menentukan kapan tampil (biasanya: daftar gambar SUDAH selesai
  * dimuat DAN kosong) supaya banner tidak berkedip saat loading.
@@ -32,7 +32,7 @@ export function EmptyGalleryNotice() {
         </p>
       </div>
       <Link
-        href="/dashboard"
+        href="/gambar"
         className="shrink-0 rounded-full bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-700"
       >
         {L("Upload Foto Produk →", "Upload Product Photos →")}
