@@ -81,6 +81,32 @@ export async function GET() {
     .select("*", { count: "exact", head: true })
     .gte("created_at", dayAgo);
 
+  // ── 5. Kapasitas Supabase (free tier) ────────────────────────────────
+  // Storage: jumlahkan ukuran semua file di storage.objects (service role bisa baca).
+  // DB: fungsi RPC db_size_bytes() — lihat migration SQL di BACA-DULU.
+  // Egress tidak bisa di-query — cek manual di Supabase dashboard > Usage.
+  const STORAGE_LIMIT_BYTES = 1 * 1024 * 1024 * 1024; // 1 GB free tier
+  const DB_LIMIT_BYTES = 500 * 1024 * 1024; // 500 MB free tier
+  let storageBytes: number | null = null;
+  try {
+    const { data: objRows } = await service
+      .schema("storage")
+      .from("objects")
+      .select("metadata");
+    if (objRows) {
+      storageBytes = objRows.reduce((sum, r) => {
+        const size = Number((r.metadata as { size?: number | string } | null)?.size ?? 0);
+        return sum + (Number.isFinite(size) ? size : 0);
+      }, 0);
+    }
+  } catch { /* biarkan null — UI tampilkan "tidak tersedia" */ }
+  let dbBytes: number | null = null;
+  try {
+    const { data: sizeData } = await service.rpc("db_size_bytes");
+    if (typeof sizeData === "number") dbBytes = sizeData;
+    else if (typeof sizeData === "string") dbBytes = Number(sizeData);
+  } catch { /* fungsi belum dibuat — UI tampilkan "tidak tersedia" */ }
+
   return NextResponse.json({
     timestamp: now.toISOString(),
     errors: {
@@ -98,6 +124,12 @@ export async function GET() {
     },
     tokens: {
       usage24h: tokenUsage24h ?? 0,
+    },
+    capacity: {
+      storageBytes,
+      storageLimitBytes: STORAGE_LIMIT_BYTES,
+      dbBytes,
+      dbLimitBytes: DB_LIMIT_BYTES,
     },
   });
 }

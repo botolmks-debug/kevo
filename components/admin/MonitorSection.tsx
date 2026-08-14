@@ -26,7 +26,51 @@ type MonitorData = {
   tokens: {
     usage24h: number;
   };
+  capacity?: {
+    storageBytes: number | null;
+    storageLimitBytes: number;
+    dbBytes: number | null;
+    dbLimitBytes: number;
+  };
 };
+
+function formatBytes(b: number): string {
+  if (b >= 1024 * 1024 * 1024) return `${(b / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  return `${(b / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** Bar kapasitas: hijau <60%, kuning 60-80%, merah >80% (saatnya planning upgrade). */
+function CapacityBar({ label, used, limit }: { label: string; used: number | null; limit: number }) {
+  if (used === null) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <p className="text-[10px] uppercase tracking-wide text-slate-500 mb-1">{label}</p>
+        <p className="text-xs text-slate-500">Tidak tersedia (cek migration db_size_bytes / izin storage)</p>
+      </div>
+    );
+  }
+  const pct = Math.min(100, Math.round((used / limit) * 100));
+  const warn = pct >= 80;
+  const caution = pct >= 60 && pct < 80;
+  return (
+    <div className={`rounded-xl border p-4 ${warn ? "border-red-300 bg-red-50" : "border-slate-200 bg-white"}`}>
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-[10px] uppercase tracking-wide text-slate-500">{label}</p>
+        <p className={`text-xs font-bold ${warn ? "text-red-700" : caution ? "text-amber-600" : "text-slate-700"}`}>{pct}%</p>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+        <div
+          className={`h-full rounded-full ${warn ? "bg-red-500" : caution ? "bg-amber-400" : "bg-teal-500"}`}
+          style={{ width: `${Math.max(2, pct)}%` }}
+        />
+      </div>
+      <p className="text-[10px] text-slate-500 mt-1">
+        {formatBytes(used)} dari {formatBytes(limit)} (free tier)
+        {warn ? " — ⚠️ siapkan upgrade Supabase Pro" : ""}
+      </p>
+    </div>
+  );
+}
 
 export default function MonitorSection() {
   const [data, setData] = useState<MonitorData | null>(null);
@@ -120,6 +164,13 @@ export default function MonitorSection() {
           value={data.tokens.usage24h}
         />
       </div>
+
+      {data.capacity ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <CapacityBar label="Storage Supabase" used={data.capacity.storageBytes} limit={data.capacity.storageLimitBytes} />
+          <CapacityBar label="Database Supabase" used={data.capacity.dbBytes} limit={data.capacity.dbLimitBytes} />
+        </div>
+      ) : null}
 
       <div className="rounded-xl border border-slate-200 bg-white p-4">
         <h3 className="text-sm font-semibold text-slate-900 mb-3">
