@@ -83,7 +83,7 @@ export function OnboardingWelcome() {
         <button
           type="button"
           onClick={close}
-          className="kp-rise-3 mt-5 w-full rounded-full bg-cta px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+          className="kp-rise-3 mt-5 w-full rounded-full bg-accent px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:brightness-95"
         >
           Oke, mulai — cuma ±2 menit
         </button>
