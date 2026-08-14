@@ -14,6 +14,7 @@ import {
 } from "@/lib/onboarding/businessProfile";
 import { MAX_SELECTED_SOCIALS, SOCIAL_PLATFORMS } from "@/lib/social/platforms";
 import { getLang, setLang, type Lang } from "@/lib/i18n";
+import { createClient } from "@/lib/supabase/client";
 
 const TOTAL_STEPS = 5;
 
@@ -207,6 +208,20 @@ export default function OnboardingPage() {
     }
   }
 
+  async function handleLogoutOnboarding() {
+    const ok = window.confirm(
+      lang === "en"
+        ? "Log out and use a different account? Your onboarding progress won't be saved."
+        : "Keluar dan pakai akun lain? Progres onboarding belum tersimpan.",
+    );
+    if (!ok) return;
+    try {
+      await createClient().auth.signOut();
+    } catch {}
+    router.push("/login");
+    router.refresh();
+  }
+
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-6 px-6 py-12">
       {/* Popup sambutan: jelaskan TUJUAN pertanyaan onboarding (komponen sudah
@@ -227,6 +242,10 @@ export default function OnboardingPage() {
             <button type="button" onClick={() => chooseLang("en")}
               className={`rounded-full px-3 py-1 text-xs font-semibold transition ${lang === "en" ? "bg-primary text-white" : "text-navy/60 hover:text-navy"}`}>EN</button>
           </div>
+          <button type="button" onClick={handleLogoutOnboarding}
+            className="rounded-full px-3 py-1 text-xs font-semibold text-navy/50 transition hover:bg-navy/5 hover:text-navy">
+            {lang === "en" ? "Log out" : "Keluar"}
+          </button>
         </div>
       </div>
 
