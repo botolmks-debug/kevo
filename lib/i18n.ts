@@ -81,6 +81,7 @@ const DICT: Record<string, Entry> = {
   "login.resendBtn": { id: "Kirim ulang email konfirmasi", en: "Resend confirmation email" },
   "login.resendOk": { id: "Email konfirmasi sudah dikirim ulang. Cek inbox & spam.", en: "Confirmation email resent. Check your inbox & spam." },
   "login.resendFail": { id: "Gagal mengirim ulang. Coba lagi sebentar.", en: "Couldn't resend. Please try again shortly." },
+  "login.verifiedOk": { id: "Email berhasil dikonfirmasi ✅ Silakan masuk dengan email & passwordmu.", en: "Email confirmed ✅ Please sign in with your email & password." },
   "login.processing": { id: "Memproses...", en: "Signing in..." },
   "login.submit": { id: "Masuk", en: "Sign in" },
   "login.noAccount": { id: "Belum punya akun?", en: "Don't have an account?" },

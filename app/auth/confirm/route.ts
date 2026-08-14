@@ -29,12 +29,25 @@ export async function GET(request: NextRequest) {
 
   const supabase = await createClient();
 
+  // next=/reset-password BUTUH sesi aktif (user langsung isi password baru),
+  // jadi untuk kasus itu sesi dipertahankan. Untuk konfirmasi signup biasa
+  // (next default "/"), pakai Opsi B: aktifkan akun lalu SIGN OUT + arahkan ke
+  // /login, supaya orang yang cuma bisa baca email TIDAK otomatis masuk akun —
+  // akses tetap butuh password.
+  const keepSession = next.startsWith("/reset-password");
+
+  async function onVerified() {
+    if (keepSession) return NextResponse.redirect(`${origin}${next}`);
+    await supabase.auth.signOut();
+    return NextResponse.redirect(`${origin}/login?verified=1`);
+  }
+
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(`${origin}${next}`);
+    if (!error) return await onVerified();
   } else if (tokenHash && type) {
     const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
-    if (!error) return NextResponse.redirect(`${origin}${next}`);
+    if (!error) return await onVerified();
   }
 
   // Link tidak valid/kedaluwarsa -> lempar ke login dengan pesan singkat,

@@ -17,12 +17,20 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [showResend, setShowResend] = useState(false);
   const [resendMsg, setResendMsg] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   // Default BAHASA INDONESIA (pre-launch pasar Indonesia). Kalau user sudah
   // pernah memilih, pakai pilihannya.
   const [lang, setLangLocal] = useState<Lang>("id");
 
   useEffect(() => {
+    // Pesan setelah konfirmasi email (Opsi B): akun aktif, minta user login.
+    try {
+      const q = new URLSearchParams(window.location.search);
+      if (q.get("verified") === "1") setNotice("login.verifiedOk");
+      const err = q.get("error");
+      if (err) setError(err.startsWith("login.") ? err : err);
+    } catch {}
     const stored = getStoredLang();
     if (stored) {
       setLangLocal(stored);
@@ -128,6 +136,11 @@ export default function LoginPage() {
               {t("login.forgot", lang)}
             </Link>
           </div>
+          {notice && (
+            <div className="rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+              {t(notice, lang)}
+            </div>
+          )}
           {error && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
               <p>{t(error, lang)}</p>
