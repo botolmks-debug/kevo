@@ -27,9 +27,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "GEMINI_API_KEY belum diisi." }, { status: 503 });
   }
 
-  const token = await consumeToken(supabase, user.id, user.email, "Konten Standar");
-  if (!token.ok) return NextResponse.json({ error: token.error }, { status: 402 });
-
+  // Validasi body DULU, baru potong token — supaya request tidak valid (400)
+  // tidak pernah memakan token user (dulu urutannya terbalik: token hangus).
   let body: { imageUrl?: string; judul?: string; descriptions?: string[]; ratio?: AspectRatio; sizeHint?: string };
   try {
     body = await request.json();
@@ -48,6 +47,9 @@ export async function POST(request: NextRequest) {
   if (!judul && descriptions.every((d) => !d.trim())) {
     return NextResponse.json({ error: "Isi judul atau deskripsi dulu." }, { status: 400 });
   }
+
+  const token = await consumeToken(supabase, user.id, user.email, "Konten Standar");
+  if (!token.ok) return NextResponse.json({ error: token.error }, { status: 402 });
 
   // Ambil gambar dari URL
   let imageBase64: string;

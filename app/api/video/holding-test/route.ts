@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { consumeToken, isAdmin } from "@/lib/supabase/tokens";
+import { consumeToken, refundToken, isAdmin } from "@/lib/supabase/tokens";
 import { checkSupabaseEnvPresence } from "@/lib/env";
 import { loadBusinessProfile } from "@/lib/supabase/businessProfile";
 import { listImages, publicImageUrl } from "@/lib/supabase/images";
@@ -42,20 +42,28 @@ export async function POST(request: NextRequest) {
   const token = await consumeToken(supabase, user.id, user.email, "VideoUjiPegang");
   if (!token.ok) return NextResponse.json({ error: token.error }, { status: 402 });
 
+  // Token sudah dipotong. SEMUA jalur gagal setelah ini wajib lewat fail()
+  // supaya token dikembalikan (pola yang sama dengan Carousel & Otomatis).
+  const authedUser = user;
+  async function fail(error: string, status: number) {
+    await refundToken(supabase, authedUser.id, authedUser.email);
+    return NextResponse.json({ error }, { status });
+  }
+
   const profileResult = await loadBusinessProfile(supabase, user.id);
-  if (!profileResult.ok) return NextResponse.json({ error: profileResult.error }, { status: 502 });
+  if (!profileResult.ok) return fail(profileResult.error, 502);
   const profile = profileResult.profile;
   if (!profile) {
-    return NextResponse.json({ error: "Lengkapi profil bisnis dulu di halaman onboarding." }, { status: 400 });
+    return fail("Lengkapi profil bisnis dulu di halaman onboarding.", 400);
   }
 
   const imagesResult = await listImages(supabase, user.id);
-  if (!imagesResult.ok) return NextResponse.json({ error: imagesResult.error }, { status: 502 });
+  if (!imagesResult.ok) return fail(imagesResult.error, 502);
   const image = imagesResult.images.find((img) => img.id === imageId) ?? null;
   if (!image || !HOLDABLE.includes(image.category)) {
-    return NextResponse.json(
-      { error: "Produk tidak ditemukan atau kategorinya tidak bisa dipegang (pilih Produk / Makanan-Minuman / Skincare)." },
-      { status: 400 },
+    return fail(
+      "Produk tidak ditemukan atau kategorinya tidak bisa dipegang (pilih Produk / Makanan-Minuman / Skincare).",
+      400,
     );
   }
 
@@ -67,12 +75,18 @@ export async function POST(request: NextRequest) {
     mimeType = res.headers.get("content-type") ?? "image/jpeg";
     imageBase64 = Buffer.from(await res.arrayBuffer()).toString("base64");
   } catch {
-    return NextResponse.json({ error: "Gagal mengambil gambar produk." }, { status: 502 });
+    return fail("Gagal mengambil gambar produk.", 502);
   }
 
   const prompt = buildHoldingProductPrompt(profile, gender, image.description ?? undefined);
-  const result = await editImage({ imageBase64, mimeType, aspectRatio: "9:16", prompt });
-  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 502 });
+  let result;
+  try {
+    result = await editImage({ imageBase64, mimeType, aspectRatio: "9:16", prompt });
+  } catch (e) {
+    console.error(`holding-test editImage threw: ${e instanceof Error ? e.message : e}`);
+    return fail("AI gagal memproses gambar. Coba lagi.", 502);
+  }
+  if (!result.ok) return fail(result.error, 502);
 
   return NextResponse.json({ imageUrl: result.dataUri, gender });
 }
