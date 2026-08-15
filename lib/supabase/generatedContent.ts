@@ -45,6 +45,70 @@ export type InsertGeneratedContentResult =
   | { ok: true; row: GeneratedContentRow }
   | { ok: false; error: string };
 
+/** Batas konten tersimpan per user. Melebihi ini → konten TERLAMA dihapus
+ *  otomatis (first-in-first-out) beserta file storage-nya, supaya:
+ *  (1) storage Supabase free tier (1 GB) tidak jebol,
+ *  (2) user tetap bisa mengatur kalender konten 30 hari (60 = 2 bulan feed). */
+export const MAX_KONTEN_PER_USER = 60;
+
+/**
+ * FIFO cap: sebelum menyimpan konten baru, hapus konten TERLAMA milik user
+ * kalau jumlahnya sudah menyentuh batas — termasuk file PNG + background di
+ * storage (bukan cuma baris DB, supaya kuota storage benar-benar lega).
+ *
+ * Best-effort: kegagalan di sini TIDAK menggagalkan penyimpanan konten baru
+ * (lebih baik konten user tersimpan walau pembersihan gagal sekali).
+ * Delete pakai storageClient (route melewatkan service-role) karena RLS
+ * delete di generated_content historisnya bermasalah untuk user client.
+ */
+async function enforceContentCap(
+  dbClient: SupabaseClient,
+  businessId: string,
+  cap: number = MAX_KONTEN_PER_USER,
+): Promise<void> {
+  try {
+    const { data, error } = await dbClient
+      .from("generated_content")
+      .select("id, storage_path, background_path, scheduled_date")
+      .eq("business_id", businessId)
+      .order("created_at", { ascending: true });
+    if (error || !data) {
+      if (error) console.warn(`enforceContentCap (select) gagal: ${describeSupabaseError(error)}`);
+      return;
+    }
+    // Sisakan 1 slot untuk konten yang akan disimpan setelah ini.
+    const excess = data.length - (cap - 1);
+    if (excess <= 0) return;
+
+    // JANGAN korbankan konten TERJADWAL yang belum lewat tanggalnya — itu
+    // rencana kalender user. Urutan korban: (1) tak terjadwal / jadwalnya
+    // sudah lewat, tertua duluan; (2) baru terjadwal-masa-depan kalau
+    // benar-benar tidak ada pilihan lain (keduanya sudah created_at asc).
+    type CapRow = { id: string; storage_path?: string | null; background_path?: string | null; scheduled_date?: string | null };
+    const rows = data as CapRow[];
+    const today = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10); // patokan WIB/WITA
+    const expendable = rows.filter((r) => !r.scheduled_date || r.scheduled_date < today);
+    const protectedRows = rows.filter((r) => r.scheduled_date && r.scheduled_date >= today);
+    const toDelete = [...expendable, ...protectedRows].slice(0, excess);
+
+    const storagePaths: string[] = [];
+    for (const row of toDelete) {
+      if (row.storage_path) storagePaths.push(row.storage_path);
+      if (row.background_path) storagePaths.push(row.background_path);
+    }
+    if (storagePaths.length > 0) {
+      const { error: rmErr } = await dbClient.storage.from(BUCKET).remove(storagePaths);
+      if (rmErr) console.warn(`enforceContentCap (storage remove) gagal: ${describeSupabaseError(rmErr)}`);
+    }
+    const ids = toDelete.map((r) => r.id);
+    const { error: delErr } = await dbClient.from("generated_content").delete().in("id", ids);
+    if (delErr) console.warn(`enforceContentCap (delete rows) gagal: ${describeSupabaseError(delErr)}`);
+    else console.log(`enforceContentCap: ${ids.length} konten terlama dihapus (FIFO, cap ${cap}) utk business ${businessId}`);
+  } catch (e) {
+    console.warn(`enforceContentCap threw: ${e instanceof Error ? e.message : e}`);
+  }
+}
+
 export async function insertGeneratedContent(
   client: SupabaseClient,
   input: InsertGeneratedContentInput,
@@ -55,6 +119,10 @@ export async function insertGeneratedContent(
 ): Promise<InsertGeneratedContentResult> {
   const businessId = input.businessId ?? DEV_BUSINESS_ID;
   const storagePath = `${businessId}/generated/${randomUUID()}.png`;
+
+  // FIFO cap 60: buang konten terlama dulu kalau kuota user sudah penuh.
+  // Pakai storageClient (service-role dari route) supaya delete lolos RLS.
+  await enforceContentCap(storageClient, businessId);
 
   // Upload dengan RETRY — "fetch failed" adalah kegagalan jaringan sesaat ke
   // Supabase Storage; percobaan ulang biasanya berhasil. upsert:true supaya aman

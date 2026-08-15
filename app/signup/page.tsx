@@ -35,6 +35,11 @@ export default function SignupPage() {
       setError("Gagal daftar: " + error.message);
       return;
     }
+    // Lapor ke Meta Pixel: pendaftaran berhasil (dipakai kampanye iklan untuk
+    // optimasi & hitung konversi). Aman kalau fbq belum termuat — di-skip.
+    if (typeof window !== "undefined" && (window as unknown as { fbq?: (...a: unknown[]) => void }).fbq) {
+      (window as unknown as { fbq: (...a: unknown[]) => void }).fbq("track", "CompleteRegistration");
+    }
     if (data.session) {
       router.push("/onboarding");
       router.refresh();

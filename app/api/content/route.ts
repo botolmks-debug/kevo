@@ -74,6 +74,8 @@ export async function POST(request: NextRequest) {
   }
 
   const pngBuffer = Buffer.from(await file.arrayBuffer());
+  // Service-role sebagai storageClient: dipakai insert utk upload PNG DAN oleh
+  // FIFO cap 60 (hapus konten terlama + file storage-nya) supaya lolos RLS.
   const result = await insertGeneratedContent(supabase, {
     businessId: user.id,
     jenis,
@@ -83,7 +85,7 @@ export async function POST(request: NextRequest) {
     ratio,
     backgroundPath,
     layoutState,
-  });
+  }, createServiceRoleClient());
 
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 502 });
 
