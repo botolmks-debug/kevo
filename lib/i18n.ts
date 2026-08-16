@@ -56,7 +56,7 @@ const DICT: Record<string, Entry> = {
   "nav.admin": { id: "Admin", en: "Admin" },
   "nav.panduan": { id: "Panduan", en: "Guide" },
   "nav.keluar": { id: "Keluar", en: "Log out" },
-  "nav.gambar": { id: "Upload Produk", en: "Upload Produk" },
+  "nav.gambar": { id: "Upload Gambar", en: "Upload Image" },
   "buat.tab.otomatis": { id: "Otomatis", en: "Auto" },
   "buat.tab.manual": { id: "Manual", en: "Manual" },
   "gambar.continue": { id: "Lanjut Buat Konten →", en: "Continue to Create →" },
@@ -71,7 +71,7 @@ const DICT: Record<string, Entry> = {
 
   // ── Halaman Login ──
   "login.title": { id: "Masuk", en: "Sign in" },
-  "login.tagline": { id: "Setiap Produk Punya Cerita", en: "Every Product Has a Story" },
+  "login.tagline": { id: "Setiap Foto Punya Cerita", en: "Every Photo Has a Story" },
   "login.email": { id: "Email", en: "Email" },
   "login.emailPlaceholder": { id: "kamu@email.com", en: "you@email.com" },
   "login.password": { id: "Password", en: "Password" },
@@ -191,7 +191,7 @@ const DICT: Record<string, Entry> = {
 
   // ── Dashboard: Database Gambar ──
   "dash.img.title": { id: "Database Gambar", en: "Image Library" },
-  "dash.img.desc": { id: "Unggah gambar bisnis (lproduk, suasana, dll) untuk dipakai nanti saat generate konten.", en: "Upload your business images (logo, products, scenes, etc.) to use later when generating content." },
+  "dash.img.desc": { id: "Unggah gambar bisnis (produk, suasana, dll) untuk dipakai nanti saat generate konten.", en: "Upload your business images (logo, products, scenes, etc.) to use later when generating content." },
   "dash.img.choose": { id: "Pilih Gambar", en: "Choose Image" },
   "dash.img.chooseAria": { id: "Pilih file gambar", en: "Choose an image file" },
   "dash.img.description": { id: "Deskripsi", en: "Description" },

@@ -117,12 +117,15 @@ export async function POST() {
     });
   }
 
-  const nextRefillAt = new Date(now.getTime() + REFILL_HOURS * HOUR_MS);
+  const nextRefillAt =
+    newTokens < FREE_TOKENS_CAP
+      ? new Date(now.getTime() + REFILL_HOURS * HOUR_MS)
+      : null;
   return NextResponse.json({
     unlimited: false,
     tokens: newTokens,
     freeTokensCap: FREE_TOKENS_CAP,
     refilledJustNow: actualRefilled,
-    nextRefillAt: nextRefillAt.toISOString(),
+    nextRefillAt: nextRefillAt ? nextRefillAt.toISOString() : null,
   });
 }

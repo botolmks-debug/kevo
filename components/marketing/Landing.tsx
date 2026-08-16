@@ -17,11 +17,25 @@ const DEMOS = [
       "Semangkuk bakso yang bikin kangen pulang \ud83c\udf5c Kuah gurih, bakso kenyal, rasa konsisten tiap hari. Tinggal pesan, nggak pakai antre \u2014 mampir atau order online sekarang! #baksoenak #kulinerbakso #jajananhits #umkmkuliner #keposting",
   },
   {
+    before: "/demo/lari-before.jpeg",
+    after: "/demo/lari-after.jpeg",
+    label: "Foto lari seadanya",
+    caption:
+      "Langkah kecil tiap pagi, hasilnya kerasa \ud83c\udfc3 Konsisten itu kuncinya \u2014 mulai dari yang bisa dulu, sisanya ngikut. Yuk mulai rutinitas sehatmu hari ini! #lari #hidupsehat #olahragapagi #konsisten #keposting",
+  },
+  {
     before: "/demo/kaos-before.jpg",
     after: "/demo/kaos-after.jpg",
     label: "Foto produk seadanya",
     caption:
       "Kaos 'Struggle' buat yang nggak takut tampil beda \ud83d\udd25 Bahan adem, sablon tebal awet nggak gampang belel \u2014 dari nongkrong sampai kencan tetap on point. Stok terbatas, checkout sebelum kehabisan! #kaosdistro #ootdpria #streetwearlokal #brandlokal #keposting",
+  },
+  {
+    before: "/demo/bengkel-before.jpeg",
+    after: "/demo/bengkel-after.jpeg",
+    label: "Foto bengkel seadanya",
+    caption:
+      "Servis rapi, hasil bikin tenang \ud83d\udd27 Ditangani mekanik berpengalaman, pengerjaan cepat, harga jelas di depan. Booking sekarang, kendaraanmu balik prima! #bengkel #servismotor #otomotif #umkmlokal #keposting",
   },
 ];
 
@@ -198,10 +212,10 @@ export function Landing() {
         <section className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-12 md:grid-cols-2 md:py-20">
           <div className="text-center md:text-left">
             <h1 className="text-3xl font-extrabold leading-tight text-navy sm:text-4xl md:text-5xl">
-              Setiap produk punya <span className="text-primary">cerita</span>
+              Setiap foto punya <span className="text-primary">cerita</span>
             </h1>
             <p className="mx-auto mt-4 max-w-md text-base text-muted md:mx-0">
-              Upload foto produkmu, dapat gambar + caption Instagram siap posting. Cukup dari satu foto—dibantu AI.
+              Upload fotomu, dapat gambar + caption Instagram siap posting. Cukup dari satu foto—dibantu AI.
             </p>
             <div className="mt-7 flex flex-col items-center gap-3 sm:flex-row md:items-start">
               <LinkButton href="/signup" className="w-full px-7 py-3.5 sm:w-auto">Coba 5 Konten Gratis</LinkButton>
@@ -303,7 +317,7 @@ export function Landing() {
         {/* ── CTA penutup ── */}
         <section className="mx-auto max-w-5xl px-5 py-16">
           <div className="rounded-[24px] bg-primary px-6 py-12 text-center text-white sm:px-12">
-            <h2 className="text-2xl font-bold sm:text-3xl">Ceritakan produkmu, mulai hari ini</h2>
+            <h2 className="text-2xl font-bold sm:text-3xl">Ceritakan foto produkmu hari ini</h2>
             <p className="mx-auto mt-3 max-w-md text-white/85">Berhenti pusing mikirin ide. Mulai dari satu foto sekarang.</p>
             <div className="mt-7">
               <LinkButton href="/signup" variant="cta" className="px-8 py-3.5">Coba 5 Konten Gratis</LinkButton>
@@ -319,7 +333,7 @@ export function Landing() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/keposty-icon.png" alt="Keposting" className="h-6 w-6" />
             <span className="font-semibold text-navy">Keposting</span>
-            <span className="hidden sm:inline">· Setiap Produk Punya Cerita</span>
+            <span className="hidden sm:inline">· Setiap Foto Punya Cerita</span>
           </div>
           <div className="flex items-center gap-5">
             <a href="/login" className="hover:text-navy">Masuk</a>

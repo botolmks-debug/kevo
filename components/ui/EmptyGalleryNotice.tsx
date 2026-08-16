@@ -35,7 +35,7 @@ export function EmptyGalleryNotice() {
         href="/gambar"
         className="shrink-0 rounded-full bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-700"
       >
-        {L("Upload Foto Produk →", "Upload Product Photos →")}
+        {L("Upload Gambar →", "Upload Image →")}
       </Link>
     </div>
   );

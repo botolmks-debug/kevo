@@ -122,7 +122,7 @@ export function TokenSlot() {
           ) : (
             <p className="text-xs text-navy/50">{t("token.aiFeaturesInfo", lang)}</p>
           )}
-          {countdownText ? (
+          {countdownText && belowCap ? (
             <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
               <span aria-hidden>⏳</span>
               <p className="text-xs font-medium text-navy/70">
