@@ -3,6 +3,7 @@
 import { getLang } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/Card";
+import { BusyToast } from "@/components/ui/BusyToast";
 import { Button } from "@/components/ui/Button";
 import { CanvasEditor } from "@/components/editor/CanvasEditor";
 import { applyEditorOverrides, type EditorOverrides } from "@/lib/editor/layoutOverrides";
@@ -500,6 +501,7 @@ export function CarouselAuto({
           </div>
         </>
       ) : null}
+      <BusyToast active={genStatus === "loading"} />
     </div>
   );
 }

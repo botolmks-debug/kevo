@@ -3,6 +3,7 @@
 import { getLang, type Lang } from "@/lib/i18n";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/Button";
+import { BusyToast } from "@/components/ui/BusyToast";
 import { Card } from "@/components/ui/Card";
 import { Textarea } from "@/components/ui/Input";
 import { CanvasEditor } from "@/components/editor/CanvasEditor";
@@ -590,6 +591,8 @@ export function AutoGenerate() {
       {generateError ? <p className="text-sm text-red-600">{generateError}</p> : null}
       </>
       ) : null}
+
+      <BusyToast active={isGenerating} />
 
       {result && editTemplate ? (
         <div className="flex flex-col gap-4 rounded-[20px] border border-line bg-surface/50 p-5">
