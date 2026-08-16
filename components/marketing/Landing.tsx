@@ -207,7 +207,7 @@ export function Landing() {
               <LinkButton href="/signup" className="w-full px-7 py-3.5 sm:w-auto">Coba 5 Konten Gratis</LinkButton>
               <LinkButton href="#cara-kerja" variant="secondary" className="w-full px-7 py-3.5 sm:w-auto">Lihat cara kerjanya</LinkButton>
             </div>
-            <p className="mt-3 text-xs text-muted">5 token gratis + refill harian · Tanpa kartu kredit</p>
+            <p className="mt-3 text-xs text-muted">5 token gratis + refill harian · Tanpa langganan</p>
           </div>
           <HeroAnimation />
         </section>
@@ -277,7 +277,7 @@ export function Landing() {
             <li className="flex items-start gap-2"><span className="text-primary">✓</span> 5 token gratis saat daftar</li>
             <li className="flex items-start gap-2"><span className="text-primary">✓</span> +1 token gratis per hari (maks 5)</li>
             <li className="flex items-start gap-2"><span className="text-primary">✓</span> Semua fitur AI: generate konten, hapus background, caption</li>
-            <li className="flex items-start gap-2"><span className="text-primary">✓</span> Tanpa kartu kredit, tanpa langganan</li>
+            <li className="flex items-start gap-2"><span className="text-primary">✓</span> Sekali bayar, tanpa langganan</li>
           </ul>
           <div className="mt-7">
             <LinkButton href="/signup" className="px-8 py-3.5">Coba 5 konten gratis</LinkButton>

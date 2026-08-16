@@ -26,6 +26,7 @@ import {
   buildInteraksiContentPrompt,
   buildProdukContentPrompt,
   buildGabungContentPrompt,
+  hookInstruction,
 } from "@/lib/ai/autoContentPrompt";
 import { buildGeneralImagePrompt, buildInteraksiImagePrompt } from "@/lib/ai/autoImagePrompt";
 import { FONT_OPTIONS } from "@/lib/templates/fonts";
@@ -82,7 +83,7 @@ export async function GET() {
   return NextResponse.json({ items });
 }
 
-type RequestBody = { jenis: GeneratedContentJenis; ratio: AspectRatio; imageId?: string; imageIds?: string[]; language?: "id" | "en"; referenceDataUri?: string };
+type RequestBody = { jenis: GeneratedContentJenis; ratio: AspectRatio; imageId?: string; imageIds?: string[]; language?: "id" | "en"; referenceDataUri?: string; hook?: boolean };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -98,6 +99,7 @@ function isValidBody(body: unknown): body is RequestBody {
     if (!body.imageIds.every((x) => typeof x === "string")) return false;
   }
   if (body.referenceDataUri !== undefined && typeof body.referenceDataUri !== "string") return false;
+  if (body.hook !== undefined && typeof body.hook !== "boolean") return false;
   return true;
 }
 
@@ -202,10 +204,14 @@ export async function POST(request: NextRequest) {
   }
 
   // ── Generate teks (headline + caption + fontId) ──────────────────────────
+  // Tombol 🔥 (hook): kalau ON, suntik instruksi WTF-hook lewat param `extra`.
+  // HANYA utk produk/gabung/general — Interaksi punya format sendiri (kuis/
+  // quote/tips) dan tidak ikut. Carousel punya alur generate terpisah.
+  const hookExtra = body.hook ? hookInstruction(body.language) : undefined;
   const contentPrompt = (
-    isGabung ? buildGabungContentPrompt(profile, sourceImages.map((s) => s.description ?? ""), body.language)
-    : body.jenis === "produk" ? buildProdukContentPrompt(profile, sourceImage?.description ?? "", body.language)
-    : body.jenis === "general" ? buildGeneralContentPrompt(profile, body.language)
+    isGabung ? buildGabungContentPrompt(profile, sourceImages.map((s) => s.description ?? ""), body.language, hookExtra)
+    : body.jenis === "produk" ? buildProdukContentPrompt(profile, sourceImage?.description ?? "", body.language, hookExtra)
+    : body.jenis === "general" ? buildGeneralContentPrompt(profile, body.language, hookExtra)
     : buildInteraksiContentPrompt(profile, body.language)
   ) + notesBlock;
 

@@ -86,6 +86,7 @@ async function fetchWithAuthRetry(input: string, init?: RequestInit): Promise<Re
 
 export function AutoGenerate() {
   const [jenis, setJenis] = useState<GeneratedContentJenis | "referensi" | "carousel">("produk");
+  const [hook, setHook] = useState(false); // tombol 🔥 — judul gaya penahan-scroll
   const [uiLang, setUiLang] = useState<Lang>("id");
   useEffect(() => setUiLang(getLang()), []);
   const L = (id: string, en: string) => (uiLang === "en" ? en : id);
@@ -236,6 +237,8 @@ export function AutoGenerate() {
             imageIds: jenis === "produk" || jenis === "referensi" ? selectedImageIds : undefined,
             language: getLang(),
             referenceDataUri: jenis === "referensi" ? (refDataUri ?? undefined) : undefined,
+            // 🔥 hook hanya relevan utk produk/referensi/general (bukan interaksi)
+            hook: hook && (jenis === "produk" || jenis === "referensi" || jenis === "general") ? true : undefined,
           }),
         });
       let res = await doPost();
@@ -427,6 +430,34 @@ export function AutoGenerate() {
           })}
         </div>
       </div>
+
+      {jenis === "produk" || jenis === "referensi" || jenis === "general" ? (
+        <button
+          type="button"
+          onClick={() => setHook((v) => !v)}
+          aria-pressed={hook}
+          className={`flex items-start gap-3 rounded-2xl border p-3.5 text-left transition ${
+            hook
+              ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+              : "border-line hover:border-primary/40 hover:bg-navy/[0.02]"
+          }`}
+        >
+          <span className="text-xl leading-none">🔥</span>
+          <span className="flex flex-col gap-0.5">
+            <span className={`text-sm font-semibold ${hook ? "text-primary" : "text-navy"}`}>
+              {hook
+                ? L("Judul nge-hook: AKTIF", "Hook headline: ON")
+                : L("Bikin judul lebih nge-hook", "Make headline more hooky")}
+            </span>
+            <span className="text-xs text-navy/60">
+              {L(
+                "Judul dibuat lebih memancing rasa penasaran (tetap jujur sesuai produk).",
+                "Headline crafted to spark curiosity (still honest to the product).",
+              )}
+            </span>
+          </span>
+        </button>
+      ) : null}
 
       {imagesLoaded && images.length === 0 && (jenis === "produk" || jenis === "referensi" || jenis === "carousel") ? (
         <EmptyGalleryNotice />

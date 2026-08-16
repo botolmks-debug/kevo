@@ -76,6 +76,22 @@ export async function generateOpenAIImage(input: {
   }
 }
 
+/**
+ * Pagar KERAS anti-ubah produk untuk fallback edit OpenAI (gpt-image-1).
+ * Masalah nyata: saat Gemini timeout & jatuh ke OpenAI, gpt-image-1 cenderung
+ * MENGGAMBAR ULANG kemasan produk dari nol → teks label jadi gibberish
+ * (kasus nyata: "250 ml / 100% KEDELAI MURNI" berubah jadi "230 ml / 190%
+ * KEDELAI WARNI"). Instruksi ini dipaksa masuk ke SETIAP edit, tak bergantung
+ * pada prompt yang datang dari pemanggil.
+ */
+const PRESERVE_PRODUCT_GUARD = [
+  "CRITICAL — PRESERVE THE PRODUCT EXACTLY AS IN THE SOURCE IMAGE:",
+  "- Do NOT redraw, regenerate, restyle, or alter the product itself.",
+  "- Keep the packaging, bottle/box shape, label, logo, and ALL printed text 100% identical to the source — same wording, same numbers, same spelling, same fonts. Never invent or change any text on the product (e.g. volume like '250 ml', claims like '100% KEDELAI MURNI').",
+  "- If unsure about any letter or number on the label, copy it exactly from the source; never guess or fabricate.",
+  "- You may ONLY change the surrounding scene/background/lighting. The product must remain pixel-faithful.",
+].join("\n");
+
 /** Edit gambar dari foto asli (fallback untuk konten Produk). */
 export async function editOpenAIImage(input: {
   imageBase64: string;
@@ -92,7 +108,8 @@ export async function editOpenAIImage(input: {
     // Endpoint edit OpenAI butuh multipart/form-data, beda dari generate (JSON).
     const form = new FormData();
     form.append("model", OPENAI_IMAGE_MODEL);
-    form.append("prompt", input.prompt);
+    // Pagar anti-ubah produk ditaruh PALING DEPAN supaya bobotnya kuat.
+    form.append("prompt", `${PRESERVE_PRODUCT_GUARD}\n\n${input.prompt}`);
     form.append("size", sizeForAspect(input.aspectRatio));
     form.append("quality", "medium"); // patok biaya fallback (bukan auto/high)
     const buffer = Buffer.from(input.imageBase64, "base64");

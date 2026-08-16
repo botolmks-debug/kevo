@@ -29,7 +29,12 @@ export default function LoginPage() {
       const q = new URLSearchParams(window.location.search);
       if (q.get("verified") === "1") setNotice("login.verifiedOk");
       const err = q.get("error");
-      if (err) setError(err.startsWith("login.") ? err : err);
+      if (err) {
+        setError(err.startsWith("login.") ? err : err);
+        // Link kedaluwarsa/tak valid -> tampilkan tombol kirim ulang juga,
+        // supaya user langsung bisa minta email baru tanpa buntu.
+        if (err === "login.linkExpired") setShowResend(true);
+      }
     } catch {}
     const stored = getStoredLang();
     if (stored) {

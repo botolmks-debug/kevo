@@ -82,6 +82,7 @@ const DICT: Record<string, Entry> = {
   "login.resendOk": { id: "Email konfirmasi sudah dikirim ulang. Cek inbox & spam.", en: "Confirmation email resent. Check your inbox & spam." },
   "login.resendFail": { id: "Gagal mengirim ulang. Coba lagi sebentar.", en: "Couldn't resend. Please try again shortly." },
   "login.verifiedOk": { id: "Email berhasil dikonfirmasi ✅ Silakan masuk dengan email & passwordmu.", en: "Email confirmed ✅ Please sign in with your email & password." },
+  "login.linkExpired": { id: "Link konfirmasi tidak valid atau sudah kedaluwarsa. Ini biasa terjadi kalau link dibuka di HP/browser yang berbeda dari tempat kamu daftar. Kirim ulang email konfirmasi, lalu buka link-nya di perangkat yang sama.", en: "The confirmation link is invalid or expired. This usually happens when the link is opened on a different device/browser than where you signed up. Resend the confirmation email, then open the link on the same device." },
   "login.processing": { id: "Memproses...", en: "Signing in..." },
   "login.submit": { id: "Masuk", en: "Sign in" },
   "login.noAccount": { id: "Belum punya akun?", en: "Don't have an account?" },

@@ -50,7 +50,11 @@ export async function GET(request: NextRequest) {
     if (!error) return await onVerified();
   }
 
-  // Link tidak valid/kedaluwarsa -> lempar ke login dengan pesan singkat,
-  // daripada menampilkan halaman error mentah.
-  return NextResponse.redirect(`${origin}/login?error=Link%20verifikasi%20tidak%20valid%20atau%20sudah%20kedaluwarsa`);
+  // Link tidak valid/kedaluwarsa -> lempar ke login dengan KODE pesan stabil
+  // (bukan teks mentah), supaya halaman login bisa menampilkannya sekaligus
+  // memunculkan tombol "Kirim ulang email". Penyebab tersering: link dibuka di
+  // browser/HP BERBEDA dari tempat daftar (alur PKCE `code` terkunci ke browser
+  // asal). Solusi utama ada di template email Supabase (pakai token_hash), tapi
+  // kalaupun tetap gagal, user diarahkan untuk kirim ulang, bukan buntu.
+  return NextResponse.redirect(`${origin}/login?error=login.linkExpired`);
 }

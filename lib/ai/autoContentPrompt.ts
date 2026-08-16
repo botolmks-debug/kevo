@@ -188,6 +188,47 @@ function pickHeadlineAngleForProduk(lang?: Lang): string {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+/**
+ * Instruksi "WTF hook" — dipakai HANYA saat user mencentang tombol 🔥.
+ * Diteruskan ke builder konten lewat parameter `extra` (produk/gabung/general).
+ * PENTING: pagar kejujuran sengaja dibuat tegas — model kalau disuruh "bikin
+ * heboh" cenderung MENGARANG (kasus nyata: "Botol Pir" ditafsir jadi bentuk
+ * lalu dikarang lawan katanya "silinder"). Hook boleh mengejutkan, TAPI wajib
+ * benar sesuai data produk/profil. Clickbait bohong DILARANG.
+ */
+export function hookInstruction(lang?: Lang): string {
+  if (isEn(lang)) {
+    return `HEADLINE STYLE OVERRIDE — STRONG SCROLL-STOPPER ("hook") MODE:
+The HEADLINE (onImageText) must STOP the thumb in the first second. Be bold: open a curiosity gap the reader NEEDS to close. A plain descriptive title is a FAIL here — if it reads like a normal caption, rewrite it harder.
+Pick ONE high-impact pattern and commit fully:
+- Pattern-interrupt claim: "Most people <do X wrong> — here's the fix"
+- Direct warning: "Stop <common mistake> before you <consequence>"
+- Curiosity gap: "The real reason <surprising outcome>…" (don't reveal it in the headline)
+- Contrarian truth: "<Thing everyone assumes> is actually <the opposite> — here's why"
+- Loss/mistake framing: "<Overlooked thing> is quietly costing you <specific loss>"
+- Callout to the reader: speak directly ("kamu"/"you"), make it feel personal and urgent.
+HARD RULES (non-negotiable — boldness never overrides these):
+- The hook MUST be TRUE and grounded in the product/profile data above. NEVER invent facts, numbers, comparisons, or attributes not given. Bold framing of a REAL point — never a fabricated one.
+- Treat any product NAME as a name, not a description — never reinterpret it into a shape, category, or claim.
+- No all-caps shouting, no stacked "!!!", no "OMG/VIRAL/GILA" spam energy — the surprise is in the IDEA, not loud punctuation. Stay in the brand voice.
+- Short and punchy (headline length). The content underneath must honestly deliver what the hook promises.`;
+  }
+  return `OVERRIDE GAYA JUDUL — MODE PENAHAN-SCROLL KUAT ("hook"):
+JUDUL (onImageText) HARUS menghentikan jempol di 1 detik pertama. Berani: buka celah rasa penasaran yang bikin pembaca WAJIB cari tahu. Judul deskriptif biasa = GAGAL — kalau kebacanya seperti caption biasa, tulis ulang lebih nendang.
+Pilih SATU pola berdampak tinggi dan totalitas:
+- Klaim pemutus pola: "Kebanyakan orang <salah lakukan X> — ini cara benarnya"
+- Peringatan langsung: "Berhenti <kesalahan umum> sebelum <akibatnya>"
+- Celah penasaran: "Alasan sebenarnya kenapa <hasil mengejutkan>…" (jangan bocorkan di judul)
+- Kebenaran kontra-dugaan: "<Yang orang kira benar> ternyata <kebalikannya> — ini alasannya"
+- Bingkai kerugian/kesalahan: "<Hal yang diremehkan> diam-diam bikin kamu rugi <kerugian spesifik>"
+- Sapa pembaca langsung: pakai "kamu", bikin terasa personal & mendesak.
+ATURAN KERAS (tak bisa ditawar — keberanian TAK PERNAH mengalahkan ini):
+- Hook WAJIB BENAR & berdasar data produk/profil di atas. JANGAN mengarang fakta, angka, perbandingan, atau atribut yang tak diberikan. Bingkai berani dari poin NYATA — bukan poin karangan.
+- Perlakukan NAMA produk sebagai nama, bukan deskripsi — jangan tafsirkan jadi bentuk/kategori/klaim.
+- Dilarang HURUF KAPITAL semua, dilarang "!!!" bertumpuk, dilarang energi spam "OMG/VIRAL/GILA" — kejutan ada di IDE, bukan tanda baca heboh. Tetap dalam nada brand.
+- Singkat & nendang (panjang judul). Isi konten di baliknya WAJIB menepati janji hook.`;
+}
+
 const PERSPECTIVE_ANGLES_ID = [
   "EFISIENSI WAKTU untuk hal lain — bukan cuma soal cepat, tapi apa yang jadi BISA dilakukan pelanggan karena waktu/tenaga yang terhemat",
   "KONSISTENSI & KUALITAS — bagaimana produk/layanan ini menjaga standar yang susah dijaga sendiri secara manual/berulang",
