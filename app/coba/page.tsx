@@ -147,7 +147,7 @@ export default function CobaPage() {
       <header className="flex items-center justify-between px-5 py-4 max-w-md mx-auto">
         <div className="flex items-center gap-2">
           <img
-            src="/Logo/logo%20keposting.png"
+            src="/Logo/logo-keposting.png"
             alt="Keposting"
             className="h-9 w-auto"
           />
