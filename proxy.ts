@@ -2,7 +2,15 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isAdmin } from "@/lib/supabase/tokens";
 
-const PUBLIC_PATHS = ["/login", "/signup", "/auth", "/lupa-password", "/reset-password"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/signup",
+  "/auth",
+  "/lupa-password",
+  "/reset-password",
+  "/coba",       // halaman demo publik (lead capture iklan/SEO) — tanpa login
+  "/ide-konten", // halaman SEO publik (index + semua /ide-konten/[slug]) — tanpa login & harus bisa dirayapi Googlebot
+];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
