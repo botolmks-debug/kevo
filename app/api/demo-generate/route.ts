@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { checkEmail } from "@/lib/demo/validateEmail";
 import { generateDemoContent } from "@/lib/demo/generate";
+import { sendDemoResultEmail } from "@/lib/demo/sendResultEmail";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
     const imageBuffer = Buffer.from(await image.arrayBuffer());
 
     // --- GENERATE (mesin yang sama dengan produk asli) ---
-    const { resultUrl, caption } = await generateDemoContent({
+    const { resultUrl, bgUrl, caption, title, demoId } = await generateDemoContent({
       imageBuffer,
       mimeType: image.type,
       businessType,
@@ -100,7 +101,22 @@ export async function POST(req: NextRequest) {
       ip,
     });
 
-    return NextResponse.json({ imageUrl: resultUrl, caption });
+    // AUTO-KIRIM hasil ke email BEGITU JADI (server-side) — pengunjung yang
+    // sudah menutup halaman tetap menerima hasilnya (lead tidak hangus).
+    // Best-effort: gagal kirim email TIDAK menggagalkan response.
+    let autoSent = false;
+    try {
+      await sendDemoResultEmail({ email, imageUrl: resultUrl, caption });
+      autoSent = true;
+      await db
+        .from("demo_leads")
+        .update({ sent_at: new Date().toISOString() })
+        .eq("email", email);
+    } catch (e) {
+      console.error("[demo-generate] auto-send gagal:", e);
+    }
+
+    return NextResponse.json({ imageUrl: resultUrl, bgUrl, caption, title, demoId, autoSent });
   } catch (err) {
     console.error("[demo-generate]", err);
     return NextResponse.json({ error: "server_error" }, { status: 500 });

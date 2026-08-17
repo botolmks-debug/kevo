@@ -24,6 +24,7 @@ import { createServiceRoleClient } from "@/lib/supabase/serviceRole";
 import { editImage } from "@/lib/ai/geminiImage";
 import { generateJsonContent } from "@/lib/ai/geminiJson";
 import { buildProdukContentPrompt } from "@/lib/ai/autoContentPrompt";
+import { describeProductImage } from "@/lib/ai/describeImage";
 import {
   buildScenePrompt,
   buildFoodPrompt,
@@ -43,7 +44,13 @@ export type DemoGenInput = {
   mimeType: string;
   businessType: string;
 };
-export type DemoGenResult = { resultUrl: string; caption: string };
+export type DemoGenResult = {
+  resultUrl: string;
+  bgUrl: string;   // background AI TANPA teks — utk preview drag di client
+  caption: string;
+  title: string;   // judul yang ditempel di gambar (onImageText) — bisa diedit user
+  demoId: string;  // id file di bucket, dipakai /api/demo-render utk render ulang
+};
 
 // Profil minimal dari tipe bisnis — field kosong ("") aman, builder ubah jadi "-".
 function synthProfile(businessType: string): BusinessProfile {
@@ -56,13 +63,19 @@ function synthProfile(businessType: string): BusinessProfile {
   } as unknown as BusinessProfile;
 }
 
-// Pilih prompt gambar dari tipe bisnis (pengganti analisis foto).
-function imagePromptFor(businessType: string, profile: BusinessProfile): string {
+// Pilih prompt gambar dari tipe bisnis. Deskripsi produk (hasil analisis foto)
+// diteruskan ke food/skincare prompt supaya scene lebih nyambung; scene umum
+// pakai foto asli sebagai acuan editImage.
+function imagePromptFor(
+  businessType: string,
+  profile: BusinessProfile,
+  description?: string
+): string {
   const t = businessType.toLowerCase();
   if (t.includes("f&b") || t.includes("kuliner") || t.includes("makan"))
-    return buildFoodPrompt(profile, undefined, LANG);
+    return buildFoodPrompt(profile, description, LANG);
   if (t.includes("skincare") || t.includes("kecantikan"))
-    return buildSkincarePrompt(profile, undefined, LANG);
+    return buildSkincarePrompt(profile, description, LANG);
   return buildScenePrompt(profile, undefined, LANG);
 }
 
@@ -72,22 +85,37 @@ export async function generateDemoContent(
   const profile = synthProfile(input.businessType);
   const imageBase64 = input.imageBuffer.toString("base64");
 
-  // 1) TEKS (headline + caption) — mesin teks yang sama dengan produk asli
-  const contentPrompt = buildProdukContentPrompt(profile, "", LANG);
-  const contentRes = await generateJsonContent(contentPrompt);
+  // 0) ANALISIS FOTO — AI "membaca" produk di foto jadi deskripsi teks.
+  //    Ini yang bikin judul & caption NYAMBUNG dengan produk asli (bukan
+  //    generik dari tipe bisnis). Best-effort: kalau gagal, lanjut dgn "".
+  let productDesc = "";
+  const descRes = await describeProductImage({
+    imageBase64,
+    mimeType: input.mimeType,
+    lang: LANG,
+  });
+  if (descRes.ok) productDesc = descRes.description;
+
+  // 1+2) TEKS & GAMBAR digenerate PARALEL (saling independen) —
+  // sebelumnya berurutan, buang 5-20 detik waktu tunggu percuma.
+  // Deskripsi produk hasil analisis diselipkan ke prompt teks.
+  const contentPrompt = buildProdukContentPrompt(profile, productDesc, LANG);
+  const [contentRes, imgRes] = await Promise.all([
+    generateJsonContent(contentPrompt),
+    editImage({
+      imageBase64,
+      mimeType: input.mimeType,
+      aspectRatio: RATIO,
+      prompt: imagePromptFor(input.businessType, profile, productDesc),
+    }),
+  ]);
+
   if (!contentRes.ok) throw new Error(contentRes.error || "gagal membuat teks");
   const data = contentRes.data as { onImageText?: string; caption?: string };
   const onImageText = String(data.onImageText || "").trim();
   const caption = String(data.caption || "").trim();
   if (!onImageText || !caption) throw new Error("format teks tidak lengkap");
 
-  // 2) GAMBAR — EDIT foto asli pengunjung (inti "hasil = produk asli")
-  const imgRes = await editImage({
-    imageBase64,
-    mimeType: input.mimeType,
-    aspectRatio: RATIO,
-    prompt: imagePromptFor(input.businessType, profile),
-  });
   if (!imgRes.ok) throw new Error(imgRes.error || "gagal membuat gambar");
 
   // 3) RENDER overlay headline (template polos, tanpa logo user)
@@ -98,13 +126,26 @@ export async function generateDemoContent(
   });
 
   // 4) SIMPAN ke bucket PUBLIC lalu ambil URL (untuk tampil di layar + email)
+  //    Dua file per demo:
+  //      <id>-bg.png = background hasil AI TANPA teks (bahan render ulang judul)
+  //      <id>.png    = hasil final dengan teks (yang ditampilkan/dikirim)
   const svc = createServiceRoleClient();
-  const path = `${randomUUID()}.png`;
+  const demoId = randomUUID();
+
+  // background: dataUri -> buffer
+  const bgBase64 = imgRes.dataUri.replace(/^data:image\/\w+;base64,/, "");
+  const bgBuffer = Buffer.from(bgBase64, "base64");
+  const upBg = await svc.storage
+    .from(DEMO_BUCKET)
+    .upload(`${demoId}-bg.png`, bgBuffer, { contentType: "image/png" });
+  if (upBg.error) throw new Error("gagal menyimpan background: " + upBg.error.message);
+
   const up = await svc.storage
     .from(DEMO_BUCKET)
-    .upload(path, pngBuffer, { contentType: "image/png" });
+    .upload(`${demoId}.png`, pngBuffer, { contentType: "image/png" });
   if (up.error) throw new Error("gagal menyimpan hasil: " + up.error.message);
 
-  const { data: pub } = svc.storage.from(DEMO_BUCKET).getPublicUrl(path);
-  return { resultUrl: pub.publicUrl, caption };
+  const { data: pub } = svc.storage.from(DEMO_BUCKET).getPublicUrl(`${demoId}.png`);
+  const { data: pubBg } = svc.storage.from(DEMO_BUCKET).getPublicUrl(`${demoId}-bg.png`);
+  return { resultUrl: pub.publicUrl, bgUrl: pubBg.publicUrl, caption, title: onImageText, demoId };
 }

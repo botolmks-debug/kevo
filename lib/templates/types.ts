@@ -17,6 +17,16 @@ export type TextSlot = {
   label?: string;
   /** Contoh isi (dipakai sebagai placeholder di form, bukan value awal). */
   placeholder?: string;
+  /**
+   * Bayangan lembut di belakang teks — disimulasikan via CSS textShadow di
+   * mesin render (renderTemplate). Bikin teks putih terbaca di atas foto terang.
+   */
+  shadow?: { blur: number; color: string; opacity: number } | null;
+  /**
+   * Garis tepi tipis (stroke) mengelilingi teks — juga via textShadow 8 arah.
+   * Menegaskan judul supaya terkesan profesional.
+   */
+  outline?: { width: number; color: string } | null;
 };
 
 export type ImageSlot = {
