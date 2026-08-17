@@ -57,7 +57,9 @@ export default function KontenPage() {
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [overrides, setOverrides] = useState<EditorOverrides>({ slots: {} });
-  const [previewMode, setPreviewMode] = useState(false); // false = edit cepat (Konva), true = render asli
+  // false = mode edit cepat (Konva, ringan, default). true = render Satori asli
+  // (akurat) — HANYA saat user klik "Lihat hasil asli". Tidak dirender saat buka.
+  const [previewMode, setPreviewMode] = useState(false);
   const [editTemplateId, setEditTemplateId] = useState<ContentLayoutState["templateId"]>("polos");
   const [editBgColor, setEditBgColor] = useState<string | undefined>(undefined);
   const [editDescCount, setEditDescCount] = useState<number | undefined>(undefined);
@@ -248,7 +250,7 @@ export default function KontenPage() {
 
   const baseTemplate =
     editTemplateId === "produk-latar" ? createProdukLatarTemplate(editBgColor)
-    : editTemplateId === "standar" ? createStandarTemplate(editDescCount ?? 1)
+    : editTemplateId === "standar" ? createStandarTemplate(editDescCount ?? 1, editValues.title ?? editValues.caption)
     : editTemplateId === "teks-saja" ? createTeksSajaTemplate(editDescCount ?? 1)
     : editTemplateId === "carousel" ? createCarouselTemplate()
     : editTemplateId === "interaksi" ? interaksiTemplate
@@ -267,7 +269,8 @@ export default function KontenPage() {
     activeLogo,
   );
   const editTemplate = selected ? applyEditorOverrides(templateBase, selected.ratio, overrides) : null;
-  // WYSIWYG: render Satori asli sebagai latar editor (ghost) — yang dilihat = hasil export.
+  // Ghost = render Satori asli sebagai preview akurat. enabled hanya saat
+  // previewMode → tidak ada render saat mode edit cepat (bebas lag).
   const { url: ghostUrl, rendering: ghostRendering } = useLiveRender(editTemplate, editValues, selected?.ratio ?? "4:5", !!selected && previewMode);
 
   return (
@@ -291,17 +294,17 @@ export default function KontenPage() {
               <div className="mb-1.5 flex items-center justify-between gap-2">
                 <p className="text-xs font-medium text-navy/50">
                   {previewMode
-                    ? "Hasil asli (persis yang akan diekspor). Geser untuk atur presisi."
+                    ? "Hasil asli (persis yang akan diekspor)."
                     : "Mode edit cepat — geser bebas, tanpa jeda."}
                 </p>
                 <button
                   type="button"
                   onClick={() => setPreviewMode((v) => !v)}
                   className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition ${
-                    previewMode ? "bg-navy/10 text-navy hover:bg-navy/15" : "bg-primary text-white hover:opacity-90"
+                    previewMode ? "bg-primary text-white hover:opacity-90" : "bg-navy/10 text-navy hover:bg-navy/15"
                   }`}
                 >
-                  {previewMode ? "✏ Lanjut edit cepat" : "👁 Lihat hasil asli"}
+                  {previewMode ? "✏ Edit cepat" : "👁 Lihat hasil asli"}
                 </button>
               </div>
               <CanvasEditor
@@ -318,9 +321,10 @@ export default function KontenPage() {
                 canToggleLogo={!!(logoDark && logoLight)}
                 onLogoVariantChange={(v) => setOverrides((o) => ({ ...o, logoVariant: v }))}
                 ghostUrl={previewMode ? (ghostUrl ?? undefined) : undefined}
+                rendering={previewMode ? ghostRendering : false}
               />
               {previewMode && ghostRendering ? (
-                <p className="mt-1 text-center text-[11px] text-navy/40">memperbarui hasil asli…</p>
+                <p className="mt-1 text-center text-[11px] text-navy/40">merender hasil asli…</p>
               ) : null}
             </div>
             <Textarea label="Caption" value={selected.caption} readOnly />

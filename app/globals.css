@@ -60,6 +60,15 @@
 @font-face { font-family: "Great Vibes"; src: url("/fonts/GreatVibes-Regular.ttf") format("truetype"); font-weight: 400 700; }
 @font-face { font-family: "Sacramento"; src: url("/fonts/Sacramento-Regular.ttf") format("truetype"); font-weight: 400 700; }
 
+/* Inter untuk KANVAS (Konva). Inter versi UI dimuat via next/font dengan nama
+   ter-hash, jadi nama literal "Inter" tak dikenal kanvas → slot teks Inter
+   (deskripsi/subjudul) sempat digambar pakai font fallback dan beda dari hasil
+   Satori. Daftarkan literal "Inter" di sini supaya preview = export. */
+@font-face { font-family: "Inter"; src: url("/fonts/Inter-Regular.ttf") format("truetype"); font-weight: 400; font-style: normal; }
+@font-face { font-family: "Inter"; src: url("/fonts/Inter-Bold.ttf") format("truetype"); font-weight: 700; font-style: normal; }
+@font-face { font-family: "Oswald"; src: url("/fonts/Oswald-Regular.ttf") format("truetype"); font-weight: 400; font-style: normal; }
+@font-face { font-family: "Oswald"; src: url("/fonts/Oswald-Bold.ttf") format("truetype"); font-weight: 700; font-style: normal; }
+
 :root {
   --background: #fbf9f6;
   --foreground: #2a2a28;

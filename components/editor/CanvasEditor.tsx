@@ -13,6 +13,20 @@ import { useKonvaImage } from "./useKonvaImage";
 import { fitFontSize } from "@/lib/render/fitText";
 
 const PREVIEW_WIDTH = 340;
+
+// input type=color hanya menerima #rrggbb. Template kadang pakai rgba(...) →
+// browser menolak & spam error console. Konversi ke hex untuk swatch.
+function toHexColor(c: string | undefined): string {
+  if (!c) return "#ffffff";
+  if (c.startsWith("#")) return c.slice(0, 7);
+  const m = c.match(/rgba?\(([^)]+)\)/i);
+  if (m) {
+    const parts = m[1].split(",").map((s) => parseInt(s.trim(), 10));
+    const h = (n: number) => Math.max(0, Math.min(255, n || 0)).toString(16).padStart(2, "0");
+    return `#${h(parts[0])}${h(parts[1])}${h(parts[2])}`;
+  }
+  return "#ffffff";
+}
 const ALIGN_LABEL: Record<"left" | "center" | "right", string> = {
   left: "Kiri", center: "Tengah", right: "Kanan",
 };
@@ -44,6 +58,8 @@ type CanvasEditorProps = {
   onLogoVariantChange?: (variant: "dark" | "light") => void;
   /** WYSIWYG: URL render Satori asli sebagai latar; semua elemen jadi transparan (opt-in, hanya di Edit). */
   ghostUrl?: string;
+  /** true saat render "hasil asli" sedang berjalan — elemen tetap tampil di posisi baru biar tidak melompat-balik. */
+  rendering?: boolean;
 };
 
 function SocialIconKonva({ platformId, size, scale }: { platformId: string; size: number; scale: number }) {
@@ -119,12 +135,13 @@ function LogoKonva({ url, size, scale }: { url: string; size: number; scale: num
 export function CanvasEditor({
   layout, values, overrides, onOverridesChange, onTextChange,
   footerPreviewText, socials, businessName, logoUrl,
-  logoVariant = "light", canToggleLogo = false, onLogoVariantChange, ghostUrl,
+  logoVariant = "light", canToggleLogo = false, onLogoVariantChange, ghostUrl, rendering = false,
 }: CanvasEditorProps) {
   // Lebar preview mengikuti lebar container (maks 340) supaya muat di HP.
   const wrapRef = useRef<HTMLDivElement>(null);
   const [previewWidth, setPreviewWidth] = useState(PREVIEW_WIDTH);
   const [dragging, setDragging] = useState(false); // WYSIWYG: tampilkan elemen saat diseret
+  const [fontsReady, setFontsReady] = useState(false); // web-font sudah dimuat ke canvas?
   useEffect(() => {
     function measure() {
       const w = wrapRef.current?.clientWidth ?? PREVIEW_WIDTH;
@@ -134,6 +151,31 @@ export function CanvasEditor({
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
   }, []);
+
+  // Konva menggambar teks di <canvas> yang TIDAK menunggu web-font (@font-face)
+  // selesai dimuat. Akibatnya font display seperti "Bebas Neue" sempat digambar
+  // pakai font fallback → di preview tampak beda/lebih tipis dari hasil export
+  // Satori (yang memakai buffer font asli). Muat SEMUA font lebih dulu, lalu
+  // paksa redraw sekali (lewat key <Layer>) supaya preview = hasil render.
+  useEffect(() => {
+    if (typeof document === "undefined" || !("fonts" in document)) {
+      setFontsReady(true);
+      return;
+    }
+    let cancelled = false;
+    const families = Array.from(new Set(FONT_OPTIONS.map((f) => f.family)));
+    Promise.all(
+      families.flatMap((fam) => [
+        document.fonts.load(`400 32px "${fam}"`),
+        document.fonts.load(`700 32px "${fam}"`),
+      ]),
+    )
+      .then(() => document.fonts.ready)
+      .then(() => { if (!cancelled) setFontsReady(true); })
+      .catch(() => { if (!cancelled) setFontsReady(true); });
+    return () => { cancelled = true; };
+  }, []);
+
   const scale = previewWidth / layout.canvas.width;
   const previewHeight = Math.round(layout.canvas.height * scale);
   // Batasi drag: SELURUH badan elemen (bukan cuma titik pegang) tetap di dalam
@@ -460,7 +502,7 @@ export function CanvasEditor({
           onDragStart={() => setDragging(true)}
           onDragEnd={() => setDragging(false)}
           onMouseDown={(e) => { if (e.target === e.target.getStage()) setSelectedId(null); }}>
-          <Layer>
+          <Layer key={fontsReady ? "fonts-ready" : "fonts-loading"}>
             {/* Teks */}
             {textSlots.map((slot) => {
               const eff = effectiveText(slot);
@@ -799,7 +841,7 @@ export function CanvasEditor({
           </label>
           <label className="flex items-center gap-1.5">
             <span className="text-navy/60">Warna</span>
-            <input type="color" value={captionEff.color} onChange={(e) => updateSlot(captionSlot.id, { color: e.target.value })}
+            <input type="color" value={toHexColor(captionEff.color)} onChange={(e) => updateSlot(captionSlot.id, { color: e.target.value })}
               className="h-6 w-8 rounded border border-line" />
           </label>
           <div className="flex items-center gap-1">
@@ -828,7 +870,7 @@ export function CanvasEditor({
                 </label>
                 <label className="flex items-center gap-1.5">
                   <span className="text-navy/60">Warna shadow</span>
-                  <input type="color" value={shadowColor}
+                  <input type="color" value={toHexColor(shadowColor)}
                     onChange={(e) => updateSlot(captionSlot.id, { shadow: { blur: shadowBlur, color: e.target.value, opacity: shadowOpacity } })}
                     className="h-6 w-8 rounded border border-line" />
                 </label>
@@ -858,7 +900,7 @@ export function CanvasEditor({
                 </label>
                 <label className="flex items-center gap-1.5">
                   <span className="text-navy/60">Warna outline</span>
-                  <input type="color" value={outlineColor}
+                  <input type="color" value={toHexColor(outlineColor)}
                     onChange={(e) => updateSlot(captionSlot.id, { outline: { width: outlineWidth, color: e.target.value } })}
                     className="h-6 w-8 rounded border border-line" />
                 </label>
