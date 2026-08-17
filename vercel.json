@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/demo-daily-digest",
+      "schedule": "0 21 * * *"
+    }
+  ]
+}
