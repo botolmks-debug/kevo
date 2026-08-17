@@ -22,10 +22,8 @@ export type Industry = {
   contohCaption: ContohCaption[]; // target 5 caption siap pakai
 };
 
+
 export const INDUSTRIES: Industry[] = [
-  // ============================================================
-  // 1. TOKO BANGUNAN
-  // ============================================================
   {
     slug: "toko-bangunan",
     nama: "Toko Bangunan",
@@ -193,9 +191,6 @@ export const INDUSTRIES: Industry[] = [
     ],
   },
 
-  // ============================================================
-  // 2. JUALAN MAKANAN
-  // ============================================================
   {
     slug: "jualan-makanan",
     nama: "Usaha Makanan",
@@ -364,7 +359,7 @@ export const INDUSTRIES: Industry[] = [
   },
 
   // ============================================================
-  // 3. LAUNDRY — KERANGKA (isi mengikuti pola di atas)
+  // 3. LAUNDRY
   // ============================================================
   {
     slug: "laundry",
@@ -372,51 +367,196 @@ export const INDUSTRIES: Industry[] = [
     metaTitle:
       "25 Ide Konten Instagram untuk Usaha Laundry (Contoh Caption Siap Pakai)",
     metaDescription:
-      "Usaha laundry juga butuh konten. 25 ide konten Instagram untuk laundry + contoh caption siap pakai — dari edukasi perawatan pakaian sampai promo langganan.",
+      "Bingung posting apa untuk laundry? 25 ide konten Instagram + 5 contoh caption siap pakai. Gratis, tinggal disesuaikan dengan usahamu.",
     intro: [
-      "Laundry termasuk usaha yang paling jarang posting \u2014 dan itu justru peluang: di kategori yang sepi konten, yang konsisten posting akan terlihat paling profesional di daerahnya.",
-      "Kuncinya bukan foto mesin cuci terus-menerus, tapi jadi \u201cahli perawatan pakaian\u201d di mata pelanggan. Ide-ide di bawah ini dibuat untuk membangun posisi itu.",
+      "Laundry itu bisnis kepercayaan \u2014 orang menitipkan pakaian kesayangannya ke tanganmu. Tapi di Instagram, semua laundry kelihatan mirip: foto mesin cuci dan daftar harga. Padahal yang membuat orang pindah langganan bukan harga termurah, tapi rasa percaya.",
+      "Kabar baiknya, kepercayaan itu bisa dibangun lewat konten. Daftar di bawah ini dibuat supaya kamu tinggal pilih satu ide, foto seadanya pakai HP, dan posting hari itu juga \u2014 tanpa perlu jadi fotografer.",
     ],
     ideKonten: [
-      {
-        judul: "Arti simbol label pakaian",
-        deskripsi:
-          "Terjemahkan simbol-simbol di label baju. Konten evergreen yang selalu dicari dan di-save.",
-      },
-      {
-        judul: "Noda membandel dan cara mengatasinya",
-        deskripsi:
-          "Satu noda satu post: kopi, tinta, minyak. Seri konten yang tidak ada habisnya.",
-      },
-      {
-        judul: "Sebelum\u2013sesudah cucian",
-        deskripsi:
-          "Sepatu kusam jadi bersih, kemeja kuning jadi cerah. Bukti hasil kerja paling meyakinkan.",
-      },
-      {
-        judul: "Pakaian yang tidak boleh dicuci mesin",
-        deskripsi:
-          "Edukasi yang menyelamatkan baju kesayangan pelanggan \u2014 dan memposisikan kamu sebagai ahlinya.",
-      },
-      {
-        judul: "Promo paket langganan bulanan",
-        deskripsi:
-          "Hitung penghematan langganan vs kiloan satuan. Angka konkret lebih menjual.",
-      },
+      { judul: "Noda hilang (sebelum\u2013sesudah)", deskripsi: "Foto noda membandel sebelum dan sesudah dicuci. Ini konten paling laku untuk laundry \u2014 bukti nyata lebih meyakinkan daripada janji." },
+      { judul: "Arti simbol di label baju", deskripsi: "Banyak orang tidak paham simbol setrika/cuci di label. Jelaskan satu per satu \u2014 konten edukasi yang sering disimpan." },
+      { judul: "Cara rawat baju putih", deskripsi: "Tips supaya kemeja putih tidak menguning. Kamu lebih tahu ini daripada pelanggan." },
+      { judul: "Proses sortir per pelanggan", deskripsi: "Tunjukkan bagaimana cucian tiap pelanggan dipisah, tidak tercampur. Membangun rasa aman." },
+      { judul: "Baju luntur, gimana?", deskripsi: "Jelaskan prosedur pemisahan warna di tempatmu. Menjawab kekhawatiran nomor satu pelanggan." },
+      { judul: "Behind the scenes proses", deskripsi: "Video 15 detik: cucian masuk mesin, dijemur/dikeringkan, dilipat rapi. Proses yang rapi menjual sendiri." },
+      { judul: "Estimasi waktu selesai", deskripsi: "\u201cReguler 2 hari, kilat 6 jam.\u201d Informasi kecil yang paling sering ditanya di DM." },
+      { judul: "Cara lipat baju biar hemat lemari", deskripsi: "Tips lipat kaus/celana ala laundry. Konten give-value yang bikin orang follow." },
+      { judul: "Paket langganan bulanan", deskripsi: "Tawarkan paket cuci mingguan untuk anak kos/keluarga sibuk. Ubah pembeli sekali jadi pelanggan tetap." },
+      { judul: "Kenalkan tim laundry", deskripsi: "Foto orang yang mencuci & melipat. Pelanggan lebih tenang menitipkan baju ke orang yang dikenal." },
+      { judul: "Jenis parfum laundry", deskripsi: "Pamerkan pilihan wangi yang tersedia. Ajak pelanggan pilih favorit lewat polling story." },
+      { judul: "Kesalahan mencuci di rumah", deskripsi: "Misal: campur handuk baru dengan baju, air terlalu panas untuk sablon. Posisikan dirimu sebagai ahli." },
+      { judul: "Cuci sepatu / tas / boneka", deskripsi: "Kalau terima cuci selain baju, pamerkan. Banyak orang tidak tahu kamu melayani ini." },
+      { judul: "Testimoni pelanggan", deskripsi: "Screenshot chat pujian (blur nomornya) atau video singkat pelanggan. Bukti sosial sederhana." },
+      { judul: "Antar-jemput gratis", deskripsi: "Kalau ada layanan pickup, jadikan konten. Kemudahan ini yang bikin orang malas pindah." },
+      { judul: "Cara hilangkan bau apek", deskripsi: "Tips supaya baju simpanan lama tidak apek. Edukasi ringan yang relatable." },
+      { judul: "Hitungan kiloan vs satuan", deskripsi: "Jelaskan kapan lebih hemat kiloan, kapan satuan. Transparansi membangun kepercayaan." },
+      { judul: "Promo hari tertentu", deskripsi: "Misal diskon Senin sepi atau paket keluarga akhir pekan. Ratakan beban kerja sekaligus jualan." },
+      { judul: "Merawat mukena / baju ibadah", deskripsi: "Cara mencuci mukena, sajadah, baju koko biar awet & wangi. Konten musiman jelang hari besar." },
+      { judul: "Fakta menarik seputar cucian", deskripsi: "\u201cSatu keluarga rata-rata cuci 6 kg/minggu.\u201d Angka kecil yang bikin orang berhenti scroll." },
+      { judul: "Tanya-jawab (FAQ)", deskripsi: "\u201cBisa titip hari Minggu?\u201d Kumpulkan pertanyaan yang sering masuk, jawab dalam satu post." },
+      { judul: "Kapasitas & jam operasional", deskripsi: "Dibuat menarik, bukan sekadar info kaku \u2014 misal \u201ctitip sebelum jam 10, selesai besok pagi.\u201d" },
+      { judul: "Perawatan alat: kebersihan mesin", deskripsi: "Tunjukkan mesin dibersihkan rutin. Menepis kekhawatiran cucian tercampur kotoran orang lain." },
+      { judul: "Cerita awal buka laundry", deskripsi: "Kisah kenapa kamu memulai usaha ini. Orang beli dari orang, bukan dari logo." },
+      { judul: "Checklist yang bisa di-save", deskripsi: "\u201c5 hal cek dulu sebelum menitip laundry.\u201d Konten give-value yang layak disimpan pelanggan." },
     ],
     contohCaption: [
-      {
-        judul: "Caption edukasi noda",
-        teks:
-          "Noda kopi di kemeja putih? Jangan digosok! Itu justru membuat noda menyebar ke serat kain.\n\nTepuk-tepuk dengan tisu, basahi air dingin, lalu bawa ke kami sebelum 24 jam \u2014 makin cepat, makin besar peluang bersih total. \u2615",
-      },
-      {
-        judul: "Caption promo langganan",
-        teks:
-          "Hitung-hitungan jujur: cuci kiloan 4x sebulan = [harga satuan x4]. Paket langganan bulanan = [harga paket]. Hematnya bisa buat jajan. \ud83d\udcb0\n\nSlot langganan bulan ini tinggal sedikit \u2014 chat untuk daftar.",
-      },
+      { judul: "Sebelum\u2013sesudah", teks: "Noda kunyit di kemeja putih. Kata orang: mustahil hilang. \ud83d\udc55\n\nGeser untuk lihat hasilnya. \u27a1\ufe0f\n\nBukan sulap \u2014 cuma penanganan yang benar sebelum nodanya \u201cmenetap\u201d. Makin cepat diantar, makin besar peluang selamat.\n\n#laundry #nodamembandel #laundryterdekat" },
+      { judul: "Bangun kepercayaan", teks: "Cucianmu tidak pernah tercampur dengan punya orang lain. \ud83e\uddfa\n\nSetiap pelanggan punya keranjang & label sendiri dari masuk sampai selesai. Baju kesayanganmu kami jaga seperti punya sendiri.\n\nTitip sekarang, besok sudah wangi & rapi. \ud83d\ude4c\n\n#laundrybersih #laundryterpercaya" },
+      { judul: "Paket langganan", teks: "Capek nyuci tiap minggu? Serahkan ke kami. \ud83e\uddfa\n\nPaket langganan bulanan: cucian mingguan, jemput-antar gratis, wangi pilihanmu.\n\nWaktu weekend-mu terlalu berharga buat dihabiskan di mesin cuci. \ud83d\ude09\n\nDM \u201cLANGGANAN\u201d untuk harga. \ud83d\udc47\n\n#laundrylangganan #jasalaundry" },
+      { judul: "Edukasi label", teks: "Pernah bingung sama simbol di label baju? \ud83e\udd14\n\n\u25a1 dengan titik = boleh dikeringkan mesin\n\u25b3 dicoret = jangan pakai pemutih\nSetrika 1 titik = suhu rendah (untuk bahan halus)\n\nSalah baca = baju rusak. Atau\u2026 titip ke kami saja, biar kami yang pusing. \ud83d\ude04\n\n#tipslaundry #rawatbaju" },
+      { judul: "Testimoni", teks: "\u201cKak, jaket kesayanganku yang kena oli akhirnya bersih lagi \ud83e\udd79\u201d\n\nChat seperti ini yang bikin kerja sampai malam rasanya worth it. \ud83d\ude4f\n\nTerima kasih sudah mempercayakan baju kesayanganmu ke kami.\n\n#testimonilaundry #laundrymakassar" },
     ],
-  },
+    },
+
+  // ============================================================
+  // 4. SALON & BARBERSHOP
+  // ============================================================
+  {
+    slug: "salon-barbershop",
+    nama: "Salon & Barbershop",
+    metaTitle:
+      "25 Ide Konten Instagram untuk Salon & Barbershop (Contoh Caption Siap Pakai)",
+    metaDescription:
+      "Kehabisan ide konten untuk salon atau barbershop? 25 ide Instagram + 5 caption siap pakai. Gratis, tinggal sesuaikan dengan usahamu.",
+    intro: [
+      "Salon dan barbershop punya keunggulan yang jarang dimiliki bisnis lain: hasil kerjamu terlihat langsung dan sangat visual. Satu potongan rambut yang rapi, satu wajah pelanggan yang puas \u2014 itu sudah konten.",
+      "Tapi banyak salon berhenti di foto hasil saja, lalu kehabisan ide. Daftar di bawah ini memberi 25 sudut berbeda supaya feed-mu tidak monoton dan pelanggan baru yakin memilihmu sebelum datang.",
+    ],
+    ideKonten: [
+      { judul: "Sebelum\u2013sesudah potong rambut", deskripsi: "Transformasi paling memuaskan untuk ditonton. Minta izin pelanggan dulu. Konten andalan yang tak pernah gagal." },
+      { judul: "Video proses (timelapse)", deskripsi: "Percepat proses potong/cat/styling jadi 15 detik. Sangat memuaskan ditonton dan gampang viral." },
+      { judul: "Rekomendasi model sesuai bentuk wajah", deskripsi: "\u201cWajah bulat cocok potongan apa?\u201d Konten edukasi yang membantu pelanggan memutuskan." },
+      { judul: "Tips rawat rambut di rumah", deskripsi: "Cara jaga hasil catok/warna biar awet. Give-value yang bikin follow." },
+      { judul: "Kenalkan kapster/hairstylist", deskripsi: "Foto & keahlian tiap tim. Pelanggan sering datang karena orangnya, bukan cuma tempatnya." },
+      { judul: "Produk yang dipakai", deskripsi: "Pomade, serum, cat merek apa. Bangun kesan profesional dan bisa jadi jualan tambahan." },
+      { judul: "Harga & paket layanan", deskripsi: "Dibuat jelas & menarik. Transparansi harga mengurangi keraguan calon pelanggan." },
+      { judul: "Suasana tempat", deskripsi: "Tunjukkan interior yang nyaman/bersih. Kenyamanan tempat bagian dari alasan orang balik." },
+      { judul: "Cara booking / antre", deskripsi: "Jelaskan sistem janji temu biar pelanggan tidak menunggu lama. Kemudahan menjual." },
+      { judul: "Model kekinian bulan ini", deskripsi: "Tren potongan/warna yang sedang ramai. Posisikan salonmu selalu update." },
+      { judul: "Kesalahan potong rambut sendiri", deskripsi: "Bahaya potong poni sendiri, cat rumahan gagal. Relatable dan lucu." },
+      { judul: "Testimoni pelanggan", deskripsi: "Video singkat atau screenshot pujian. Bukti sosial paling kuat." },
+      { judul: "Promo hari sepi", deskripsi: "Diskon Senin\u2013Kamis untuk ratakan antrean. Jualan sekaligus atur jadwal." },
+      { judul: "Perawatan khusus (creambath, spa rambut)", deskripsi: "Pamerkan layanan yang belum semua orang tahu kamu punya." },
+      { judul: "Fakta seputar rambut", deskripsi: "\u201cRambut tumbuh ~1 cm/bulan.\u201d Fakta ringan yang menghentikan scroll." },
+      { judul: "Grooming untuk pria", deskripsi: "Tips rapikan jenggot, rawat kulit kepala. Konten khusus segmen barbershop." },
+      { judul: "Paket pengantin / acara", deskripsi: "Tawarkan makeup + hairdo untuk acara. Konten musiman bernilai tinggi." },
+      { judul: "Behind the scenes buka toko", deskripsi: "Ritual pagi sebelum pelanggan datang. Membangun kedekatan." },
+      { judul: "Q&A dengan kapster", deskripsi: "Jawab pertanyaan umum: \u201cberapa lama sekali potong?\u201d Bangun otoritas." },
+      { judul: "Koleksi hasil (portofolio)", deskripsi: "Kumpulan potongan terbaik bulan ini dalam satu carousel. Pamer skill." },
+      { judul: "Reaksi pelanggan lihat hasil", deskripsi: "Momen jujur pelanggan bercermin. Emosi asli menjual." },
+      { judul: "Layanan anak / keluarga", deskripsi: "Kalau ramah anak, tunjukkan. Menarik segmen keluarga." },
+      { judul: "Cerita awal buka salon", deskripsi: "Kisah perjalananmu. Orang mendukung usaha yang punya cerita." },
+      { judul: "Tips pilih warna rambut sesuai kulit", deskripsi: "Panduan singkat yang layak disimpan pelanggan." },
+      { judul: "Jam ramai & saran datang", deskripsi: "Kasih tahu jam sepi biar pelanggan bisa santai. Perhatian kecil yang dihargai." },
+    ],
+    contohCaption: [
+      { judul: "Transformasi", teks: "Dari begini\u2026 jadi begini. \u2702\ufe0f\u2728\n\nGeser untuk lihat transformasinya. \u27a1\ufe0f\n\nPotongan yang tepat bisa bikin wajah kelihatan lebih fresh tanpa perlu ubah apa pun. \ud83d\ude0e\n\nBooking slot-mu: [nomor WA]\n\n#barbershop #potongrambut #haircut" },
+      { judul: "Rekomendasi model", teks: "Bingung mau potong model apa? \ud83e\udd14\n\nWajah bulat \u2192 potongan berlayer, tambah volume di atas\nWajah kotak \u2192 sisi lebih pendek, softening di rahang\nWajah oval \u2192 hampir semua model cocok (kamu beruntung \ud83d\ude04)\n\nDatang aja, biar kami bantu pilih yang paling pas. \u2728\n\n#tipsrambut #salon" },
+      { judul: "Promo hari sepi", teks: "Senin\u2013Kamis males keluar? Justru waktu terbaik. \ud83d\ude09\n\nDiskon 20% khusus hari kerja \u2014 tanpa antre, dilayani santai, hasil tetap maksimal.\n\nWeekend biar buat yang sibuk. Kamu yang santai, dapat harga santai juga. \u2702\ufe0f\n\n#promopotongrambut #barbershopmakassar" },
+      { judul: "Rawat hasil", teks: "Baru catok/smoothing? Jangan langsung keramas 3 hari ya! \ud83d\udeab\ud83d\udca7\n\n\u2705 Tidur dengan rambut lurus tergerai\n\u2705 Hindari ikat terlalu kencang\n\u2705 Pakai sampo khusus rambut treatment\n\nHasil bagus itu 50% di kami, 50% di perawatanmu di rumah. \ud83d\ude4c\n\n#tipsrambut #smoothing" },
+      { judul: "Testimoni", teks: "\u201cUdah 3 tahun potong di sini, gak mau pindah \ud83d\ude4f\u201d\n\nPelanggan setia seperti ini alasan kami tetap semangat tiap hari. Terima kasih sudah percaya! \u2728\n\nBelum pernah ke sini? Yuk, buktikan sendiri. \ud83d\ude0a\n\n#testimoni #barbershopterbaik" },
+    ],
+    },
+
+  // ============================================================
+  // 5. BENGKEL MOTOR
+  // ============================================================
+  {
+    slug: "bengkel-motor",
+    nama: "Bengkel Motor",
+    metaTitle:
+      "25 Ide Konten Instagram untuk Bengkel Motor (Contoh Caption Siap Pakai)",
+    metaDescription:
+      "Bingung posting apa untuk bengkel motor? 25 ide konten Instagram + 5 contoh caption siap pakai. Gratis, tinggal sesuaikan dengan bengkelmu.",
+    intro: [
+      "Bengkel motor jarang dianggap \u201cInstagramable\u201d \u2014 padahal justru di sinilah kepercayaan dibangun. Pemilik motor ingin tahu bengkel mana yang jujur, tidak asal ganti part, dan paham mesin. Konten adalah cara membuktikannya sebelum mereka datang.",
+      "Kamu tidak perlu jago fotografi. Cukup HP dan pengetahuan yang sudah kamu punya tiap hari. Daftar di bawah membantu mengubah keahlianmu jadi konten yang menarik pelanggan baru.",
+    ],
+    ideKonten: [
+      { judul: "Tanda-tanda motor perlu servis", deskripsi: "Suara aneh, tarikan berat, boros bensin. Edukasi yang bikin orang cek motornya \u2014 lalu datang." },
+      { judul: "Sebelum\u2013sesudah (part kotor vs baru)", deskripsi: "Foto busi/filter/rantai sebelum & sesudah. Bukti visual kenapa servis rutin penting." },
+      { judul: "Jadwal servis berkala", deskripsi: "\u201cGanti oli tiap 2.000 km.\u201d Konten yang sering disimpan pemilik motor." },
+      { judul: "Cara rawat motor sendiri", deskripsi: "Cek angin ban, panasin motor, bersihkan rantai. Give-value membangun kepercayaan." },
+      { judul: "Mitos vs fakta otomotif", deskripsi: "\u201cOli mahal pasti lebih bagus?\u201d Jawab jujur berdasarkan pengalaman. Posisikan diri sebagai ahli." },
+      { judul: "Kenalkan mekanik", deskripsi: "Foto & spesialisasi tiap mekanik. Pelanggan lebih percaya bengkel yang orangnya dikenal." },
+      { judul: "Beda oli & fungsinya", deskripsi: "Jelaskan kode oli (10W-40 dll) sederhana. Edukasi yang jarang dijelaskan bengkel lain." },
+      { judul: "Layanan yang tersedia", deskripsi: "Servis, ganti part, cuci steam, modif ringan. Banyak orang tidak tahu kamu melayani semua." },
+      { judul: "Harga jasa transparan", deskripsi: "Kisaran biaya servis rutin. Transparansi = pembeda dari bengkel \u201cnakal\u201d." },
+      { judul: "Kesalahan pemilik motor", deskripsi: "Telat ganti oli, isi bensin salah oktan. Selamatkan pelanggan dari kerusakan." },
+      { judul: "Behind the scenes perbaikan", deskripsi: "Video singkat bongkar mesin & pasang lagi. Proses menunjukkan keahlian." },
+      { judul: "Testimoni pelanggan", deskripsi: "Screenshot/video pelanggan puas. Terutama kasus motor yang tadinya rewel jadi normal." },
+      { judul: "Part asli vs KW", deskripsi: "Cara bedakan part orisinal. Edukasi yang membangun kepercayaan besar." },
+      { judul: "Tips hemat bensin", deskripsi: "Kebiasaan berkendara yang irit. Konten relatable untuk semua pemilik motor." },
+      { judul: "Promo servis paketan", deskripsi: "Ganti oli + servis ringan harga khusus. Jualan sekaligus kasih nilai." },
+      { judul: "Cerita kasus unik", deskripsi: "Motor dengan masalah aneh yang berhasil diperbaiki. Bercerita = engagement." },
+      { judul: "Persiapan motor untuk mudik", deskripsi: "Checklist sebelum perjalanan jauh. Konten musiman bernilai tinggi." },
+      { judul: "Cara pilih ban sesuai kebutuhan", deskripsi: "Ban harian vs touring vs basah. Panduan yang membantu keputusan beli." },
+      { judul: "Fakta menarik mesin motor", deskripsi: "\u201cMesin dingin lebih boros saat pertama nyala.\u201d Fakta yang menghentikan scroll." },
+      { judul: "Q&A seputar motor", deskripsi: "Kumpulkan pertanyaan pelanggan, jawab dalam satu post. Bangun otoritas." },
+      { judul: "Jam buka & antre", deskripsi: "Jam sepi biar servis cepat. Informasi kecil yang dihargai." },
+      { judul: "Steam / cuci motor", deskripsi: "Kalau ada layanan cuci, pamerkan hasil kinclong. Sebelum\u2013sesudah selalu menang." },
+      { judul: "Alat & peralatan bengkel", deskripsi: "Tunjukkan alat lengkap/modern. Membangun kesan bengkel serius." },
+      { judul: "Cerita awal buka bengkel", deskripsi: "Perjalananmu dari nol. Orang mendukung usaha yang punya kisah." },
+      { judul: "Checklist beli motor bekas", deskripsi: "Yang wajib dicek sebelum beli motkas. Give-value yang layak disimpan." },
+    ],
+    contohCaption: [
+      { judul: "Edukasi tanda servis", teks: "Motor mulai bunyi \u201ckasar\u201d pas digas? Jangan diabaikan. \ud83d\udee0\ufe0f\n\nBiasanya tanda: oli sudah waktunya ganti, atau rantai minta perhatian. Dibiarkan = kerusakan makin mahal.\n\nMampir, kami cek gratis dulu sebelum kamu putuskan. \ud83d\udc4d\n\n#bengkelmotor #servismotor #tipsmotor" },
+      { judul: "Sebelum\u2013sesudah part", teks: "Ini busi motor pelanggan tadi. Geser lihat yang baru. \u27a1\ufe0f\n\nHitam kerak vs bersih \u2014 bedanya berasa langsung di tarikan & irit bensin.\n\nKapan terakhir cek businya? \ud83e\udd14\n\n#businmotor #servisberkala #bengkelterdekat" },
+      { judul: "Transparansi harga", teks: "Takut ke bengkel karena biaya \u201cngambang\u201d? Di sini enggak. \ud83d\udcb0\n\nServis rutin: mulai Rp[isi]\nGanti oli: mulai Rp[isi]\nCek diagnosa: GRATIS\n\nKami kasih tahu dulu apa yang rusak & biayanya, baru dikerjakan. Tanpa kejutan. \ud83e\udd1d\n\n#bengkeljujur #servismotor" },
+      { judul: "Give value", teks: "3 hal yang bikin motormu cepat rusak (tanpa sadar): \ud83c\udfcd\ufe0f\n\n1\ufe0f\u20e3 Telat ganti oli \u2014 mesin \u201ckering\u201d, gesekan naik\n2\ufe0f\u20e3 Ban kurang angin \u2014 boros bensin + ban cepat botak\n3\ufe0f\u20e3 Jarang panasin \u2014 oli belum naik, langsung digas kencang\n\nSave dulu, ingatkan dirimu nanti. \ud83d\udccc\n\n#tipsmotor #rawatmotor" },
+      { judul: "Testimoni", teks: "\u201cMotor yang bengkel lain bilang harus turun mesin, di sini beres cuma ganti [part] \ud83d\ude4f\u201d\n\nKami cek dulu akar masalahnya, bukan asal ganti yang mahal. Terima kasih sudah percaya! \ud83d\udee0\ufe0f\n\n#testimoni #bengkelterpercaya" },
+    ],
+    },
+
+  // ============================================================
+  // 6. OLSHOP FASHION
+  // ============================================================
+  {
+    slug: "olshop-fashion",
+    nama: "Olshop Fashion",
+    metaTitle:
+      "25 Ide Konten Instagram untuk Olshop Fashion (Contoh Caption Siap Pakai)",
+    metaDescription:
+      "Kehabisan ide konten untuk olshop baju? 25 ide Instagram + 5 caption siap pakai. Gratis, tinggal sesuaikan dengan tokomu.",
+    intro: [
+      "Olshop fashion bersaing di feed yang penuh sesak \u2014 ratusan toko menjual barang mirip. Yang membedakan bukan produknya saja, tapi bagaimana kamu menampilkannya dan membangun karakter toko yang diingat.",
+      "Foto produk polos saja tidak cukup lagi. Daftar di bawah memberi 25 sudut konten supaya feed-mu punya kepribadian, membangun kepercayaan, dan mengubah penonton jadi pembeli.",
+    ],
+    ideKonten: [
+      { judul: "Outfit of the day (OOTD)", deskripsi: "Pakai produkmu di kehidupan nyata. Orang beli \u201ctampilan\u201d, bukan cuma baju di hanger." },
+      { judul: "Mix & match satu item", deskripsi: "Satu kemeja, 3 gaya berbeda. Tunjukkan produk serbaguna \u2014 nilai lebih untuk pembeli." },
+      { judul: "Detail bahan (close-up)", deskripsi: "Zoom tekstur kain, jahitan, kancing. Menjawab kekhawatiran \u201ckualitasnya gimana?\u201d" },
+      { judul: "Restock item favorit", deskripsi: "\u201cReady lagi!\u201d untuk barang yang sempat habis. Ciptakan urgensi jujur." },
+      { judul: "Panduan ukuran (size chart)", deskripsi: "Cara ukur badan sendiri. Kurangi salah beli & retur \u2014 sekaligus konten berguna." },
+      { judul: "Behind the scenes packing", deskripsi: "Proses bungkus pesanan yang rapi. Bikin calon pembeli yakin barang sampai aman." },
+      { judul: "Testimoni & foto pelanggan", deskripsi: "Repost pembeli yang pakai produkmu (izin dulu). Bukti sosial paling meyakinkan." },
+      { judul: "Tips padu-padan warna", deskripsi: "Warna apa cocok dengan apa. Give-value yang bikin follow walau belum beli." },
+      { judul: "New arrival", deskripsi: "Koleksi baru dengan foto menarik. Beri alasan pelanggan lama cek feed-mu terus." },
+      { judul: "Cara rawat baju biar awet", deskripsi: "Cuci/simpan bahan tertentu. Menunjukkan kamu peduli setelah barang terjual." },
+      { judul: "Flash sale / promo terbatas", deskripsi: "Diskon waktu terbatas. Urgensi mendorong keputusan cepat." },
+      { judul: "Rekomendasi outfit per acara", deskripsi: "\u201cOOTD kondangan\u201d, \u201coutfit kerja\u201d. Bantu pembeli membayangkan pemakaian." },
+      { judul: "Kesalahan padu-padan umum", deskripsi: "Yang bikin outfit terlihat \u201cnggak nyambung\u201d. Edukasi ringan & relatable." },
+      { judul: "Kenalkan pemilik / tim", deskripsi: "Wajah di balik toko. Olshop dengan orang nyata lebih dipercaya daripada akun anonim." },
+      { judul: "Bandingkan model / warna", deskripsi: "\u201cTim hitam atau tim krem?\u201d Ajak pembeli memilih lewat polling story." },
+      { judul: "Tren fashion terkini", deskripsi: "Gaya yang sedang naik. Posisikan tokomu selalu update." },
+      { judul: "Paket / bundling hemat", deskripsi: "Beli 2 lebih murah, set atasan+bawahan. Naikkan nilai per transaksi." },
+      { judul: "Proses dari supplier ke toko", deskripsi: "Kalau produksi/kurasi sendiri, ceritakan. Membangun nilai & keaslian." },
+      { judul: "Fakta / tips fashion", deskripsi: "\u201cWarna netral itu investasi lemari.\u201d Konten yang layak disimpan." },
+      { judul: "Q&A seputar produk", deskripsi: "\u201cBahannya panas nggak?\u201d Kumpulkan & jawab dalam satu post. Kurangi DM berulang." },
+      { judul: "Cara order & pembayaran", deskripsi: "Langkah belanja dibuat jelas & mudah. Kurangi calon pembeli yang bingung lalu kabur." },
+      { judul: "Koleksi best seller", deskripsi: "Produk paling laku bulan ini. Social proof + bantu pembeli baru memilih." },
+      { judul: "Konten musiman", deskripsi: "Koleksi Lebaran, outfit tahun baru, seragam keluarga. Manfaatkan momen belanja." },
+      { judul: "Cerita awal buka olshop", deskripsi: "Kisah mulai dari nol / kamar kos. Perjalanan membangun kedekatan dengan pembeli." },
+      { judul: "Styling untuk berbagai bentuk tubuh", deskripsi: "Rekomendasi potongan yang menyanjung. Konten inklusif yang dihargai & dibagikan." },
+    ],
+    contohCaption: [
+      { judul: "Mix & match", teks: "Satu kemeja, tiga gaya. \ud83d\udc55\u2728\n\n1\ufe0f\u20e3 Kancing rapi + celana bahan \u2192 ke kantor\n2\ufe0f\u20e3 Lengan digulung + jeans \u2192 hangout\n3\ufe0f\u20e3 Dipakai terbuka + inner \u2192 gaya santai\n\nBeli satu, dapat banyak tampilan. Itu baru hemat. \ud83d\ude09\n\nOrder: [link/WA]\n\n#ootd #fashionmurah #mixandmatch" },
+      { judul: "Restock urgensi", teks: "READY LAGI yang kemarin diburu! \ud83d\udd25\n\nUkuran sempat habis dalam 2 hari. Sekarang restock \u2014 tapi jumlah terbatas.\n\nYang kemarin nunggu di keranjang, ini saatnya. Jangan sampai kehabisan lagi ya. \ud83d\ude4c\n\n#restock #olshop #fashionwanita" },
+      { judul: "Detail bahan", teks: "\u201cKualitasnya gimana kak?\u201d \u2014 nih, lihat sendiri. \ud83d\udd0d\n\nBahan katun premium, adem, tidak nerawang, jahitan rapi double-stitch.\n\nKami tampilkan apa adanya. Yang datang harus sesuai yang di foto \u2014 itu prinsip kami. \ud83e\udd1d\n\n#detailproduk #olshopjujur" },
+      { judul: "Panduan ukuran", teks: "Takut salah ukuran pas belanja online? Ini triknya. \ud83d\udccf\n\nAmbil baju kesayangan yang paling pas di badan, ukur:\n\u2022 Lebar dada (dari ketiak ke ketiak)\n\u2022 Panjang baju (bahu ke bawah)\n\nCocokkan dengan size chart kami. Bingung? DM aja, kami bantu pilih. \ud83d\ude0a\n\n#sizechart #tipsbelanjaonline" },
+      { judul: "Testimoni pelanggan", teks: "Pelanggan kami pakai [produk] ke acara kemarin \ud83e\udd79\u2728\n\nLihat sendiri jatuhnya di badan \u2014 ini bukan foto model, ini pembeli asli.\n\nMakasih sudah pilih kami untuk momen spesialmu! \ud83d\ude4f\n\n#testimoni #ootdpelanggan #fashionlokal" },
+    ],
+    },
 ];
 
 // Helper untuk halaman dinamis
