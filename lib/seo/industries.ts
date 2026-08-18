@@ -557,6 +557,178 @@ export const INDUSTRIES: Industry[] = [
       { judul: "Testimoni pelanggan", teks: "Pelanggan kami pakai [produk] ke acara kemarin \ud83e\udd79\u2728\n\nLihat sendiri jatuhnya di badan \u2014 ini bukan foto model, ini pembeli asli.\n\nMakasih sudah pilih kami untuk momen spesialmu! \ud83d\ude4f\n\n#testimoni #ootdpelanggan #fashionlokal" },
     ],
     },
+    // ============================================================
+  // PET SHOP
+  // Cara pakai: SALIN seluruh blok objek di bawah ini (dari `{` sampai `},`)
+  // lalu TEMPEL ke dalam array INDUSTRIES di lib/seo/industries.ts —
+  // taruh SEBELUM tanda `];` yang menutup array. JANGAN menimpa seluruh file.
+  // ============================================================
+  {
+    slug: "pet-shop",
+    nama: "Pet Shop",
+    metaTitle:
+      "25 Ide Konten Instagram untuk Pet Shop (Contoh Caption Siap Pakai)",
+    metaDescription:
+      "Bingung mau posting apa untuk pet shop? 25 ide konten Instagram + 5 contoh caption siap pakai. Gratis, tinggal disesuaikan dengan tokomu.",
+    intro: [
+      "Pet shop punya modal konten yang tidak dimiliki bisnis lain: setiap hari ada hewan lucu di depan mata. Anjing yang baru grooming, kucing yang tidur di rak makanan, pelanggan yang gemas milih mainan \u2014 semuanya berhenti jempol orang saat scroll.",
+      "Masalahnya, sibuk ngurus hewan seharian bikin nggak sempat mikir caption. Daftar di bawah ini dibuat supaya kamu tinggal pilih satu ide, foto seadanya pakai HP, dan posting hari itu juga \u2014 tanpa pusing.",
+    ],
+    ideKonten: [
+      {
+        judul: "Sebelum\u2013sesudah grooming",
+        deskripsi:
+          "Foto anjing/kucing sebelum dan sesudah dimandikan atau dicukur. Konten transformasi paling gampang viral dan paling sering dibagikan.",
+      },
+      {
+        judul: "Produk baru datang",
+        deskripsi:
+          "Makanan, mainan, atau aksesori baru yang baru masuk. Pelanggan tetap suka tahu stok terbaru sebelum kehabisan.",
+      },
+      {
+        judul: "Tips merawat hewan",
+        deskripsi:
+          "Cara memandikan kucing yang takut air, seberapa sering anjing perlu grooming. Konten edukasi yang paling banyak disimpan orang.",
+      },
+      {
+        judul: "Rekomendasi makanan sesuai usia",
+        deskripsi:
+          "Makanan untuk anak kucing beda dengan kucing dewasa. Bantu pelanggan memilih, mereka akan balik ke tokomu untuk tanya lagi.",
+      },
+      {
+        judul: "Hewan pelanggan yang mampir",
+        deskripsi:
+          "Minta izin foto hewan pelanggan yang lagi belanja atau grooming. Bukti nyata toko ramai lebih meyakinkan daripada iklan.",
+      },
+      {
+        judul: "Mitos vs fakta soal hewan",
+        deskripsi:
+          "\u201cKucing nggak boleh mandi?\u201d, \u201cAnjing makan tulang ayam aman?\u201d Jawab jujur berdasarkan pengalamanmu. Konten ini memicu banyak komentar.",
+      },
+      {
+        judul: "Tanda hewan sakit yang perlu diwaspadai",
+        deskripsi:
+          "Gejala umum yang pemilik sering telat sadar. Konten yang menyelamatkan hewan sekaligus bikin tokomu dipercaya.",
+      },
+      {
+        judul: "Kenalkan tim toko",
+        deskripsi:
+          "Foto groomer atau kasir yang biasa melayani. Pelanggan lebih nyaman ke toko yang orangnya mereka kenal.",
+      },
+      {
+        judul: "Proses grooming di balik layar",
+        deskripsi:
+          "Rekam pendek proses mandi\u2013keringkan\u2013cukur. Orang suka melihat hewan mereka ditangani dengan telaten.",
+      },
+      {
+        judul: "Perbandingan dua merek makanan",
+        deskripsi:
+          "Merek A vs merek B \u2014 beda harga, beda kandungan. Pelanggan suka konten yang membantu mereka memilih.",
+      },
+      {
+        judul: "Adopsi / cari rumah baru",
+        deskripsi:
+          "Kalau kamu bantu penyaluran hewan, posting yang cari adopter. Konten bermakna yang sering dibagikan ulang.",
+      },
+      {
+        judul: "Aksesori lucu minggu ini",
+        deskripsi:
+          "Baju, kalung, atau bandana baru. Pakaikan ke hewan display atau hewan pelanggan (izin dulu) untuk foto yang menggemaskan.",
+      },
+      {
+        judul: "Jadwal vaksin & obat cacing",
+        deskripsi:
+          "Ingatkan pemilik soal jadwal rutin. Konten pengingat begini bikin tokomu terasa peduli, bukan cuma jualan.",
+      },
+      {
+        judul: "Kesalahan umum pemilik baru",
+        deskripsi:
+          "Salah kasih makan, kandang terlalu sempit, telat steril. Kamu lebih tahu ini daripada pemilik pemula.",
+      },
+      {
+        judul: "Hewan display toko",
+        deskripsi:
+          "Kalau ada kucing/anjing toko, jadikan maskot. Update tingkahnya rutin \u2014 pelanggan bisa datang cuma buat lihat dia.",
+      },
+      {
+        judul: "Tebak jenis / ras hewan",
+        deskripsi:
+          "\u201cKira-kira ini ras apa?\u201d Ajak komentar. Algoritma suka interaksi, kamu dapat engagement gratis.",
+      },
+      {
+        judul: "Testimoni pelanggan",
+        deskripsi:
+          "Screenshot chat pelanggan yang puas dengan grooming atau produk (sensor nomornya). Sederhana tapi paling dipercaya.",
+      },
+      {
+        judul: "Paket hemat / bundling",
+        deskripsi:
+          "Makanan + vitamin + mainan dalam satu paket. Tunjukkan hitungan hematnya biar pelanggan tergerak.",
+      },
+      {
+        judul: "Cara memilih kandang yang tepat",
+        deskripsi:
+          "Ukuran kandang sesuai jenis dan berat hewan. Konten panduan yang bikin pelanggan tanya lebih lanjut.",
+      },
+      {
+        judul: "Momen lucu di toko",
+        deskripsi:
+          "Hewan yang tingkahnya menggemaskan atau kocak. Konten ringan yang bikin orang senyum dan follow.",
+      },
+      {
+        judul: "Cerita berdirinya toko",
+        deskripsi:
+          "Sekali-sekali cerita kenapa kamu buka pet shop. Konten personal biasanya engagement-nya paling tinggi.",
+      },
+      {
+        judul: "Promo grooming hari sepi",
+        deskripsi:
+          "Diskon grooming di hari yang biasanya sepi (misal Senin\u2013Selasa). Bikin jadwal groomer lebih merata.",
+      },
+      {
+        judul: "Q&A seputar hewan",
+        deskripsi:
+          "Buka sesi tanya-jawab di story, kumpulkan pertanyaan, jawab jadi satu post. Konten yang relevan langsung dari pelanggan.",
+      },
+      {
+        judul: "Perawatan sesuai musim",
+        deskripsi:
+          "Tips saat musim hujan (jamur kulit) atau musim panas (hidrasi). Konten yang selalu relevan sepanjang tahun.",
+      },
+      {
+        judul: "Hewan yang baru diadopsi pelanggan",
+        deskripsi:
+          "Follow up hewan yang produk/perlengkapannya beli di tempatmu. Tunjukkan mereka tumbuh sehat \u2014 bukti kualitas tokomu.",
+      },
+    ],
+    contohCaption: [
+      {
+        judul: "Caption sebelum\u2013sesudah grooming",
+        teks:
+          "Dari kusut jadi menggemaskan dalam 45 menit. \u2728\n\nGrooming bukan cuma soal tampilan \u2014 bulu bersih bikin hewan lebih sehat dan nyaman. Mau jadwalkan si anabul? Chat kami buat pesan slot minggu ini. \ud83d\udc3e\n\n#petshop #groominghewan #anabul",
+      },
+      {
+        judul: "Caption produk baru",
+        teks:
+          "Stok makanan baru datang pagi ini \u2014 termasuk varian buat kucing yang susah makan. \ud83d\ude3a\n\nYang anabulnya lagi picky, mampir atau chat dulu buat cek rekomendasi sesuai usianya. Stok terbatas ya!",
+      },
+      {
+        judul: "Caption edukasi",
+        teks:
+          "\u201cKucing nggak boleh mandi\u201d \u2014 ini mitos yang sering bikin bulu kucing malah bermasalah. \ud83d\udc31\n\nFaktanya: kucing boleh mandi, asal pakai sampo khusus dan tidak terlalu sering. Simpan post ini, dan kalau ragu, bawa ke kami \u2014 dimandikan aman sama groomer.",
+      },
+      {
+        judul: "Caption promo hari sepi",
+        teks:
+          "Senin\u2013Selasa grooming lagi santai, jadwal masih longgar. \ud83d\ude0c\n\nKhusus dua hari itu ada harga spesial buat mandi + potong kuku. Pas buat yang nggak mau antre. Booking dulu biar kebagian slot.",
+      },
+      {
+        judul: "Caption interaksi",
+        teks:
+          "Tebak-tebakan sore: kira-kira anabul di foto ini ras apa? \ud83d\udc47\n\nJawab di komentar \u2014 yang paling tepat besok kami kasih tahu jawabannya (dan mungkin ada kejutan kecil buat anabulmu \ud83d\udc40).",
+      },
+    ],
+  },
 ];
 
 // Helper untuk halaman dinamis
