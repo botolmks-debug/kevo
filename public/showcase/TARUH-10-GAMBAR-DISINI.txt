@@ -1,0 +1,10 @@
+Taruh sampai 10 gambar hasil TERBAIK di folder ini, nama:
+  1.png, 2.png, 3.png, ... sampai 10.png
+
+- 4 gambar tampil sekaligus (grid 2x2), berganti otomatis dengan fade.
+- Tidak ada gambar kembar tampil bersamaan.
+- Urutan mengikuti nomor file (1,2,3,...).
+- Boleh kurang dari 10 (minimal 4 supaya ada rotasi; kalau pas 4, diam tanpa rotasi).
+
+Kalau nama/jumlah beda, sesuaikan array POOL di components/SignupProof.tsx.
+Hapus file .txt ini setelah selesai.

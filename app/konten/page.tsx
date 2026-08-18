@@ -1,6 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import * as htmlToImage from "html-to-image";
+import { createClient } from "@/lib/supabase/client";
+import { isAdmin } from "@/lib/supabase/tokens";
+import { DomEditor } from "@/components/editor/DomEditor";
 import { Header } from "@/components/ui/Header";
 import { LogoSettings } from "@/app/dashboard/LogoSettings";
 import { Card } from "@/components/ui/Card";
@@ -60,6 +64,14 @@ export default function KontenPage() {
   // false = mode edit cepat (Konva, ringan, default). true = render Satori asli
   // (akurat) — HANYA saat user klik "Lihat hasil asli". Tidak dirender saat buka.
   const [previewMode, setPreviewMode] = useState(false);
+  // Uji coba editor DOM satu-mesin — KHUSUS admin (botolmks@gmail.com).
+  const [isAdminUser, setIsAdminUser] = useState(false);
+  const [domMode, setDomMode] = useState(false);
+  const domRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data }) => setIsAdminUser(isAdmin(data.user?.email)));
+  }, []);
   const [editTemplateId, setEditTemplateId] = useState<ContentLayoutState["templateId"]>("polos");
   const [editBgColor, setEditBgColor] = useState<string | undefined>(undefined);
   const [editDescCount, setEditDescCount] = useState<number | undefined>(undefined);
@@ -167,12 +179,22 @@ export default function KontenPage() {
       if (logoData) renderTpl = { ...editTemplate, brand: { ...editTemplate.brand, logoUrl: logoData } };
     }
     try {
-      const res = await fetch("/api/render", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildRenderInput(renderTpl, renderValues, selected.ratio)),
-      });
-      if (!res.ok) { const d = await res.json().catch(() => null); throw new Error(d?.error ?? "Gagal merender."); }
-      const blob = await res.blob();
+      let blob: Blob;
+      if (domMode && domRef.current) {
+        // EDITOR DOM: potret elemen yang diedit → PNG (edit = hasil, identik).
+        await document.fonts.ready;
+        const pr = editTemplate.layouts[selected.ratio].canvas.width / 340;
+        const b = await htmlToImage.toBlob(domRef.current, { pixelRatio: pr, cacheBust: true });
+        if (!b) throw new Error("Gagal memotret editor DOM.");
+        blob = b;
+      } else {
+        const res = await fetch("/api/render", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(buildRenderInput(renderTpl, renderValues, selected.ratio)),
+        });
+        if (!res.ok) { const d = await res.json().catch(() => null); throw new Error(d?.error ?? "Gagal merender."); }
+        blob = await res.blob();
+      }
       downloadBlob(blob, `kevo-${selected.jenis}-${selected.id}.png`);
       const { photo: _photo, ...textValues } = editValues;
       const layoutState = {
@@ -269,7 +291,6 @@ export default function KontenPage() {
     activeLogo,
   );
   const editTemplate = selected ? applyEditorOverrides(templateBase, selected.ratio, overrides) : null;
-  // Ghost = render Satori asli sebagai preview akurat. enabled hanya saat
   // previewMode → tidak ada render saat mode edit cepat (bebas lag).
   const { url: ghostUrl, rendering: ghostRendering } = useLiveRender(editTemplate, editValues, selected?.ratio ?? "4:5", !!selected && previewMode);
 
@@ -290,6 +311,27 @@ export default function KontenPage() {
               </h2>
               <button type="button" onClick={() => setSelected(null)} className="text-xs text-navy/50 hover:text-navy">✕ Tutup</button>
             </div>
+            {isAdminUser && (
+              <button
+                type="button"
+                onClick={() => setDomMode((v) => !v)}
+                className={`self-start rounded-full px-3 py-1 text-xs font-bold ${domMode ? "bg-primary text-white" : "border border-primary text-primary"}`}
+              >
+                {domMode ? "● Editor DOM (uji) — AKTIF" : "○ Coba Editor DOM (uji)"}
+              </button>
+            )}
+            {domMode ? (
+              <DomEditor
+                layout={editTemplate.layouts[selected.ratio]}
+                values={editValues}
+                overrides={overrides}
+                onOverridesChange={setOverrides}
+                onTextChange={(slotId, value) => setEditValues((v) => ({ ...v, [slotId]: value }))}
+                photo={editValues.photo ?? null}
+                logoUrl={activeLogo?.url ?? null}
+                exportRef={domRef}
+              />
+            ) : (
             <div className="mx-auto">
               <div className="mb-1.5 flex items-center justify-between gap-2">
                 <p className="text-xs font-medium text-navy/50">
@@ -327,6 +369,7 @@ export default function KontenPage() {
                 <p className="mt-1 text-center text-[11px] text-navy/40">merender hasil asli…</p>
               ) : null}
             </div>
+            )}
             <Textarea label="Caption" value={selected.caption} readOnly />
             <label className="flex flex-wrap items-center gap-2 text-sm">
               <span className="font-medium text-navy/70">Jadwal posting</span>

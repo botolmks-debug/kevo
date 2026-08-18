@@ -137,6 +137,13 @@ export default function CobaPage() {
       setTitleError("");
       setTitleXY({ x: 0.5, y: 0.82 });
       setStep("result");
+
+      // Meta Pixel: catat LEAD saat pengunjung berhasil generate konten demo.
+      // Inilah "aksi bernilai" yang dipakai Meta untuk optimasi iklan —
+      // mencari orang yang benar-benar mencoba, bukan sekadar mendarat.
+      if (typeof window !== "undefined" && typeof window.fbq === "function") {
+        window.fbq("track", "Lead", { content_name: "demo_coba" });
+      }
     } catch {
       clearInterval(timer);
       setGenError("Ada kendala saat membuat konten. Coba sekali lagi ya.");
@@ -552,7 +559,7 @@ export default function CobaPage() {
                 Ini baru sebagian kecilnya
               </p>
               <p className="text-white/90 text-sm mt-1.5">
-                Daftar Sekarang
+                Daftar gratis untuk buka semua: ganti gaya & template, atur posisi teks, jadwal posting otomatis, dan 5 konten gratis lagi.
               </p>
               <a
                 href={`/signup?email=${encodeURIComponent(email.trim().toLowerCase())}`}

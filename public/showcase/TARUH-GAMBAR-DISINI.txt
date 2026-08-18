@@ -1,0 +1,10 @@
+Taruh 4 gambar hasil TERBAIK kamu di folder ini dengan nama:
+  1.png
+  2.png
+  3.png
+  4.png
+
+(boleh .jpg juga, tapi ganti juga nama di components/SignupProof.tsx array SHOWCASE)
+
+Rekomendasi: pilih hasil yang paling meyakinkan — produk jelas, teks rapi,
+warna bagus. INI ETALASE, jadi hanya yang terbaik. Hapus file .txt ini setelah selesai.

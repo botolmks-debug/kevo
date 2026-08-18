@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { AuthBackground } from "@/components/ui/AuthBackground";
+import { SignupProof } from "@/components/SignupProof";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -67,38 +68,43 @@ export default function SignupPage() {
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 py-12">
       <AuthBackground />
-      <Card className="relative z-10 w-full max-w-sm">
-        <div className="mb-6 flex flex-col items-center gap-2">
-          {/* Logo Keposting */}
-          <div className="flex items-center gap-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/keposty-icon.png" alt="Keposting" className="h-10 w-10" />
-            <span className="text-2xl font-bold text-navy">Keposting</span>
+      <div className="relative z-10 grid w-full max-w-5xl items-center gap-8 md:grid-cols-[3fr_2fr]">
+        {/* KIRI: bukti sosial (di HP muncul di atas form) */}
+        <SignupProof />
+
+        {/* KANAN: form daftar — logika TIDAK diubah */}
+        <Card className="w-full max-w-sm justify-self-center md:justify-self-end">
+          <div className="mb-6 flex flex-col items-center gap-2">
+            <div className="flex items-center gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/keposty-icon.png" alt="Keposting" className="h-10 w-10" />
+              <span className="text-2xl font-bold text-navy">Keposting</span>
+            </div>
+            <h1 className="text-2xl font-bold text-navy">Buat akun</h1>
+            <p className="text-sm text-navy/60">Mulai bikin konten harianmu ✨</p>
           </div>
-          <h1 className="text-2xl font-bold text-navy">Buat akun</h1>
-          <p className="text-sm text-navy/60">Mulai bikin konten harianmu ✨</p>
-        </div>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSignup();
-          }}
-          className="flex flex-col gap-4"
-        >
-          <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="kamu@email.com" />
-          <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="minimal 6 karakter" />
-          {error && <p className="text-sm text-red-500">{error}</p>}
-          <Button type="submit" disabled={loading || !email || !password} className="w-full">
-            {loading ? "Memproses..." : "Daftar"}
-          </Button>
-        </form>
-        <p className="mt-5 text-center text-sm text-navy/60">
-          Sudah punya akun?{" "}
-          <Link href="/login" className="font-semibold text-primary hover:underline">
-            Masuk
-          </Link>
-        </p>
-      </Card>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSignup();
+            }}
+            className="flex flex-col gap-4"
+          >
+            <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="kamu@email.com" />
+            <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="minimal 6 karakter" />
+            {error && <p className="text-sm text-red-500">{error}</p>}
+            <Button type="submit" disabled={loading || !email || !password} className="w-full">
+              {loading ? "Memproses..." : "Daftar"}
+            </Button>
+          </form>
+          <p className="mt-5 text-center text-sm text-navy/60">
+            Sudah punya akun?{" "}
+            <Link href="/login" className="font-semibold text-primary hover:underline">
+              Masuk
+            </Link>
+          </p>
+        </Card>
+      </div>
     </main>
   );
 }
