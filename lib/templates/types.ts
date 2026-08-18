@@ -45,7 +45,7 @@ export type Slot = TextSlot | ImageSlot;
 
 export type FooterSocial = { platformId: string; value: string };
 
-export type LogoLayout = { x: number; y: number; size: number };
+export type LogoLayout = { x: number; y: number; size: number; opacity?: number };
 
 export type SocialFooterLayout = {
   x: number;

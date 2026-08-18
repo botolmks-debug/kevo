@@ -154,7 +154,9 @@ function buildLayoutAt(height: number, xPct: number, yPct: number): TemplateLayo
 
   return {
     canvas: { width: 1080, height },
-    logo: { x: 992, y: 40, size: 36 },
+    // Logo Keposting sebagai WATERMARK di kanan bawah, opacity rendah.
+    // Kalau hasil demo di-share, logo ikut tersebar (promosi organik).
+    logo: { x: 964, y: height - 108, size: 68, opacity: 0.4 },
     footerLayout: {
       x: 60, y: footerY, direction: "row", gap: 18, iconSize: 42,
       textSize: 26, textColor: "#e2e8f0", nameColor: "#ffffff",

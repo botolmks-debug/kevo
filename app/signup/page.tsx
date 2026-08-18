@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { AuthBackground } from "@/components/ui/AuthBackground";
 import { SignupProof } from "@/components/SignupProof";
+import { GoogleAuthButton } from "@/components/GoogleAuthButton";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -75,14 +76,23 @@ export default function SignupPage() {
         {/* KANAN: form daftar — logika TIDAK diubah */}
         <Card className="w-full max-w-sm justify-self-center md:justify-self-end">
           <div className="mb-6 flex flex-col items-center gap-2">
-            <div className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2 transition hover:opacity-80">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/keposty-icon.png" alt="Keposting" className="h-10 w-10" />
               <span className="text-2xl font-bold text-navy">Keposting</span>
-            </div>
+            </Link>
             <h1 className="text-2xl font-bold text-navy">Buat akun</h1>
             <p className="text-sm text-navy/60">Mulai bikin konten harianmu ✨</p>
           </div>
+
+          <GoogleAuthButton label="Daftar dengan Google" />
+
+          <div className="my-4 flex items-center gap-3">
+            <div className="h-px flex-1 bg-navy/10" />
+            <span className="text-xs text-navy/40">atau pakai email</span>
+            <div className="h-px flex-1 bg-navy/10" />
+          </div>
+
           <form
             onSubmit={(e) => {
               e.preventDefault();

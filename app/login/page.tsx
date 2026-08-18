@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { AuthBackground } from "@/components/ui/AuthBackground";
+import { GoogleAuthButton } from "@/components/GoogleAuthButton";
 import { getStoredLang, setLang, t, type Lang } from "@/lib/i18n";
 
 export default function LoginPage() {
@@ -127,6 +128,15 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold text-navy">{t("login.title", lang)}</h1>
           <p className="text-sm font-medium text-navy/50">{t("login.tagline", lang)}</p>
         </div>
+
+        <GoogleAuthButton label="Masuk dengan Google" />
+
+        <div className="my-4 flex items-center gap-3">
+          <div className="h-px flex-1 bg-navy/10" />
+          <span className="text-xs text-navy/40">atau pakai email</span>
+          <div className="h-px flex-1 bg-navy/10" />
+        </div>
+
         <form
           onSubmit={(e) => {
             e.preventDefault();

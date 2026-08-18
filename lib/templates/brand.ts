@@ -24,10 +24,6 @@ export const defaultBrand: Pick<Template["brand"], "logoUrl" | "footer"> = {
   logoUrl: svgToDataUri(logoSvg),
   footer: {
     text: "Keposting Demo Instansi",
-    socials: [
-      { platformId: "instagram", value: "@keposting.demo" },
-      { platformId: "whatsapp", value: "+62 812-0000-0000" },
-      { platformId: "website", value: "keposting.demo" },
-    ],
+    socials: [],
   },
 };

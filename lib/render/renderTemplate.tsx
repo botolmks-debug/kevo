@@ -460,6 +460,7 @@ export async function renderTemplate(input: RenderInput): Promise<Buffer> {
             position: "absolute",
             top: logoDraw ? logoDraw.top : logo.y,
             left: logoDraw ? logoDraw.left : logo.x,
+            opacity: logo.opacity ?? 1,
             // Kalau dimensi gambar tak terbaca (mis. format WEBP), jangan melar —
             // tetap contain seperti editor.
             ...(logoDraw ? {} : { objectFit: "contain" as const }),
