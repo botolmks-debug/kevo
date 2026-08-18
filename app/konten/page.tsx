@@ -329,6 +329,11 @@ export default function KontenPage() {
                 onTextChange={(slotId, value) => setEditValues((v) => ({ ...v, [slotId]: value }))}
                 photo={editValues.photo ?? null}
                 logoUrl={activeLogo?.url ?? null}
+                socials={footerOverride?.socials ?? []}
+                businessName={businessProfile?.business.name}
+                logoVariant={activeLogoVariant}
+                canToggleLogo={!!(logoDark && logoLight)}
+                onLogoVariantChange={(v) => setOverrides((o) => ({ ...o, logoVariant: v }))}
                 exportRef={domRef}
               />
             ) : (
