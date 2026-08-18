@@ -54,27 +54,40 @@ export async function POST(req: NextRequest) {
     }
     const email = check.email;
 
+    // Email ADMIN boleh coba /coba tanpa batas (untuk tes iklan berulang).
+    // Bisa tambah lewat env DEMO_ADMIN_EMAILS (pisah koma), default info@keposting.com.
+    const adminEmails = (process.env.DEMO_ADMIN_EMAILS || "info@keposting.com")
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+    const isAdmin = adminEmails.includes(email.toLowerCase());
+
     const db = admin();
 
     // --- 1 email = 1 percobaan (cek SEBELUM generate biar tidak boros) ---
-    const { data: existing } = await db
-      .from("demo_leads")
-      .select("id")
-      .eq("email", email)
-      .maybeSingle();
-    if (existing) {
-      return NextResponse.json({ error: "email_used" }, { status: 409 });
+    // Admin dikecualikan supaya bisa tes berkali-kali.
+    if (!isAdmin) {
+      const { data: existing } = await db
+        .from("demo_leads")
+        .select("id")
+        .eq("email", email)
+        .maybeSingle();
+      if (existing) {
+        return NextResponse.json({ error: "email_used" }, { status: 409 });
+      }
     }
 
-    // --- cap harian (rem biaya) ---
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    const { count } = await db
-      .from("demo_leads")
-      .select("id", { count: "exact", head: true })
-      .gte("created_at", startOfDay.toISOString());
-    if ((count ?? 0) >= DEMO_DAILY_CAP) {
-      return NextResponse.json({ error: "quota_full" }, { status: 429 });
+    // --- cap harian (rem biaya) — admin dikecualikan ---
+    if (!isAdmin) {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const { count } = await db
+        .from("demo_leads")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", startOfDay.toISOString());
+      if ((count ?? 0) >= DEMO_DAILY_CAP) {
+        return NextResponse.json({ error: "quota_full" }, { status: 429 });
+      }
     }
 
     // --- siapkan buffer foto ---

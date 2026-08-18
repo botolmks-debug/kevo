@@ -49,6 +49,12 @@ export async function GET(req: NextRequest) {
     // dan ketahanan (tak ada hasil yang terlewat kalau jam cron bergeser).
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
+    // Email admin (untuk tes iklan) dikecualikan dari ringkasan supaya data bersih.
+    const adminEmails = (process.env.DEMO_ADMIN_EMAILS || "info@keposting.com")
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+
     const svc = createServiceRoleClient();
     const { data, error } = await svc
       .from("demo_leads")
@@ -60,7 +66,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    const leads = (data || []) as Lead[];
+    const leads = ((data || []) as Lead[]).filter(
+      (l) => !adminEmails.includes((l.email || "").toLowerCase())
+    );
 
     // Tidak ada hasil hari ini -> tidak usah kirim email kosong.
     if (leads.length === 0) {
