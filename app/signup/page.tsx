@@ -85,14 +85,6 @@ export default function SignupPage() {
             <p className="text-sm text-navy/60">Mulai bikin konten harianmu ✨</p>
           </div>
 
-          <GoogleAuthButton label="Daftar dengan Google" />
-
-          <div className="my-4 flex items-center gap-3">
-            <div className="h-px flex-1 bg-navy/10" />
-            <span className="text-xs text-navy/40">atau pakai email</span>
-            <div className="h-px flex-1 bg-navy/10" />
-          </div>
-
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -106,6 +98,14 @@ export default function SignupPage() {
             <Button type="submit" disabled={loading || !email || !password} className="w-full">
               {loading ? "Memproses..." : "Daftar"}
             </Button>
+
+            <div className="my-1 flex items-center gap-3">
+              <div className="h-px flex-1 bg-navy/10" />
+              <span className="text-xs text-navy/40">atau</span>
+              <div className="h-px flex-1 bg-navy/10" />
+            </div>
+
+            <GoogleAuthButton label="Daftar dengan Google" />
           </form>
           <p className="mt-5 text-center text-sm text-navy/60">
             Sudah punya akun?{" "}

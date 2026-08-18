@@ -486,6 +486,20 @@ export default function CobaPage() {
                 )}
                 <div className="absolute left-0 right-0 bottom-0 h-14 pointer-events-none"
                      style={{ background: "linear-gradient(to top, rgba(0,0,0,.7), rgba(0,0,0,0))" }} />
+                {/* Logo watermark — konsisten dengan hasil final yang dikirim ke email */}
+                <img
+                  src="/Logo/logo-keposting.png"
+                  alt="Keposting"
+                  className="absolute pointer-events-none"
+                  draggable={false}
+                  style={{
+                    right: "4%",
+                    bottom: "3%",
+                    width: "28%",
+                    opacity: 0.5,
+                    filter: "drop-shadow(0 1px 2px rgba(0,0,0,.4))",
+                  }}
+                />
               </div>
 
               {/* editor JUDUL — hanya teks; posisi diatur dgn menggeser di preview */}
@@ -559,7 +573,7 @@ export default function CobaPage() {
                 Ini baru sebagian kecilnya
               </p>
               <p className="text-white/90 text-sm mt-1.5">
-                Daftar gratis untuk buka semua: ganti gaya & template, atur posisi teks, jadwal posting otomatis, dan 5 konten gratis lagi.
+                Daftar gratis untuk buka semua: ganti gaya & template, atur posisi teks, penjadwalan konten, dan 5 konten gratis lagi.
               </p>
               <a
                 href={`/signup?email=${encodeURIComponent(email.trim().toLowerCase())}`}
@@ -569,10 +583,6 @@ export default function CobaPage() {
                 Buka fitur lengkap — gratis
               </a>
             </div>
-
-            <p className="mt-5 text-center text-xs text-neutral-400">
-              Hasil yang tampil ini produk aslimu — bukan gambar AI palsu.
-            </p>
           </section>
         )}
       </div>

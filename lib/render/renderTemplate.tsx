@@ -86,6 +86,18 @@ export async function loadImageAsDataUri(
   if (url.startsWith("data:")) {
     return url;
   }
+  // 0) Path root-relative (mis. "/Logo/logo-keposting.png") = file di folder
+  //    public/. Fetch biasa tak bisa ambil ini di server, jadi baca langsung
+  //    dari filesystem.
+  if (url.startsWith("/")) {
+    try {
+      const filePath = path.join(process.cwd(), "public", url);
+      const buf = fs.readFileSync(filePath);
+      return `data:${sniffImageMime(buf)};base64,${buf.toString("base64")}`;
+    } catch {
+      // lanjut ke fetch di bawah (kalau ternyata bukan file lokal)
+    }
+  }
   // 1) Coba fetch biasa (cepat; berhasil kalau bucket/URL publik).
   try {
     const res = await fetch(url);

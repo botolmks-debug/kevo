@@ -129,14 +129,6 @@ export default function LoginPage() {
           <p className="text-sm font-medium text-navy/50">{t("login.tagline", lang)}</p>
         </div>
 
-        <GoogleAuthButton label="Masuk dengan Google" />
-
-        <div className="my-4 flex items-center gap-3">
-          <div className="h-px flex-1 bg-navy/10" />
-          <span className="text-xs text-navy/40">atau pakai email</span>
-          <div className="h-px flex-1 bg-navy/10" />
-        </div>
-
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -174,6 +166,14 @@ export default function LoginPage() {
           <Button type="submit" disabled={loading || !email || !password} className="w-full">
             {loading ? t("login.processing", lang) : t("login.submit", lang)}
           </Button>
+
+          <div className="my-1 flex items-center gap-3">
+            <div className="h-px flex-1 bg-navy/10" />
+            <span className="text-xs text-navy/40">atau</span>
+            <div className="h-px flex-1 bg-navy/10" />
+          </div>
+
+          <GoogleAuthButton label="Masuk dengan Google" />
         </form>
         <p className="mt-5 text-center text-sm text-navy/60">
           {t("login.noAccount", lang)}{" "}

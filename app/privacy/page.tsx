@@ -26,6 +26,12 @@ export default function PrivacyPage() {
               <strong>Account information</strong>: email address, password (hashed)
             </li>
             <li>
+              <strong>Google Sign-In data</strong>: if you sign in with Google, we receive your
+              name, email address, and profile picture from your Google Account. We use this
+              solely to create and identify your account. We do not access any other Google data
+              (such as Gmail, Drive, or Contacts).
+            </li>
+            <li>
               <strong>Business profile</strong>: business name, industry, location, target
               customer, and other information you provide during onboarding
             </li>

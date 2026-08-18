@@ -156,7 +156,7 @@ function buildLayoutAt(height: number, xPct: number, yPct: number): TemplateLayo
     canvas: { width: 1080, height },
     // Logo Keposting sebagai WATERMARK di kanan bawah, opacity rendah.
     // Kalau hasil demo di-share, logo ikut tersebar (promosi organik).
-    logo: { x: 964, y: height - 108, size: 68, opacity: 0.4 },
+    logo: { x: 720, y: height - 330, size: 320, opacity: 0.5 },
     footerLayout: {
       x: 60, y: footerY, direction: "row", gap: 18, iconSize: 42,
       textSize: 26, textColor: "#e2e8f0", nameColor: "#ffffff",
@@ -195,7 +195,8 @@ export function buildPolosTemplateAt(xPct: number, yPct: number): Template {
   return {
     id: "polos",
     name: "Tanpa Template",
-    brand: { ...defaultBrand, backgroundColor: "#000000" },
+    // Watermark pakai logo Keposting asli (file di public/Logo/).
+    brand: { ...defaultBrand, logoUrl: "/Logo/logo-keposting.png", backgroundColor: "#000000" },
     layouts: {
       "4:5": buildLayoutAt(1350, xPct, yPct),
       "1:1": buildLayoutAt(1080, xPct, yPct),
