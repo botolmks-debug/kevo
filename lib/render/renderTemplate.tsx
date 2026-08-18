@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import sharp from "sharp";
 import type { CSSProperties } from "react";
 import satori from "satori";
 import { Resvg } from "@resvg/resvg-js";
@@ -77,6 +78,20 @@ function sniffImageMime(buf: Buffer): string {
   return "image/jpeg";
 }
 
+// Satori/resvg HANYA bisa render PNG & JPEG — BUKAN WEBP. Gemini sering
+// mengembalikan gambar WEBP, yang membuat background jadi HITAM saat render
+// (padahal browser bisa menampilkannya, jadi preview terlihat normal).
+// Normalisasi SEMUA gambar ke PNG dulu supaya Satori selalu bisa render.
+async function bufferToImageDataUri(buf: Buffer): Promise<string> {
+  try {
+    const png = await sharp(buf).png().toBuffer();
+    return `data:image/png;base64,${png.toString("base64")}`;
+  } catch {
+    // sharp gagal (mis. bukan gambar) → pakai apa adanya
+    return `data:${sniffImageMime(buf)};base64,${buf.toString("base64")}`;
+  }
+}
+
 export async function loadImageAsDataUri(
   url: string | undefined,
 ): Promise<string | null> {
@@ -84,6 +99,15 @@ export async function loadImageAsDataUri(
     return null;
   }
   if (url.startsWith("data:")) {
+    // Sudah dataUri — tetap normalisasi ke PNG (Gemini bisa kirim WEBP).
+    const m = url.match(/^data:[^;,]*;base64,(.+)$/);
+    if (m) {
+      try {
+        return await bufferToImageDataUri(Buffer.from(m[1], "base64"));
+      } catch {
+        return url;
+      }
+    }
     return url;
   }
   // 0) Path root-relative (mis. "/Logo/logo-keposting.png") = file di folder
@@ -93,7 +117,7 @@ export async function loadImageAsDataUri(
     try {
       const filePath = path.join(process.cwd(), "public", url);
       const buf = fs.readFileSync(filePath);
-      return `data:${sniffImageMime(buf)};base64,${buf.toString("base64")}`;
+      return await bufferToImageDataUri(buf);
     } catch {
       // lanjut ke fetch di bawah (kalau ternyata bukan file lokal)
     }
@@ -103,7 +127,7 @@ export async function loadImageAsDataUri(
     const res = await fetch(url);
     if (res.ok) {
       const buf = Buffer.from(await res.arrayBuffer());
-      return `data:${sniffImageMime(buf)};base64,${buf.toString("base64")}`;
+      return await bufferToImageDataUri(buf);
     }
   } catch {
     // lanjut ke fallback di bawah
@@ -127,7 +151,7 @@ async function downloadSupabaseStorageAsDataUri(url: string): Promise<string | n
     const { data, error } = await client.storage.from(bucket).download(objectPath);
     if (error || !data) return null;
     const buf = Buffer.from(await data.arrayBuffer());
-    return `data:${sniffImageMime(buf)};base64,${buf.toString("base64")}`;
+    return await bufferToImageDataUri(buf);
   } catch {
     return null;
   }

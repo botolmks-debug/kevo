@@ -10,6 +10,9 @@ const PUBLIC_PATHS = [
   "/reset-password",
   "/coba",       // halaman demo publik (lead capture iklan/SEO) — tanpa login
   "/ide-konten", // halaman SEO publik (index + semua /ide-konten/[slug]) — tanpa login & harus bisa dirayapi Googlebot
+  "/privacy",    // kebijakan privasi — WAJIB publik (verifikasi Google OAuth + dibaca calon user)
+  "/terms",      // ketentuan layanan — WAJIB publik (verifikasi Google OAuth + dibaca calon user)
+  "/refund",     // kebijakan refund — publik (dibaca calon pembeli sebelum bayar)
 ];
 
 export async function proxy(request: NextRequest) {
