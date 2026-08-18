@@ -268,3 +268,28 @@ Remove phone watermarks / date stamps / pre-existing overlay text. Do NOT add an
 
 ${localeSceneNote(lang)}`;
 }
+/**
+ * Prompt khusus konten JASA — TIDAK mengubah foto jadi scene baru.
+ * Foto jasa (interior, hasil kerja, suasana tempat) cukup DIPOLES pencahayaannya
+ * biar enak dipandang, TANPA menata ulang / mengganti latar / memindah objek.
+ * (Sesuai masukan: untuk Jasa jangan diubah jadi sesuatu yang berbeda.)
+ */
+export function buildJasaPrompt(profile: BusinessProfile, lang?: Lang): string {
+  return `You are a professional photo retoucher. You are given a real photo from a service business (interior, workspace, a finished result, or the place itself). Your job is to make it look more pleasant WITHOUT changing what it shows.
+
+DO:
+- Improve LIGHTING & EXPOSURE: fix dark/flat/uneven light so it looks warm, clean, and inviting. Balance highlights and shadows, lift shadows gently, add natural depth.
+- Improve COLOR: correct white balance, remove ugly color casts, make colors natural and appealing (not oversaturated).
+- Gentle cleanup only: remove overlaid camera/phone watermarks, date/time stamps, model names (e.g. "REDMI Note 13"), and floating text that is NOT physically part of the scene.
+- Keep it looking like a REAL, believable photo of the SAME place/result.
+
+DO NOT (critical):
+- Do NOT replace or regenerate the background or scene.
+- Do NOT move, add, remove, resize, or restyle objects, furniture, walls, or people.
+- Do NOT change the composition, layout, or what the photo depicts.
+- Do NOT turn it into a studio/stock look. It must remain the user's own photo, just better lit.
+
+Business context (for tasteful tone only, do NOT add props): ${profile.business.industry || "-"}, ${profile.offering.mainProducts || "-"}.
+
+${localeSceneNote(lang)}`;
+}

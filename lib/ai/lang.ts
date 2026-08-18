@@ -13,7 +13,17 @@ export function outputLangDirective(lang?: Lang): string {
  * English dipilih -> orang & suasana bergaya global/internasional.
  */
 export function localeSceneNote(lang?: Lang): string {
-  return lang === "en"
-    ? "LOCALE: any people shown should have a diverse, global/international appearance (not tied to one specific ethnicity), and the environment/setting should feel broadly international — suitable for a worldwide English-speaking audience. Avoid making it look specifically Indonesian/Southeast Asian."
-    : "LOCALE: orang yang tampil (kalau ada) harus terlihat Indonesia/Asia Tenggara, dan lingkungan/suasana harus terasa khas Indonesia (arsitektur, dekorasi, konteks sehari-hari lokal) yang sesuai jenis usahanya — bukan gaya foto stok Barat/global yang generik.";
+  if (lang === "en")
+    return "LOCALE: any people shown should have a diverse, global/international appearance (not tied to one specific ethnicity), and the environment/setting should feel broadly international — suitable for a worldwide English-speaking audience. Avoid making it look specifically Indonesian/Southeast Asian.";
+
+  // Nuansa Indonesia lewat KONTEKS sehari-hari (orang, cahaya, ruang), BUKAN
+  // ornamen tradisional yang ditempel ke tiap gambar. Batik dsb hanya sesekali
+  // (~1 dari 10) supaya feed tidak terasa "batik terus".
+  const base =
+    "LOCALE: orang yang tampil (kalau ada) terlihat Indonesia/Asia Tenggara, dan suasananya terasa Indonesia lewat KONTEKS sehari-hari yang wajar (orang, ruang, cahaya hangat, benda keseharian) yang sesuai jenis usahanya — bukan gaya foto stok Barat/global yang generik.";
+  const avoidOrnament =
+    " PENTING: JANGAN menempelkan ornamen tradisional yang mencolok sebagai latar/properti (batik, wayang, ukiran, songket, tenun, gebyok) — hindari di gambar ini. Cukup nuansa Indonesia modern & sehari-hari.";
+  const allowOrnament =
+    " Boleh SESEKALI ada sentuhan ornamen tradisional halus (mis. motif batik) HANYA jika benar-benar cocok dgn jenis usahanya, tampil natural, kecil, dan tidak berlebihan.";
+  return base + (Math.random() < 0.1 ? allowOrnament : avoidOrnament);
 }

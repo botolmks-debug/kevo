@@ -29,6 +29,7 @@ import {
   buildScenePrompt,
   buildFoodPrompt,
   buildSkincarePrompt,
+  buildJasaPrompt,
 } from "@/lib/ai/scenePrompt";
 import { polosTemplate } from "@/lib/templates/polos";
 import { renderTemplate } from "@/lib/render/renderTemplate";
@@ -76,6 +77,8 @@ function imagePromptFor(
     return buildFoodPrompt(profile, description, LANG);
   if (t.includes("skincare") || t.includes("kecantikan"))
     return buildSkincarePrompt(profile, description, LANG);
+  // Jasa: jangan ubah foto jadi scene baru — cukup poles pencahayaan.
+  if (t.includes("jasa")) return buildJasaPrompt(profile, LANG);
   return buildScenePrompt(profile, undefined, LANG);
 }
 
