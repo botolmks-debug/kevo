@@ -1,21 +1,12 @@
 /**
- * GENERATE DEMO — disambung ke mesin generate ASLI.
+ * GENERATE DEMO — tanpa sharp.
  * =====================================================================
- * Alur = flow "produk" produk aslimu: EDIT foto asli pengunjung, jadi hasil
- * yang tampil BENAR-BENAR produknya (bukan gambar AI palsu). Teks (headline +
- * caption) pakai buildProdukContentPrompt + generateJsonContent yang sama.
+ * Alur: Gemini edit foto → simpan LANGSUNG ke Supabase (tanpa renderTemplate
+ * yang memanggil sharp). Overlay teks (judul) ditangani di browser (CSS),
+ * bukan di-burn ke gambar — ini yang menghilangkan ketergantungan sharp.
  *
- * Beda dengan generate-auto biasa (sengaja, karena pengunjung anonim):
- *   - tanpa login / tanpa potong token
- *   - tanpa profil bisnis lengkap -> disintesis minimal dari "tipe bisnis"
- *   - tanpa analisis foto per-gambar -> prompt gambar dipilih dari tipe bisnis
- *     (CAVEAT: caption jadi lebih generik, tak mengutip detail produk.
- *      Upgrade opsional: colok helper analisis gambarmu -> dapat description
- *      -> caption jadi spesifik. Kirim file analisisnya kalau mau ini.)
- *   - overlay pakai polosTemplate tanpa logo user (ini demo)
- *
- * PRASYARAT: buat bucket PUBLIC bernama "demo-results" di Supabase Storage
- * (Storage -> New bucket -> nama: demo-results -> centang Public).
+ * Hasilnya: URL gambar bersih (AI-edited) + caption + title → ditampilkan
+ * di halaman /coba sebagai preview interaktif (user bisa edit teks dll).
  * =====================================================================
  */
 
@@ -31,12 +22,10 @@ import {
   buildSkincarePrompt,
   buildJasaPrompt,
 } from "@/lib/ai/scenePrompt";
-import { polosTemplate } from "@/lib/templates/polos";
-import { renderTemplate } from "@/lib/render/renderTemplate";
 import type { BusinessProfile } from "@/lib/onboarding/businessProfile";
 import type { AspectRatio } from "@/lib/templates/types";
 
-const DEMO_BUCKET = "demo-results"; // WAJIB bucket PUBLIC
+const DEMO_BUCKET = "demo-results";
 const RATIO: AspectRatio = "4:5";
 const LANG = "id" as const;
 
@@ -45,15 +34,15 @@ export type DemoGenInput = {
   mimeType: string;
   businessType: string;
 };
+
 export type DemoGenResult = {
-  resultUrl: string;
-  bgUrl: string;   // background AI TANPA teks — utk preview drag di client
+  resultUrl: string;  // URL gambar Gemini (tanpa overlay teks)
+  bgUrl: string;      // sama dengan resultUrl (untuk kompatibilitas)
   caption: string;
-  title: string;   // judul yang ditempel di gambar (onImageText) — bisa diedit user
-  demoId: string;  // id file di bucket, dipakai /api/demo-render utk render ulang
+  title: string;      // judul (ditampilkan via CSS di browser, bukan di gambar)
+  demoId: string;
 };
 
-// Profil minimal dari tipe bisnis — field kosong ("") aman, builder ubah jadi "-".
 function synthProfile(businessType: string): BusinessProfile {
   return {
     business: { name: "", industry: businessType, location: "" },
@@ -64,9 +53,6 @@ function synthProfile(businessType: string): BusinessProfile {
   } as unknown as BusinessProfile;
 }
 
-// Pilih prompt gambar dari tipe bisnis. Deskripsi produk (hasil analisis foto)
-// diteruskan ke food/skincare prompt supaya scene lebih nyambung; scene umum
-// pakai foto asli sebagai acuan editImage.
 function imagePromptFor(
   businessType: string,
   profile: BusinessProfile,
@@ -77,7 +63,6 @@ function imagePromptFor(
     return buildFoodPrompt(profile, description, LANG);
   if (t.includes("skincare") || t.includes("kecantikan"))
     return buildSkincarePrompt(profile, description, LANG);
-  // Jasa: jangan ubah foto jadi scene baru — cukup poles pencahayaan.
   if (t.includes("jasa")) return buildJasaPrompt(profile, LANG);
   return buildScenePrompt(profile, undefined, LANG);
 }
@@ -88,9 +73,7 @@ export async function generateDemoContent(
   const profile = synthProfile(input.businessType);
   const imageBase64 = input.imageBuffer.toString("base64");
 
-  // 0) ANALISIS FOTO — AI "membaca" produk di foto jadi deskripsi teks.
-  //    Ini yang bikin judul & caption NYAMBUNG dengan produk asli (bukan
-  //    generik dari tipe bisnis). Best-effort: kalau gagal, lanjut dgn "".
+  // 0) Analisis foto (best-effort)
   let productDesc = "";
   const descRes = await describeProductImage({
     imageBase64,
@@ -99,9 +82,7 @@ export async function generateDemoContent(
   });
   if (descRes.ok) productDesc = descRes.description;
 
-  // 1+2) TEKS & GAMBAR digenerate PARALEL (saling independen) —
-  // sebelumnya berurutan, buang 5-20 detik waktu tunggu percuma.
-  // Deskripsi produk hasil analisis diselipkan ke prompt teks.
+  // 1+2) Teks & gambar paralel
   const contentPrompt = buildProdukContentPrompt(profile, productDesc, LANG);
   const [contentRes, imgRes] = await Promise.all([
     generateJsonContent(contentPrompt),
@@ -121,34 +102,23 @@ export async function generateDemoContent(
 
   if (!imgRes.ok) throw new Error(imgRes.error || "gagal membuat gambar");
 
-  // 3) RENDER overlay headline (template polos, tanpa logo user)
-  const pngBuffer = await renderTemplate({
-    template: polosTemplate,
-    values: { photo: imgRes.dataUri, caption: onImageText },
-    ratio: RATIO,
-  });
-
-  // 4) SIMPAN ke bucket PUBLIC lalu ambil URL (untuk tampil di layar + email)
-  //    Dua file per demo:
-  //      <id>-bg.png = background hasil AI TANPA teks (bahan render ulang judul)
-  //      <id>.png    = hasil final dengan teks (yang ditampilkan/dikirim)
+  // 3) Simpan gambar Gemini LANGSUNG — tanpa renderTemplate (tanpa sharp)
   const svc = createServiceRoleClient();
   const demoId = randomUUID();
-
-  // background: dataUri -> buffer
-  const bgBase64 = imgRes.dataUri.replace(/^data:image\/\w+;base64,/, "");
-  const bgBuffer = Buffer.from(bgBase64, "base64");
-  const upBg = await svc.storage
-    .from(DEMO_BUCKET)
-    .upload(`${demoId}-bg.png`, bgBuffer, { contentType: "image/png" });
-  if (upBg.error) throw new Error("gagal menyimpan background: " + upBg.error.message);
+  const imgBase64 = imgRes.dataUri.replace(/^data:image\/\w+;base64,/, "");
+  const imgBuffer = Buffer.from(imgBase64, "base64");
 
   const up = await svc.storage
     .from(DEMO_BUCKET)
-    .upload(`${demoId}.png`, pngBuffer, { contentType: "image/png" });
+    .upload(`${demoId}.png`, imgBuffer, { contentType: "image/png" });
   if (up.error) throw new Error("gagal menyimpan hasil: " + up.error.message);
 
   const { data: pub } = svc.storage.from(DEMO_BUCKET).getPublicUrl(`${demoId}.png`);
-  const { data: pubBg } = svc.storage.from(DEMO_BUCKET).getPublicUrl(`${demoId}-bg.png`);
-  return { resultUrl: pub.publicUrl, bgUrl: pubBg.publicUrl, caption, title: onImageText, demoId };
+  return {
+    resultUrl: pub.publicUrl,
+    bgUrl: pub.publicUrl,
+    caption,
+    title: onImageText,
+    demoId,
+  };
 }
