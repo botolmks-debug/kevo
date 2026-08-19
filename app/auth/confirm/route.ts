@@ -1,24 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
-/**
- * Tujuan link konfirmasi email (signup, magic link, RESET PASSWORD, dll) —
- * Supabase mengarahkan browser ke sini setelah memvalidasi token di sisi
- * mereka. Sebelum route ini dibuat, link konfirmasi TIDAK PUNYA TUJUAN sama
- * sekali di app kita -> selalu error saat diklik.
- *
- * Supabase bisa kirim salah satu dari dua bentuk parameter tergantung versi
- * template/flow: `code` (PKCE, umum untuk @supabase/ssr) atau `token_hash`
- * + `type` (format lama). Route ini menangani dua-duanya.
- *
- * Query `next` opsional menentukan tujuan SETELAH sesi berhasil dibuat —
- * dipakai reset-password (next=/reset-password) supaya user mendarat di
- * form password baru dengan sesi yang SUDAH aktif (bukan menunggu event
- * client-side yang rapuh). Default "/" untuk konfirmasi signup biasa.
- */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
@@ -27,34 +13,58 @@ export async function GET(request: NextRequest) {
   const nextParam = searchParams.get("next");
   const next = nextParam && nextParam.startsWith("/") ? nextParam : "/";
 
-  const supabase = await createClient();
-
-  // next=/reset-password BUTUH sesi aktif (user langsung isi password baru),
-  // jadi untuk kasus itu sesi dipertahankan. Untuk konfirmasi signup biasa
-  // (next default "/"), pakai Opsi B: aktifkan akun lalu SIGN OUT + arahkan ke
-  // /login, supaya orang yang cuma bisa baca email TIDAK otomatis masuk akun —
-  // akses tetap butuh password.
   const keepSession = next.startsWith("/reset-password");
 
-  async function onVerified() {
-    if (keepSession) return NextResponse.redirect(`${origin}${next}`);
+  // Buat response redirect DULU — lalu pasang cookie Supabase ke dalamnya.
+  // Ini krusial di Route Handler: tanpa ini cookie sesi tidak ikut redirect
+  // dan halaman berikutnya (mis. /reset-password) tidak mengenal user.
+  const redirectUrl = keepSession
+    ? `${origin}${next}`
+    : `${origin}/login?verified=1`;
+  const errorUrl = `${origin}/login?error=login.linkExpired`;
+
+  const cookieStore = await cookies();
+
+  // Supabase client yang menulis cookie langsung ke cookieStore next/headers
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return cookieStore.getAll(); },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
+
+  let verified = false;
+
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) verified = true;
+  } else if (tokenHash && type) {
+    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
+    if (!error) verified = true;
+  }
+
+  if (!verified) {
+    return NextResponse.redirect(errorUrl);
+  }
+
+  if (!keepSession) {
     await supabase.auth.signOut();
     return NextResponse.redirect(`${origin}/login?verified=1`);
   }
 
-  if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return await onVerified();
-  } else if (tokenHash && type) {
-    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
-    if (!error) return await onVerified();
-  }
-
-  // Link tidak valid/kedaluwarsa -> lempar ke login dengan KODE pesan stabil
-  // (bukan teks mentah), supaya halaman login bisa menampilkannya sekaligus
-  // memunculkan tombol "Kirim ulang email". Penyebab tersering: link dibuka di
-  // browser/HP BERBEDA dari tempat daftar (alur PKCE `code` terkunci ke browser
-  // asal). Solusi utama ada di template email Supabase (pakai token_hash), tapi
-  // kalaupun tetap gagal, user diarahkan untuk kirim ulang, bukan buntu.
-  return NextResponse.redirect(`${origin}/login?error=login.linkExpired`);
+  // Untuk reset-password: copy semua cookie (termasuk sesi Supabase)
+  // ke dalam response redirect supaya /reset-password bisa updateUser.
+  const response = NextResponse.redirect(redirectUrl);
+  cookieStore.getAll().forEach(({ name, value }) => {
+    response.cookies.set(name, value);
+  });
+  return response;
 }
