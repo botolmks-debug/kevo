@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -16,15 +15,14 @@ export default function LupaPasswordPage() {
   async function handleSubmit() {
     setStatus("loading");
     setError(null);
-    const supabase = createClient();
-    const redirectTo = `${window.location.origin}/auth/confirm?next=/reset-password`;
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    // Pakai server API bukan supabase client browser — menghasilkan token_hash
+    // (bukan code PKCE) sehingga link reset bisa dibuka dari HP/browser manapun.
+    await fetch("/api/auth/reset-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
     setStatus("sent");
-    // Sengaja TIDAK membedakan pesan sukses/gagal berdasarkan apakah email
-    // terdaftar — supaya orang lain tidak bisa "menebak" email mana yang
-    // punya akun (privasi). Kalau memang terdaftar, link reset terkirim;
-    // kalau tidak, tidak terjadi apa-apa, tapi user tetap lihat pesan sukses.
-    if (error) setError(null);
   }
 
   return (
