@@ -23,7 +23,7 @@ import {
   buildSkincarePrompt,
   buildJasaPrompt,
 } from "@/lib/ai/scenePrompt";
-import { polosTemplate } from "@/lib/templates/polos";
+import { buildPolosTemplateAt } from "@/lib/templates/polos";
 import type { BusinessProfile } from "@/lib/onboarding/businessProfile";
 import type { AspectRatio } from "@/lib/templates/types";
 
@@ -120,7 +120,10 @@ export async function generateDemoContent(
   try {
     const { renderTemplate } = await import("@/lib/render/renderTemplate");
     const pngBuffer = await renderTemplate({
-      template: polosTemplate,
+      // Pakai varian watermark (logo Keposting kanan-bawah opacity 0.5)
+      // di posisi judul default tengah-bawah (0.5, 0.79) — tampilan judul
+      // sama seperti sebelumnya, bedanya logo watermark sekarang ikut.
+      template: buildPolosTemplateAt(0.5, 0.79),
       values: { photo: imgRes.dataUri, caption: onImageText },
       ratio: RATIO,
     });
