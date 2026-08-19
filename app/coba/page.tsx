@@ -48,6 +48,60 @@ const LOADING_LINES = [
   "Menambah hashtag relevan…",
 ];
 
+const SHOWCASE_POOL = [
+  "/showcase/1.png", "/showcase/2.png", "/showcase/3.png", "/showcase/4.png",
+  "/showcase/5.png", "/showcase/6.png", "/showcase/7.png", "/showcase/8.png",
+  "/showcase/9.png", "/showcase/10.png",
+];
+const SHOWCASE_SLOTS = 4;
+const FADE_MS = 650;
+
+function ShowcaseGrid() {
+  const pool = SHOWCASE_POOL;
+  const [slots, setSlots] = useState<number[]>([0, 1, 2, 3]);
+  const [fading, setFading] = useState<number>(-1);
+  const [nextPtr, setNextPtr] = useState<number>(4 % pool.length);
+  const [slotPtr, setSlotPtr] = useState<number>(0);
+
+  useEffect(() => {
+    pool.forEach((src) => { const img = new window.Image(); img.src = src; });
+  }, []);
+
+  useEffect(() => {
+    const tick = setInterval(() => {
+      const targetSlot = slotPtr;
+      let candidate = nextPtr;
+      let guard = 0;
+      const shown = new Set(slots.filter((_, i) => i !== targetSlot));
+      while (shown.has(candidate) && guard < pool.length) { candidate = (candidate + 1) % pool.length; guard++; }
+      setFading(targetSlot);
+      setTimeout(() => {
+        setSlots((prev) => { const copy = [...prev]; copy[targetSlot] = candidate; return copy; });
+        setFading(-1);
+      }, FADE_MS);
+      setNextPtr((candidate + 1) % pool.length);
+      setSlotPtr((p) => (p + 1) % SHOWCASE_SLOTS);
+    }, 3200);
+    return () => clearInterval(tick);
+  }, [slotPtr, nextPtr, slots]);
+
+  return (
+    <div className="grid grid-cols-4 gap-2">
+      {slots.map((imgIdx, slotIdx) => (
+        <div key={slotIdx} className="aspect-[9/16] w-full overflow-hidden rounded-2xl shadow-md ring-1 ring-black/5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={pool[imgIdx]}
+            alt=""
+            className="h-full w-full object-cover transition-opacity"
+            style={{ opacity: fading === slotIdx ? 0 : 1, transitionDuration: `${FADE_MS}ms` }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function CobaPage() {
   const [step, setStep] = useState<Step>("photo");
   const [file, setFile] = useState<File | null>(null);
@@ -206,77 +260,96 @@ export default function CobaPage() {
 
   return (
     <main style={{ background: CREAM, color: INK, minHeight: "100dvh" }} className="w-full">
-      {/* top bar */}
-      <header className="flex items-center justify-between px-5 py-4 max-w-md mx-auto">
-        <div className="flex items-center gap-2">
-          <img
-            src="/Logo/logo-keposting.png"
-            alt="Keposting"
-            className="h-9 w-auto"
-          />
-        </div>
-        <a
-          href="/signup"
-          className="text-sm font-bold px-4 py-2 rounded-full text-white"
-          style={{ background: TEAL }}
-        >
+      {/* top bar — full width */}
+      <header className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
+        <img src="/Logo/logo-keposting.png" alt="Keposting" className="h-9 w-auto" />
+        <a href="/signup" className="text-sm font-bold px-4 py-2 rounded-full text-white" style={{ background: TEAL }}>
           Daftar
         </a>
       </header>
 
+      {/* ───── STEP 1: FOTO — dua kolom di desktop ───── */}
+      {step === "photo" && (
+        <div className="max-w-6xl mx-auto px-6 pb-16 pt-4 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center" style={{ minHeight: "calc(100dvh - 73px)" }}>
+
+          {/* Kiri: bukti visual berputar */}
+          <div className="hidden lg:flex flex-col gap-5">
+            <span className="inline-flex self-start items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold" style={{ background: "#EAF9F6", color: TEAL_DARK }}>
+              ✨ Hasil nyata — bukan mockup
+            </span>
+            <h2 className="text-[36px] font-black leading-[1.08] tracking-tight">
+              Foto biasa jadi<br />
+              <span style={{ color: TEAL }}>konten yang layak posting.</span>
+            </h2>
+            <p className="text-[15px] leading-relaxed text-neutral-500 max-w-sm">
+              Upload 1 foto dari HP — gelap, miring, apa adanya sekalipun. Kami ubah jadi konten siap posting dalam hitungan detik.
+            </p>
+            <ShowcaseGrid />
+          </div>
+
+          {/* Kanan: form upload */}
+          <div className="flex flex-col justify-center">
+            {/* Hero — hanya tampil di mobile */}
+            <div className="lg:hidden mb-5">
+              <span className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold" style={{ background: "#EAF9F6", color: TEAL_DARK }}>
+                ✨ Hasil nyata dari fotomu sendiri
+              </span>
+              <h1 className="mt-2 text-[26px] font-black leading-[1.15] tracking-tight">
+                Upload foto produk,{" "}
+                <span style={{ color: TEAL }}>konten langsung jadi.</span>
+              </h1>
+              <p className="mt-2 text-sm leading-relaxed text-neutral-500">
+                Apa adanya dari HP juga boleh. Gratis, tanpa daftar dulu.
+              </p>
+            </div>
+
+            {/* Card upload */}
+            <div className="rounded-3xl p-7 shadow-sm" style={{ background: "#fff", border: "1.5px solid #E6E2D8" }}>
+              <div className="hidden lg:block mb-5">
+                <h3 className="text-[20px] font-black tracking-tight">Coba sekarang — gratis</h3>
+                <p className="text-sm text-neutral-500 mt-1">Upload 1 foto produk dan lihat hasilnya langsung di layar.</p>
+              </div>
+
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => onPickFile(e.target.files?.[0] ?? null)} />
+
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full rounded-2xl py-10 px-6 flex flex-col items-center gap-3 border-2 border-dashed transition active:scale-[0.99] hover:opacity-90"
+                style={{ borderColor: TEAL, background: "#F0FBF9" }}
+              >
+                <div className="w-14 h-14 rounded-2xl grid place-items-center text-white text-2xl" style={{ background: TEAL }}>↑</div>
+                <div className="text-center">
+                  <p className="font-bold text-[15px]">Pilih foto produk</p>
+                  <p className="text-xs text-neutral-400 mt-0.5">JPG / PNG · dari galeri atau kamera</p>
+                </div>
+              </button>
+
+              <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 justify-center">
+                {["Gratis", "Tanpa daftar dulu", "Hasil langsung tampil"].map((t) => (
+                  <span key={t} className="flex items-center gap-1 text-xs text-neutral-500">
+                    <span style={{ color: TEAL }}>✓</span> {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <p className="mt-4 text-center text-xs text-neutral-400">
+              Dipakai pemilik kafe, online shop, dan UMKM Indonesia 🇮🇩
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ───── STEP 2–5: terpusat max-w-md ───── */}
+      {step !== "photo" && (
       <div className="max-w-md mx-auto px-5 pb-16">
         {/* progress */}
         {step !== "result" && (
           <div className="flex gap-2 mt-2 mb-6">
             {[0, 1, 2].map((n) => (
-              <div
-                key={n}
-                className="h-1.5 flex-1 rounded-full transition-all"
-                style={{ background: n <= stepIndex ? TEAL : "#E6E2D8" }}
-              />
+              <div key={n} className="h-1.5 flex-1 rounded-full transition-all" style={{ background: n <= stepIndex ? TEAL : "#E6E2D8" }} />
             ))}
           </div>
-        )}
-
-        {/* ---------- STEP 1: FOTO ---------- */}
-        {step === "photo" && (
-          <section>
-            <h1 className="text-[28px] leading-[1.15] font-black tracking-tight">
-              Lihat hasilnya dari{" "}
-              <span style={{ color: TEAL }}>fotomu sendiri</span>
-            </h1>
-            <p className="mt-3 text-[15px] leading-relaxed text-neutral-600">
-              Upload 1 foto produk — apa adanya dari HP juga boleh. Kami ubah jadi
-              konten siap posting dalam hitungan detik.
-            </p>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
-            />
-
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="mt-6 w-full rounded-3xl py-12 px-6 flex flex-col items-center gap-3 border-2 border-dashed transition active:scale-[0.99]"
-              style={{ borderColor: TEAL, background: "#F0FBF9" }}
-            >
-              <div
-                className="w-14 h-14 rounded-2xl grid place-items-center text-white text-2xl"
-                style={{ background: TEAL }}
-              >
-                ↑
-              </div>
-              <span className="font-bold text-[15px]">Pilih foto produk</span>
-              <span className="text-xs text-neutral-500">JPG / PNG — dari galeri atau kamera</span>
-            </button>
-
-            <p className="mt-5 text-center text-xs text-neutral-400">
-              Gratis · Tanpa aplikasi · Hasil langsung tampil
-            </p>
-          </section>
         )}
 
         {/* ---------- STEP 2: TIPE BISNIS ---------- */}
@@ -551,6 +624,7 @@ export default function CobaPage() {
           </section>
         )}
       </div>
+      )}
     </main>
   );
 }
