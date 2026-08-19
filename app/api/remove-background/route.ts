@@ -5,7 +5,7 @@
  * 3. Return data URI PNG transparan
  */
 import { NextRequest, NextResponse } from "next/server";
-import sharp from "sharp";
+// sharp dimuat dinamis
 import { createClient } from "@/lib/supabase/server";
 import { removeChromaBackground } from "@/lib/images/backgroundRemoval";
 import { consumeToken, refundToken } from "@/lib/supabase/tokens";
@@ -139,6 +139,7 @@ RULES:
     console.warn(`remove-background: Gemini gagal (${geminiFailReason}), mencoba fallback OpenAI...`);
     let aspect: AspectRatio = "1:1";
     try {
+      const sharp = (await import("sharp")).default;
       const meta = await sharp(Buffer.from(imageBase64, "base64")).metadata();
       if ((meta.height ?? 0) > (meta.width ?? 0) * 1.2) aspect = "4:5"; // potret → 1024x1536
     } catch {}

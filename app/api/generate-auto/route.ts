@@ -16,7 +16,7 @@ import { withFooterOverride } from "@/app/generate/withFooterOverride";
 import { withLogoOverride } from "@/app/generate/withLogoOverride";
 import { polosTemplate } from "@/lib/templates/polos";
 import { interaksiTemplate } from "@/lib/templates/interaksi";
-import { renderTemplate } from "@/lib/render/renderTemplate";
+// renderTemplate dimuat dinamis saat POST (agar sharp tidak crash module saat startup)
 import { buildScenePrompt, buildRuanganPrompt, buildOrangPrompt, buildSoftwarePrompt, buildSkincarePrompt, buildFoodPrompt, buildGabungPrompt, buildReferencePrompt } from "@/lib/ai/scenePrompt";
 import { editImage, generateImage, composeProducts, editImageWithReference } from "@/lib/ai/geminiImage";
 import { generateJsonContent } from "@/lib/ai/geminiJson";
@@ -313,6 +313,7 @@ export async function POST(request: NextRequest) {
 
   let pngBuffer: Buffer;
   try {
+    const { renderTemplate } = await import("@/lib/render/renderTemplate");
     pngBuffer = await renderTemplate({
       template: templateToRender,
       values: { photo: imageDataUri, caption: content.onImageText },

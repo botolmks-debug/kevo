@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateRenderInput } from "@/lib/templates/validateRenderInput";
-import { renderTemplate } from "@/lib/render/renderTemplate";
+// renderTemplate dimuat dinamis (sharp tidak crash module saat startup)
 
 // butuh fs + native binary resvg — tidak bisa jalan di edge runtime.
 export const runtime = "nodejs";
@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const { renderTemplate } = await import("@/lib/render/renderTemplate");
     const png = await renderTemplate(validation.value);
     return new NextResponse(new Uint8Array(png), {
       status: 200,
