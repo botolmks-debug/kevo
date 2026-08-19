@@ -22,7 +22,7 @@
     "react-dom": "19.2.4",
     "react-konva": "^19.2.5",
     "satori": "^0.29.0",
-    "sharp": "^0.35.3"
+    "sharp": "^0.33.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -41,7 +41,7 @@
     "vitest": "^2.1.4"
   },
   "optionalDependencies": {
-    "@img/sharp-linux-x64": "^0.35.3",
+    "@img/sharp-linux-x64": "^0.33.5",
     "@img/sharp-linuxmusl-x64": "0.35.3"
   },
   "allowScripts": {
