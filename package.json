@@ -40,6 +40,10 @@
     "typescript": "^5",
     "vitest": "^2.1.4"
   },
+    "optionalDependencies": {
+    "@img/sharp-linux-x64": "0.35.3",
+    "@img/sharp-linuxmusl-x64": "0.35.3"
+  },
   "allowScripts": {
     "sharp@0.34.5": true,
     "sharp@0.35.3": true
