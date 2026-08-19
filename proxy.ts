@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isAdmin } from "@/lib/supabase/tokens";
+import { createServiceRoleClient } from "@/lib/supabase/serviceRole";
 
 const PUBLIC_PATHS = [
   "/login",
@@ -13,6 +14,7 @@ const PUBLIC_PATHS = [
   "/privacy",    // kebijakan privasi — WAJIB publik (verifikasi Google OAuth + dibaca calon user)
   "/terms",      // ketentuan layanan — WAJIB publik (verifikasi Google OAuth + dibaca calon user)
   "/refund",     // kebijakan refund — publik (dibaca calon pembeli sebelum bayar)
+  "/maintenance",// halaman maintenance — selalu publik
 ];
 
 export async function proxy(request: NextRequest) {
@@ -43,14 +45,52 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  // Root "/" (landing) dicocokkan PERSIS, bukan startsWith — kalau tidak,
-  // semua path (yang selalu diawali "/") ikut jadi publik dan auth jebol.
   const isPublic =
     path === "/" ||
     path === "/sitemap.xml" ||
     path === "/robots.txt" ||
     PUBLIC_PATHS.some((p) => path.startsWith(p));
   const isApi = path.startsWith("/api");
+
+  // Cek maintenance mode (best-effort, tidak blokir kalau DB tidak tersedia)
+  if (!isAdmin(user?.email) && !path.startsWith("/maintenance") && !path.startsWith("/api/admin/maintenance")) {
+    try {
+      const svc = createServiceRoleClient();
+      const { data: setting } = await svc
+        .from("app_settings")
+        .select("value")
+        .eq("key", "maintenance_mode")
+        .single();
+      if (setting?.value === "true") {
+        // Halaman publik & landing → boleh, tapi halaman app → maintenance
+        if (!isPublic && !isApi) {
+          // Kalau sudah login → logout dulu (hapus session cookie), lalu redirect
+          if (user) {
+            const url = request.nextUrl.clone();
+            url.pathname = "/maintenance";
+            const res = NextResponse.redirect(url);
+            // Hapus cookie sesi Supabase agar user ter-logout
+            request.cookies.getAll().forEach(({ name }) => {
+              if (name.startsWith("sb-")) res.cookies.delete(name);
+            });
+            return res;
+          }
+          // Belum login → langsung ke maintenance (bukan /login)
+          const url = request.nextUrl.clone();
+          url.pathname = "/maintenance";
+          return NextResponse.redirect(url);
+        }
+        // Di halaman login/signup saat maintenance → arahkan ke maintenance
+        if (path === "/login" || path === "/signup") {
+          const url = request.nextUrl.clone();
+          url.pathname = "/maintenance";
+          return NextResponse.redirect(url);
+        }
+      }
+    } catch {
+      // DB tidak tersedia → biarkan lanjut normal
+    }
+  }
 
   // Belum login & buka halaman terproteksi -> lempar ke /login
   if (!user && !isPublic && !isApi) {

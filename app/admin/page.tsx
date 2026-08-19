@@ -4,6 +4,7 @@ import { isAdmin } from "@/lib/supabase/tokens";
 import { Header } from "@/components/ui/Header";
 import { AdminOverview } from "./AdminOverview";
 import { OnboardingQuestions } from "./OnboardingQuestions";
+import { MaintenanceToggle } from "./MaintenanceToggle";
 import MonitorSection from "@/components/admin/MonitorSection";
 
 export default async function AdminPage() {
@@ -22,6 +23,10 @@ export default async function AdminPage() {
           <h1 className="text-2xl font-bold text-navy">Admin</h1>
           <p className="mt-1 text-navy/60">Aktivitas user: login terakhir, sisa token, dan pemakaian token.</p>
         </div>
+        <section className="flex flex-col gap-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-navy/50">Status Aplikasi</h2>
+          <MaintenanceToggle />
+        </section>
         <MonitorSection />
         <AdminOverview />
         <OnboardingQuestions />
