@@ -137,13 +137,6 @@ export default function CobaPage() {
       setTitleError("");
       setTitleXY({ x: 0.5, y: 0.82 });
       setStep("result");
-
-      // Meta Pixel: catat LEAD saat pengunjung berhasil generate konten demo.
-      // Inilah "aksi bernilai" yang dipakai Meta untuk optimasi iklan —
-      // mencari orang yang benar-benar mencoba, bukan sekadar mendarat.
-      if (typeof window !== "undefined" && typeof window.fbq === "function") {
-        window.fbq("track", "Lead", { content_name: "demo_coba" });
-      }
     } catch {
       clearInterval(timer);
       setGenError("Ada kendala saat membuat konten. Coba sekali lagi ya.");
@@ -156,27 +149,9 @@ export default function CobaPage() {
     setSending(true);
     setTitleError("");
     try {
-      // 1) RENDER final SEKALI dengan judul + posisi hasil drag (tanpa AI)
-      let finalUrl = result.imageUrl;
-      if (result.demoId) {
-        const t = editableTitle.trim();
-        if (t.length < 3) {
-          setTitleError("Judul minimal 3 huruf ya.");
-          setSending(false);
-          return;
-        }
-        const rr = await fetch("/api/demo-render", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ demoId: result.demoId, title: t, x: titleXY.x, y: titleXY.y }),
-        });
-        if (rr.ok) {
-          const rd = (await rr.json()) as { imageUrl: string };
-          finalUrl = rd.imageUrl;
-          setResult((r) => (r ? { ...r, imageUrl: finalUrl, title: t } : r));
-        }
-      }
-      // 2) KIRIM email dgn gambar final + caption
+      // Judul ditampilkan via CSS (tidak di-burn ke gambar — sharp tidak tersedia).
+      // Langsung kirim email dengan gambar AI yang ada + caption.
+      const finalUrl = result.imageUrl;
       const res = await fetch("/api/demo-send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -192,7 +167,7 @@ export default function CobaPage() {
     } finally {
       setSending(false);
     }
-  }, [result, email, editableTitle, editableCaption, titleXY]);
+  }, [result, email, editableCaption]);
 
   // --- DRAG judul di preview (client saja, tanpa render server) ---
   const onDragMove = useCallback((clientX: number, clientY: number) => {
@@ -486,20 +461,6 @@ export default function CobaPage() {
                 )}
                 <div className="absolute left-0 right-0 bottom-0 h-14 pointer-events-none"
                      style={{ background: "linear-gradient(to top, rgba(0,0,0,.7), rgba(0,0,0,0))" }} />
-                {/* Logo watermark — konsisten dengan hasil final yang dikirim ke email */}
-                <img
-                  src="/Logo/logo-keposting.png"
-                  alt="Keposting"
-                  className="absolute pointer-events-none"
-                  draggable={false}
-                  style={{
-                    right: "4%",
-                    bottom: "3%",
-                    width: "28%",
-                    opacity: 0.5,
-                    filter: "drop-shadow(0 1px 2px rgba(0,0,0,.4))",
-                  }}
-                />
               </div>
 
               {/* editor JUDUL — hanya teks; posisi diatur dgn menggeser di preview */}
@@ -573,7 +534,7 @@ export default function CobaPage() {
                 Ini baru sebagian kecilnya
               </p>
               <p className="text-white/90 text-sm mt-1.5">
-                Daftar gratis untuk buka semua: ganti gaya & template, atur posisi teks, penjadwalan konten, dan 5 konten gratis lagi.
+                Daftar Sekarang
               </p>
               <a
                 href={`/signup?email=${encodeURIComponent(email.trim().toLowerCase())}`}
@@ -583,6 +544,10 @@ export default function CobaPage() {
                 Buka fitur lengkap — gratis
               </a>
             </div>
+
+            <p className="mt-5 text-center text-xs text-neutral-400">
+              Hasil yang tampil ini produk aslimu — bukan gambar AI palsu.
+            </p>
           </section>
         )}
       </div>
