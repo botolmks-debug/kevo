@@ -1,12 +1,13 @@
 /**
- * GENERATE DEMO — tanpa sharp.
+ * GENERATE DEMO — dengan renderTemplate via dynamic import.
  * =====================================================================
- * Alur: Gemini edit foto → simpan LANGSUNG ke Supabase (tanpa renderTemplate
- * yang memanggil sharp). Overlay teks (judul) ditangani di browser (CSS),
- * bukan di-burn ke gambar — ini yang menghilangkan ketergantungan sharp.
+ * Alur: Gemini edit foto → renderTemplate (dynamic import, agar sharp
+ * tidak crash module saat startup) → simpan ke Supabase.
+ * Hasilnya: gambar dengan overlay teks judul + logo Keposting.
  *
- * Hasilnya: URL gambar bersih (AI-edited) + caption + title → ditampilkan
- * di halaman /coba sebagai preview interaktif (user bisa edit teks dll).
+ * renderTemplate di-import secara DINAMIS (await import) — cara yang
+ * sama yang membuat GET riwayat di generate-auto berhasil. Sharp hanya
+ * dimuat saat fungsi ini dipanggil, bukan saat module diload.
  * =====================================================================
  */
 
@@ -22,6 +23,7 @@ import {
   buildSkincarePrompt,
   buildJasaPrompt,
 } from "@/lib/ai/scenePrompt";
+import { polosTemplate } from "@/lib/templates/polos";
 import type { BusinessProfile } from "@/lib/onboarding/businessProfile";
 import type { AspectRatio } from "@/lib/templates/types";
 
@@ -36,10 +38,10 @@ export type DemoGenInput = {
 };
 
 export type DemoGenResult = {
-  resultUrl: string;  // URL gambar Gemini (tanpa overlay teks)
-  bgUrl: string;      // sama dengan resultUrl (untuk kompatibilitas)
+  resultUrl: string;  // URL gambar final (dengan overlay teks + logo)
+  bgUrl: string;      // URL gambar bersih (tanpa overlay, untuk preview drag)
   caption: string;
-  title: string;      // judul (ditampilkan via CSS di browser, bukan di gambar)
+  title: string;
   demoId: string;
 };
 
@@ -102,21 +104,43 @@ export async function generateDemoContent(
 
   if (!imgRes.ok) throw new Error(imgRes.error || "gagal membuat gambar");
 
-  // 3) Simpan gambar Gemini LANGSUNG — tanpa renderTemplate (tanpa sharp)
   const svc = createServiceRoleClient();
   const demoId = randomUUID();
-  const imgBase64 = imgRes.dataUri.replace(/^data:image\/\w+;base64,/, "");
-  const imgBuffer = Buffer.from(imgBase64, "base64");
 
-  const up = await svc.storage
+  // 3) Simpan background bersih (tanpa teks) untuk preview drag di client
+  const bgBase64 = imgRes.dataUri.replace(/^data:image\/\w+;base64,/, "");
+  const bgBuffer = Buffer.from(bgBase64, "base64");
+  const upBg = await svc.storage
     .from(DEMO_BUCKET)
-    .upload(`${demoId}.png`, imgBuffer, { contentType: "image/png" });
-  if (up.error) throw new Error("gagal menyimpan hasil: " + up.error.message);
+    .upload(`${demoId}-bg.png`, bgBuffer, { contentType: "image/png" });
+  if (upBg.error) throw new Error("gagal menyimpan background: " + upBg.error.message);
 
-  const { data: pub } = svc.storage.from(DEMO_BUCKET).getPublicUrl(`${demoId}.png`);
+  // 4) Render overlay teks + logo via dynamic import (sharp tidak crash module)
+  let resultUrl: string;
+  try {
+    const { renderTemplate } = await import("@/lib/render/renderTemplate");
+    const pngBuffer = await renderTemplate({
+      template: polosTemplate,
+      values: { photo: imgRes.dataUri, caption: onImageText },
+      ratio: RATIO,
+    });
+    const up = await svc.storage
+      .from(DEMO_BUCKET)
+      .upload(`${demoId}.png`, pngBuffer, { contentType: "image/png" });
+    if (up.error) throw new Error(up.error.message);
+    const { data: pub } = svc.storage.from(DEMO_BUCKET).getPublicUrl(`${demoId}.png`);
+    resultUrl = pub.publicUrl;
+  } catch (err) {
+    // Fallback: kalau render gagal, pakai gambar Gemini tanpa overlay
+    console.error("[demo] renderTemplate gagal, fallback ke bg:", err);
+    const { data: pub } = svc.storage.from(DEMO_BUCKET).getPublicUrl(`${demoId}-bg.png`);
+    resultUrl = pub.publicUrl;
+  }
+
+  const { data: pubBg } = svc.storage.from(DEMO_BUCKET).getPublicUrl(`${demoId}-bg.png`);
   return {
-    resultUrl: pub.publicUrl,
-    bgUrl: pub.publicUrl,
+    resultUrl,
+    bgUrl: pubBg.publicUrl,
     caption,
     title: onImageText,
     demoId,
