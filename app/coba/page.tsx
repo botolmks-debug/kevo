@@ -58,22 +58,29 @@ const FADE_MS = 650;
 
 function ShowcaseGrid() {
   const pool = SHOWCASE_POOL;
-  const [slots, setSlots] = useState<number[]>([0, 1, 2, 3]);
+  const enough = pool.length > SHOWCASE_SLOTS;
+  const [slots, setSlots] = useState<number[]>(() =>
+    Array.from({ length: SHOWCASE_SLOTS }, (_, i) => i % pool.length)
+  );
   const [fading, setFading] = useState<number>(-1);
-  const [nextPtr, setNextPtr] = useState<number>(4 % pool.length);
+  const [nextPtr, setNextPtr] = useState<number>(SHOWCASE_SLOTS % pool.length);
   const [slotPtr, setSlotPtr] = useState<number>(0);
 
   useEffect(() => {
     pool.forEach((src) => { const img = new window.Image(); img.src = src; });
-  }, []);
+  }, [pool]);
 
   useEffect(() => {
+    if (!enough) return;
     const tick = setInterval(() => {
       const targetSlot = slotPtr;
       let candidate = nextPtr;
       let guard = 0;
-      const shown = new Set(slots.filter((_, i) => i !== targetSlot));
-      while (shown.has(candidate) && guard < pool.length) { candidate = (candidate + 1) % pool.length; guard++; }
+      const shown = new Set(slots.filter((_, i) => i !== targetSlot).map((v) => v));
+      while (shown.has(candidate) && guard < pool.length) {
+        candidate = (candidate + 1) % pool.length;
+        guard++;
+      }
       setFading(targetSlot);
       setTimeout(() => {
         setSlots((prev) => { const copy = [...prev]; copy[targetSlot] = candidate; return copy; });
@@ -83,7 +90,7 @@ function ShowcaseGrid() {
       setSlotPtr((p) => (p + 1) % SHOWCASE_SLOTS);
     }, 3200);
     return () => clearInterval(tick);
-  }, [slotPtr, nextPtr, slots]);
+  }, [enough, slotPtr, nextPtr, slots, pool.length]);
 
   return (
     <div className="grid grid-cols-4 gap-2">
