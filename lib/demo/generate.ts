@@ -45,6 +45,30 @@ export type DemoGenResult = {
   demoId: string;
 };
 
+/**
+ * KHUSUS DEMO /coba — gaya judul TENANG.
+ * Pengunjung demo baru pertama kenal produk; judul hook/provokatif
+ * ("X vs Y", pertanyaan menantang, klaim kontroversial) terasa aneh
+ * untuk kesan pertama. Diteruskan via parameter `extra` (jalur yang
+ * sama dengan fitur hook 🔥 di app utama, dibalik arahnya).
+ */
+const DEMO_CALM_TITLE_NOTE = `OVERRIDE GAYA JUDUL — KHUSUS HALAMAN DEMO (kesan pertama):
+Untuk konten ini, JUDUL (onImageText) WAJIB bergaya TENANG, jelas, dan positif — deskriptif dengan sedikit rasa (bukan hambar), seperti iklan brand profesional.
+DILARANG untuk judul: gaya hook/clickbait, pertanyaan provokatif/menantang, klaim kontroversial, perbandingan "X vs Y", bingkai kerugian/ketakutan, peringatan ("berhenti X sebelum Y"), dan celah penasaran yang menggantung.
+Contoh arah yang benar: manfaat utama produk dalam kalimat pendek yang hangat, atau momen keseharian positif. Abaikan instruksi sudut viral/hook mana pun di atas jika bertentangan dengan aturan ini.`;
+
+/**
+ * KHUSUS DEMO /coba — guard kemasan bermerek.
+ * User demo sering upload produk bermerek asli (snack, cokelat, minuman).
+ * Tanpa guard ini, model kadang me-regenerate kemasan → nama merek berubah
+ * jadi palsu (kasus nyata: KitKat→"KitVat", Lay's→"Layo's") = kesan "AI zonk",
+ * persis ketakutan #1 calon user. Ditambahkan di akhir prompt gambar.
+ */
+const DEMO_BRAND_GUARD = `
+
+BRANDED PACKAGING GUARD (highest priority, overrides anything conflicting above):
+The photo may contain real branded products (snacks, drinks, chocolates, cosmetics, etc.). Every package, logo, brand name, and label text MUST remain EXACTLY as photographed — pixel-faithful, sharp, readable, unaltered. NEVER redraw, repaint, rename, misspell, or "reinterpret" any brand name or label (e.g. never turn a real brand into a similar-looking fake name). If you cannot re-render a branded package faithfully, keep the original product pixels untouched and change ONLY the background, lighting, and shadows around it.`;
+
 function synthProfile(businessType: string): BusinessProfile {
   return {
     business: { name: "", industry: businessType, location: "" },
@@ -85,14 +109,14 @@ export async function generateDemoContent(
   if (descRes.ok) productDesc = descRes.description;
 
   // 1+2) Teks & gambar paralel
-  const contentPrompt = buildProdukContentPrompt(profile, productDesc, LANG);
+  const contentPrompt = buildProdukContentPrompt(profile, productDesc, LANG, DEMO_CALM_TITLE_NOTE);
   const [contentRes, imgRes] = await Promise.all([
     generateJsonContent(contentPrompt),
     editImage({
       imageBase64,
       mimeType: input.mimeType,
       aspectRatio: RATIO,
-      prompt: imagePromptFor(input.businessType, profile, productDesc),
+      prompt: imagePromptFor(input.businessType, profile, productDesc) + DEMO_BRAND_GUARD,
     }),
   ]);
 

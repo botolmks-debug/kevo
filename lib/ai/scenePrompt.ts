@@ -66,7 +66,7 @@ The whole image must look like a SINGLE photo taken by ONE camera with ONE light
 
 STEP 5 - FRAMING (fill the whole frame):
 - The scene MUST fill the ENTIRE frame edge-to-edge. NO empty margins, NO blank/plain areas, NO black or white bars, NO border/padding.
-- The bottom ~third will be covered later by a thin dark layer with text, so keep it a bit calmer - but it must STILL contain the scene/background, never left blank.
+- The scene MUST fill the ENTIRE frame edge-to-edge, top to bottom, with real scene content — absolutely NO plain, empty, dimmed, blurred-solid, or "calm" band anywhere, especially at the bottom. NEVER reserve or clear space for text: our system overlays text separately later, and it handles readability itself. The bottom of the frame must be just as rich and detailed as the rest of the scene.
 
 FINAL CHECK: before finishing, ask yourself "does this look like ONE real photograph, or like a product pasted onto a background?" If it looks pasted, fix the light direction, the grounding/contact shadow, and the edge blending until it reads as a single genuine photo.
 
@@ -95,7 +95,7 @@ ONLY IMPROVE (do not change content):
 
 Business context (for mood only, do NOT add objects): Industry ${profile.business.industry || "-"}, Location ${profile.business.location || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.${sizeNote}
 
-Photorealistic (NOT illustration/cartoon). Do NOT add any text, logos, or watermarks. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.
+Photorealistic (NOT illustration/cartoon). Do NOT add any text, logos, or watermarks. The scene MUST fill the ENTIRE frame edge-to-edge, top to bottom, with real scene content — absolutely NO plain, empty, dimmed, blurred-solid, or "calm" band anywhere, especially at the bottom. NEVER reserve or clear space for text: our system overlays text separately later, and it handles readability itself. The bottom of the frame must be just as rich and detailed as the rest of the scene.
 
 ${localeSceneNote(lang)}`;
 }
@@ -119,7 +119,7 @@ PERSON IS THE HERO (center of attention):
 
 Business context: Industry ${profile.business.industry || "-"}, Location ${profile.business.location || "-"}, Differentiator ${profile.positioning.differentiator || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.
 
-Photorealistic, warm professional lighting. Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.
+Photorealistic, warm professional lighting. Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding. The scene MUST fill the ENTIRE frame edge-to-edge, top to bottom, with real scene content — absolutely NO plain, empty, dimmed, blurred-solid, or "calm" band anywhere, especially at the bottom. NEVER reserve or clear space for text: our system overlays text separately later, and it handles readability itself. The bottom of the frame must be just as rich and detailed as the rest of the scene.
 
 ${localeSceneNote(lang)}`;
 }
@@ -151,7 +151,7 @@ PERSON & SCENE:
 
 Business context: Industry ${profile.business.industry || "-"}, Location ${profile.business.location || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.
 
-Do NOT add any new text, logos, or branding to the scene. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.
+Do NOT add any new text, logos, or branding to the scene. The scene MUST fill the ENTIRE frame edge-to-edge, top to bottom, with real scene content — absolutely NO plain, empty, dimmed, blurred-solid, or "calm" band anywhere, especially at the bottom. NEVER reserve or clear space for text: our system overlays text separately later, and it handles readability itself. The bottom of the frame must be just as rich and detailed as the rest of the scene.
 
 ${localeSceneNote(lang)}`;
 }
@@ -180,7 +180,7 @@ STYLE: clean, minimal, premium, spa-like and hygienic. Soft diffused lighting, e
 
 Business context: Industry ${profile.business.industry || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.
 
-Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding to the scene. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.
+Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding to the scene. The scene MUST fill the ENTIRE frame edge-to-edge, top to bottom, with real scene content — absolutely NO plain, empty, dimmed, blurred-solid, or "calm" band anywhere, especially at the bottom. NEVER reserve or clear space for text: our system overlays text separately later, and it handles readability itself. The bottom of the frame must be just as rich and detailed as the rest of the scene.
 
 RESULT CHECK — both must be true: (1) the dish is pixel-recognizably the SAME dish as the input, and (2) the background, lighting, and composition are CLEARLY improved — returning the input unchanged or nearly unchanged is also a FAILED result.
 
@@ -214,7 +214,7 @@ Scan the image top to bottom. Is there ANY text visible that is NOT physically p
 
 Business context: Industry ${profile.business.industry || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.${note}
 
-Fill the whole frame edge-to-edge; keep the bottom third a little calmer for later text overlay but never blank. The result must look like a real, high-quality photograph — clearly more polished than a phone snapshot.
+The scene MUST fill the ENTIRE frame edge-to-edge, top to bottom, with real scene content — absolutely NO plain, empty, dimmed, blurred-solid, or "calm" band anywhere, especially at the bottom. NEVER reserve or clear space for text: our system overlays text separately later, and it handles readability itself. The bottom of the frame must be just as rich and detailed as the rest of the scene. The result must look like a real, high-quality photograph — clearly more polished than a phone snapshot.
 
 ${localeSceneNote(lang)}`;
 }
@@ -235,7 +235,7 @@ TRANSFORM (make it look professionally shot):
 
 Business context: Industry ${profile.business.industry || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.${dishNote}
 
-Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding to the scene. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.
+Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding to the scene. The scene MUST fill the ENTIRE frame edge-to-edge, top to bottom, with real scene content — absolutely NO plain, empty, dimmed, blurred-solid, or "calm" band anywhere, especially at the bottom. NEVER reserve or clear space for text: our system overlays text separately later, and it handles readability itself. The bottom of the frame must be just as rich and detailed as the rest of the scene.
 
 RESULT CHECK — both must be true: (1) the dish is pixel-recognizably the SAME dish as the input, and (2) the background, lighting, and composition are CLEARLY improved — returning the input unchanged or nearly unchanged is also a FAILED result.
 
@@ -264,7 +264,7 @@ ${list}
 
 Business context: Industry ${profile.business.industry || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.
 
-Remove phone watermarks / date stamps / pre-existing overlay text. Do NOT add any new text, logos, or branding. Fill the whole frame edge-to-edge; keep the bottom third a bit calmer for later text but never blank.
+Remove phone watermarks / date stamps / pre-existing overlay text. Do NOT add any new text, logos, or branding. The scene MUST fill the ENTIRE frame edge-to-edge, top to bottom, with real scene content — absolutely NO plain, empty, dimmed, blurred-solid, or "calm" band anywhere, especially at the bottom. NEVER reserve or clear space for text: our system overlays text separately later, and it handles readability itself. The bottom of the frame must be just as rich and detailed as the rest of the scene.
 
 ${localeSceneNote(lang)}`;
 }
