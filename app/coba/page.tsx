@@ -56,6 +56,35 @@ const SHOWCASE_POOL = [
 const SHOWCASE_SLOTS = 4;
 const FADE_MS = 650;
 
+// Satu gambar besar berputar untuk mobile — lebih impactful dari 4 kolom kecil
+function MobileShowcase() {
+  const [idx, setIdx] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const tick = setInterval(() => {
+      setVisible(false);
+      setTimeout(() => {
+        setIdx((i) => (i + 1) % SHOWCASE_POOL.length);
+        setVisible(true);
+      }, 400);
+    }, 3000);
+    return () => clearInterval(tick);
+  }, []);
+
+  return (
+    <div className="mt-4 w-full overflow-hidden rounded-2xl shadow-md" style={{ aspectRatio: "4/5" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={SHOWCASE_POOL[idx]}
+        alt=""
+        className="w-full h-full object-cover"
+        style={{ opacity: visible ? 1 : 0, transition: "opacity 400ms ease" }}
+      />
+    </div>
+  );
+}
+
 function ShowcaseGrid() {
   const pool = SHOWCASE_POOL;
   const enough = pool.length > SHOWCASE_SLOTS;
@@ -277,7 +306,7 @@ export default function CobaPage() {
 
       {/* ───── STEP 1: FOTO — dua kolom di desktop ───── */}
       {step === "photo" && (
-        <div className="max-w-6xl mx-auto px-6 pb-16 pt-4 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center" style={{ minHeight: "calc(100dvh - 73px)" }}>
+        <div className="max-w-6xl mx-auto px-6 pb-16 pt-4 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center" className2="">
 
           {/* Kiri: bukti visual berputar */}
           <div className="hidden lg:flex flex-col gap-5">
@@ -308,6 +337,8 @@ export default function CobaPage() {
               <p className="mt-2 text-sm leading-relaxed text-neutral-500">
                 Apa adanya dari HP juga boleh. Gratis, tanpa daftar dulu.
               </p>
+              {/* Satu gambar besar berputar — hanya di mobile */}
+              <MobileShowcase />
             </div>
 
             {/* Card upload */}
