@@ -58,29 +58,56 @@ const FADE_MS = 650;
 
 // Satu gambar besar berputar untuk mobile — lebih impactful dari 4 kolom kecil
 function MobileShowcase() {
-  const [idx, setIdx] = useState(0);
-  const [visible, setVisible] = useState(true);
+  const pool = SHOWCASE_POOL;
+  const enough = pool.length > SHOWCASE_SLOTS;
+  const [slots, setSlots] = useState<number[]>(() =>
+    Array.from({ length: SHOWCASE_SLOTS }, (_, i) => i % pool.length)
+  );
+  const [fading, setFading] = useState<number>(-1);
+  const [nextPtr, setNextPtr] = useState<number>(SHOWCASE_SLOTS % pool.length);
+  const [slotPtr, setSlotPtr] = useState<number>(0);
 
   useEffect(() => {
+    pool.forEach((src) => { const img = new window.Image(); img.src = src; });
+  }, [pool]);
+
+  useEffect(() => {
+    if (!enough) return;
     const tick = setInterval(() => {
-      setVisible(false);
+      const targetSlot = slotPtr;
+      let candidate = nextPtr;
+      let guard = 0;
+      const shown = new Set(slots.filter((_, i) => i !== targetSlot).map((v) => v));
+      while (shown.has(candidate) && guard < pool.length) {
+        candidate = (candidate + 1) % pool.length;
+        guard++;
+      }
+      setFading(targetSlot);
       setTimeout(() => {
-        setIdx((i) => (i + 1) % SHOWCASE_POOL.length);
-        setVisible(true);
-      }, 400);
-    }, 3000);
+        setSlots((prev) => { const copy = [...prev]; copy[targetSlot] = candidate; return copy; });
+        setFading(-1);
+      }, FADE_MS);
+      setNextPtr((candidate + 1) % pool.length);
+      setSlotPtr((p) => (p + 1) % SHOWCASE_SLOTS);
+    }, 3200);
     return () => clearInterval(tick);
-  }, []);
+  }, [enough, slotPtr, nextPtr, slots, pool.length]);
+
+  const visible = pool.length >= SHOWCASE_SLOTS ? slots : pool.map((_, i) => i);
 
   return (
-    <div className="mt-4 w-full overflow-hidden rounded-2xl shadow-md" style={{ aspectRatio: "4/5" }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={SHOWCASE_POOL[idx]}
-        alt=""
-        className="w-full h-full object-cover"
-        style={{ opacity: visible ? 1 : 0, transition: "opacity 400ms ease" }}
-      />
+    <div className="mt-4 grid grid-cols-4 gap-2">
+      {visible.map((imgIdx, slotIdx) => (
+        <div key={slotIdx} className="overflow-hidden rounded-xl shadow-sm ring-1 ring-black/5" style={{ aspectRatio: "9/16" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={pool[imgIdx]}
+            alt=""
+            className="h-full w-full object-cover transition-opacity"
+            style={{ opacity: fading === slotIdx ? 0 : 1, transitionDuration: `${FADE_MS}ms` }}
+          />
+        </div>
+      ))}
     </div>
   );
 }
