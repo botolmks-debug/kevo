@@ -4,6 +4,11 @@ import crypto from "crypto";
 import { exchangeCodeForToken, listIgAccounts } from "@/lib/instagram/api";
 import { upsertConnection } from "@/lib/supabase/igConnections";
 import { getRouteUser } from "@/lib/instagram/serverUser";
+import {
+  encryptPending,
+  IG_PENDING_COOKIE,
+  IG_PENDING_MAX_AGE,
+} from "@/lib/instagram/pendingCookie";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -53,18 +58,37 @@ export async function GET(req: Request) {
       );
     }
 
-    const acc = accounts[0];
-    await upsertConnection({
-      business_id: user.id,
-      ig_user_id: acc.igUserId,
-      ig_username: acc.igUsername,
-      page_id: acc.pageId,
-      page_name: acc.pageName,
-      access_token: accessToken,
-      token_expires_at: expiresAt.toISOString(),
-    });
+    // Cuma 1 akun -> langsung hubungkan seperti biasa (tanpa layar pilih)
+    if (accounts.length === 1) {
+      const acc = accounts[0];
+      await upsertConnection({
+        business_id: user.id,
+        ig_user_id: acc.igUserId,
+        ig_username: acc.igUsername,
+        page_id: acc.pageId,
+        page_name: acc.pageName,
+        access_token: accessToken,
+        token_expires_at: expiresAt.toISOString(),
+      });
+      return back("ig=ok");
+    }
 
-    return back("ig=ok");
+    // Lebih dari 1 akun -> simpan kandidat di cookie terenkripsi, arahkan ke halaman pilih
+    const pending = encryptPending({
+      userId: user.id,
+      accessToken,
+      expiresAt: expiresAt.toISOString(),
+      accounts,
+    });
+    const res = NextResponse.redirect(new URL("/instagram/pilih", req.url));
+    res.cookies.set(IG_PENDING_COOKIE, pending, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: IG_PENDING_MAX_AGE,
+    });
+    return res;
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Gagal menghubungkan";
     console.log("[IG] ERROR:", msg);
