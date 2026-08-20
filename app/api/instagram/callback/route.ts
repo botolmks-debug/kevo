@@ -40,7 +40,7 @@ export async function GET(req: Request) {
 
   try {
     const { accessToken, expiresAt } = await exchangeCodeForToken(code);
-    const accounts = await listIgAccounts(accessToken);
+    console.log("IG accounts found:", JSON.stringify(accounts));
 
     if (accounts.length === 0) {
       return back(
