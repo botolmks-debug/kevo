@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Header } from "@/components/ui/Header";
 import { Card } from "@/components/ui/Card";
 import { momenForDate, type MomenInfo } from "@/lib/ai/momenKalender";
+import AutoPostControl from "@/components/content/AutoPostControl";
 
 type Item = {
   id: string;
@@ -13,6 +14,10 @@ type Item = {
   onImageText: string;
   caption: string;
   scheduledDate?: string | null;
+  scheduled_time?: string | null;
+  auto_post?: boolean;
+  ig_posted_at?: string | null;
+  ig_post_error?: string | null;
 };
 
 const HARI = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
@@ -37,12 +42,20 @@ export default function JadwalPage() {
   const [cursor, setCursor] = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [igConnected, setIgConnected] = useState(false);
 
   useEffect(() => {
+    // Fetch konten
     fetch("/api/generate-auto")
       .then((r) => r.json())
       .then((d) => { setItems(d.items ?? []); setLoading(false); })
       .catch(() => setLoading(false));
+
+    // Fetch status IG
+    fetch("/api/instagram/status")
+      .then((r) => r.json())
+      .then((d) => setIgConnected(d?.connected ?? false))
+      .catch(() => {});
   }, []);
 
   const today = ymd(new Date());
@@ -58,7 +71,7 @@ export default function JadwalPage() {
 
   const unscheduled = useMemo(() => items.filter((i) => !i.scheduledDate), [items]);
 
-  // Susun sel kalender untuk bulan yang ditampilkan (Senin di depan).
+  // Susun sel kalender untuk bulan yang ditampilkan (Senin di depan)
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
   const cells = useMemo(() => {
@@ -143,7 +156,6 @@ export default function JadwalPage() {
                   }`}
                 >
                   <span className={`text-xs font-semibold ${isToday ? "text-amber-700" : "text-navy/70"}`}>{dayNum}</span>
-                  {/* Penanda momen: emoji + nama singkat (hover utk nama lengkap) */}
                   {momen ? (
                     <span className="mt-0.5 truncate text-[9px] font-medium leading-tight text-primary">
                       {momen.emoji} {momen.label}
@@ -192,15 +204,26 @@ export default function JadwalPage() {
             ) : (
               <div className="flex flex-col gap-2">
                 {selectedItems.map((it) => (
-                  <div key={it.id} className="flex items-center gap-3 rounded-xl border border-line p-2">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={it.imageUrl} alt="" className="h-12 w-12 rounded-lg object-cover" />
-                    <p className="line-clamp-2 flex-1 text-xs text-navy/70">{it.onImageText || it.caption || "Konten"}</p>
-                    <Link href="/konten" className="text-xs font-medium text-primary hover:underline">Edit</Link>
-                    <button type="button" disabled={busyId === it.id} onClick={() => setSchedule(it.id, null)}
-                      className="text-xs font-medium text-red-500 hover:underline disabled:opacity-50">
-                      {busyId === it.id ? "..." : "Batal"}
-                    </button>
+                  <div key={it.id} className="flex flex-col rounded-xl border border-line p-2 gap-2">
+                    <div className="flex items-center gap-3">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={it.imageUrl} alt="" className="h-12 w-12 rounded-lg object-cover" />
+                      <p className="line-clamp-2 flex-1 text-xs text-navy/70">{it.onImageText || it.caption || "Konten"}</p>
+                      <Link href="/konten" className="text-xs font-medium text-primary hover:underline">Edit</Link>
+                      <button type="button" disabled={busyId === it.id} onClick={() => setSchedule(it.id, null)}
+                        className="text-xs font-medium text-red-500 hover:underline disabled:opacity-50">
+                        {busyId === it.id ? "..." : "Batal"}
+                      </button>
+                    </div>
+                    {/* Kontrol auto-post Instagram */}
+                    <AutoPostControl
+                      contentId={it.id}
+                      scheduledTime={it.scheduled_time ?? null}
+                      autoPost={it.auto_post ?? false}
+                      postedAt={it.ig_posted_at ?? null}
+                      postError={it.ig_post_error ?? null}
+                      igConnected={igConnected}
+                    />
                   </div>
                 ))}
               </div>
@@ -218,16 +241,18 @@ export default function JadwalPage() {
           ) : (
             <div className="flex flex-col gap-2">
               {unscheduled.map((it) => (
-                <div key={it.id} className="flex items-center gap-3 rounded-xl border border-line p-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={it.imageUrl} alt="" className="h-12 w-12 rounded-lg object-cover" />
-                  <p className="line-clamp-2 flex-1 text-xs text-navy/70">{it.onImageText || it.caption || "Konten"}</p>
-                  <input
-                    type="date"
-                    disabled={busyId === it.id}
-                    onChange={(e) => e.target.value && setSchedule(it.id, e.target.value)}
-                    className="rounded-lg border border-line px-2 py-1 text-xs focus:border-primary focus:outline-none disabled:opacity-50"
-                  />
+                <div key={it.id} className="flex flex-col rounded-xl border border-line p-2 gap-2">
+                  <div className="flex items-center gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={it.imageUrl} alt="" className="h-12 w-12 rounded-lg object-cover" />
+                    <p className="line-clamp-2 flex-1 text-xs text-navy/70">{it.onImageText || it.caption || "Konten"}</p>
+                    <input
+                      type="date"
+                      disabled={busyId === it.id}
+                      onChange={(e) => e.target.value && setSchedule(it.id, e.target.value)}
+                      className="rounded-lg border border-line px-2 py-1 text-xs focus:border-primary focus:outline-none disabled:opacity-50"
+                    />
+                  </div>
                 </div>
               ))}
             </div>

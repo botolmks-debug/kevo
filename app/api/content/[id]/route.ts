@@ -1,6 +1,8 @@
 /**
- * PATCH /api/content/[id]  { scheduledDate: "YYYY-MM-DD" | null }
+ * PATCH /api/content/[id]  { scheduledDate, scheduledTime, autoPost }
  * Set / batalkan tanggal jadwal posting untuk Kalender Konten.
+ * scheduledTime: "HH:MM" untuk jam posting otomatis IG.
+ * autoPost: boolean untuk aktifkan/matikan posting otomatis IG.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
@@ -18,7 +20,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum login." }, { status: 401 });
 
-  let body: { scheduledDate?: string | null };
+  let body: { scheduledDate?: string | null; scheduledTime?: string; autoPost?: boolean };
   try {
     body = await request.json();
   } catch {
@@ -44,8 +46,24 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: "Bukan milik akun ini." }, { status: 403 });
   }
 
-  const result = await setContentSchedule(service, id, date);
-  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 502 });
+  // Update jadwal tanggal (fungsi yang sudah ada)
+  if (date !== undefined) {
+    const result = await setContentSchedule(service, id, date);
+    if (!result.ok) return NextResponse.json({ error: result.error }, { status: 502 });
+  }
 
-  return NextResponse.json({ ok: true, scheduledDate: result.row.scheduled_date ?? null });
+  // Update jam + toggle autopost IG (field baru dari migration instagram.sql)
+  const igUpdate: Record<string, unknown> = {};
+  if (typeof body.scheduledTime === "string") igUpdate.scheduled_time = body.scheduledTime;
+  if (typeof body.autoPost === "boolean") igUpdate.auto_post = body.autoPost;
+
+  if (Object.keys(igUpdate).length > 0) {
+    const { error: igErr } = await service
+      .from("generated_content")
+      .update(igUpdate)
+      .eq("id", id);
+    if (igErr) return NextResponse.json({ error: igErr.message }, { status: 502 });
+  }
+
+  return NextResponse.json({ ok: true, scheduledDate: date });
 }

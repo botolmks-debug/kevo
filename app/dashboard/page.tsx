@@ -1,4 +1,4 @@
-﻿import { redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { langFromCookie, t } from "@/lib/i18n";
 import { Header } from "@/components/ui/Header";
@@ -9,6 +9,7 @@ import { SocialLinks } from "@/components/dashboard/SocialLinks";
 import { ContentReminderBell } from "@/components/dashboard/ContentReminderBell";
 import { LanguageToggle } from "@/components/ui/LanguageToggle";
 import { AchievementCard } from "@/components/dashboard/AchievementCard";
+import InstagramConnect from "@/components/dashboard/InstagramConnect";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -41,6 +42,9 @@ export default async function DashboardPage() {
 
         {/* Achievement: peringkat hari aktif + hadiah token (lihat /api/achievements). */}
         <AchievementCard />
+
+        {/* Koneksi Instagram untuk posting otomatis */}
+        <InstagramConnect />
 
         <LanguageToggle />
 

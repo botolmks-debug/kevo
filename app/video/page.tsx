@@ -27,6 +27,10 @@ export default function VideoPage() {
   const [productDesc, setProductDesc] = useState("");
   const [targetMarket, setTargetMarket] = useState("");
   const [aspect, setAspect] = useState<"9:16" | "16:9">("9:16");
+  // Provider video: Veo (Gemini, bisa bicara, mahal) vs Seedance Fast (fal.ai, murah).
+  const [provider, setProvider] = useState<"veo" | "seedance">("seedance");
+  // Durasi video: 8 dtk (dua provider) atau 10 dtk (hanya Seedance).
+  const [durVid, setDurVid] = useState<8 | 10>(8);
 
   const [sb, setSb] = useState<Storyboard | null>(null);
   const [sbStatus, setSbStatus] = useState<Status>("idle");
@@ -70,15 +74,32 @@ export default function VideoPage() {
       const mod = (await import(
         /* webpackIgnore: true */ "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js"
       )) as { FFmpeg: new () => {
-        load: (o: { coreURL: string; wasmURL: string }) => Promise<void>;
+        load: (o: { coreURL: string; wasmURL: string; classWorkerURL?: string }) => Promise<void>;
         writeFile: (n: string, d: Uint8Array) => Promise<void>;
         exec: (a: string[]) => Promise<number>;
         readFile: (n: string) => Promise<Uint8Array | string>;
       } };
+      // Browser melarang Worker dimuat lintas-origin (unpkg vs situs kita),
+      // jadi semua file ffmpeg diunduh dulu sebagai BLOB lalu dimuat dari
+      // blob URL lokal — pola resmi dari dokumentasi ffmpeg.wasm.
+      const toBlobURL = async (url: string, type: string) => {
+        const buf = await (await fetch(url)).arrayBuffer();
+        return URL.createObjectURL(new Blob([buf], { type }));
+      };
       const ffmpeg = new mod.FFmpeg();
       await ffmpeg.load({
-        coreURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.js",
-        wasmURL: "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.wasm",
+        coreURL: await toBlobURL(
+          "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.js",
+          "text/javascript",
+        ),
+        wasmURL: await toBlobURL(
+          "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm/ffmpeg-core.wasm",
+          "application/wasm",
+        ),
+        classWorkerURL: await toBlobURL(
+          "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js",
+          "text/javascript",
+        ),
       });
       const vid = new Uint8Array(await (await fetch(videoUrl)).arrayBuffer());
       const logo = new Uint8Array(await (await fetch(logoUrl)).arrayBuffer());
@@ -119,7 +140,7 @@ export default function VideoPage() {
       const res = await fetch("/api/video/veo/storyboard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productDescription: productDesc, targetMarket, durationSeconds: 8 }),
+        body: JSON.stringify({ productDescription: productDesc, targetMarket, durationSeconds: durVid }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d?.error ?? "Gagal.");
@@ -139,7 +160,13 @@ export default function VideoPage() {
     setLogoVideoUrl(null);
     setLogoError(null);
     try {
-      const res = await fetch("/api/video/veo/generate", {
+      // Seedance = image-to-video murni: WAJIB ada foto produk.
+      if (provider === "seedance" && !selected?.publicUrl) {
+        throw new Error("Seedance butuh foto produk — pilih gambar dari galeri di langkah 1.");
+      }
+      const endpoint =
+        provider === "veo" ? "/api/video/veo/generate" : "/api/video/seedance/generate";
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -147,30 +174,34 @@ export default function VideoPage() {
           negativePrompt: sb.negativePrompt,
           productImageUrl: selected?.publicUrl,
           aspectRatio: aspect,
-          durationSeconds: 8,
+          durationSeconds: durVid,
         }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d?.error ?? "Gagal submit.");
-      startPolling(d.operationName as string);
+      startPolling(provider, (d.operationName ?? d.requestId) as string);
     } catch (e) {
       setGenStatus("error");
       setGenError(e instanceof Error ? e.message : "Gagal.");
     }
   }
 
-  function startPolling(op: string) {
+  function startPolling(prov: "veo" | "seedance", op: string) {
     setPolling(true);
+    const statusUrl =
+      prov === "veo"
+        ? `/api/video/veo/status?op=${encodeURIComponent(op)}`
+        : `/api/video/seedance/status?id=${encodeURIComponent(op)}`;
     const check = async () => {
       try {
-        const res = await fetch(`/api/video/veo/status?op=${encodeURIComponent(op)}`);
+        const res = await fetch(statusUrl);
         const d = await res.json();
         if (d?.error) throw new Error(d.error);
         if (d?.done && d?.ready) {
           if (pollRef.current) clearInterval(pollRef.current);
           setPolling(false);
           // Unduh mp4 sebagai blob supaya bisa diputar + disimpan.
-          const vid = await fetch(`/api/video/veo/status?op=${encodeURIComponent(op)}&dl=1`);
+          const vid = await fetch(`${statusUrl}&dl=1`);
           if (!vid.ok) throw new Error("Video selesai tapi gagal diunduh — coba refresh.");
           const blob = await vid.blob();
           setVideoUrl(URL.createObjectURL(blob));
@@ -194,8 +225,9 @@ export default function VideoPage() {
         <div>
           <h1 className="text-2xl font-bold text-navy">Video Produk (AI)</h1>
           <p className="mt-1 text-sm text-navy/60">
-            OpenAI menyusun naskah & storyboard, Veo (Gemini) membuat videonya dari foto produk.
-            Maks 8 detik, biaya nyata per klip, butuh Gemini API paid tier.
+            OpenAI menyusun naskah & storyboard, lalu pilih mesin video: Seedance Fast
+            (±Rp30-40rb/klip via fal.ai, 8-10 detik) atau Veo (Gemini, ±Rp25-100rb/klip,
+            maks 8 detik, butuh paid tier). Biaya nyata per klip.
           </p>
         </div>
 
@@ -229,6 +261,34 @@ export default function VideoPage() {
               </button>
             ))}
           </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-navy/60">Mesin video:</span>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => setProvider("seedance")}
+                className={`rounded-xl border px-4 py-2 text-left text-xs ${provider === "seedance" ? "border-primary bg-primary/10" : "border-line"}`}>
+                <span className="block font-semibold text-navy">Seedance Fast</span>
+                <span className="text-navy/60">±Rp30-40rb/klip · 720p · wajib foto produk</span>
+              </button>
+              <button type="button" onClick={() => { setProvider("veo"); setDurVid(8); }}
+                className={`rounded-xl border px-4 py-2 text-left text-xs ${provider === "veo" ? "border-primary bg-primary/10" : "border-line"}`}>
+                <span className="block font-semibold text-navy">Veo (Gemini)</span>
+                <span className="text-navy/60">±Rp25-100rb/klip · bicara paling natural</span>
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-navy/60">Durasi (naskah menyesuaikan):</span>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setDurVid(8)}
+                className={`rounded-full border px-4 py-1.5 text-sm ${durVid === 8 ? "border-primary bg-primary/10 text-primary" : "border-line text-navy"}`}>
+                8 detik
+              </button>
+              <button type="button" onClick={() => setDurVid(10)} disabled={provider === "veo"}
+                className={`rounded-full border px-4 py-1.5 text-sm ${durVid === 10 ? "border-primary bg-primary/10 text-primary" : "border-line text-navy"} ${provider === "veo" ? "opacity-40" : ""}`}>
+                10 detik (Seedance)
+              </button>
+            </div>
+          </div>
           <Button type="button" variant="cta" onClick={handleStoryboard}
             disabled={sbStatus === "loading" || !productDesc.trim() || !targetMarket.trim()}>
             {sbStatus === "loading" ? "Menyusun storyboard..." : "Buat Naskah & Storyboard (OpenAI)"}
@@ -260,7 +320,10 @@ export default function VideoPage() {
                 className="resize-none rounded-xl border border-line px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15" />
             </label>
             <Button type="button" variant="cta" onClick={handleGenerate} disabled={genStatus === "loading" || polling}>
-              {polling ? "Veo sedang membuat video (±1-3 menit)..." : genStatus === "loading" ? "Mengirim..." : "Generate Video (biaya nyata, 8 detik)"}
+              {polling
+                ? `${provider === "veo" ? "Veo" : "Seedance"} sedang membuat video (±1-3 menit)...`
+                : genStatus === "loading" ? "Mengirim..."
+                : `Generate via ${provider === "veo" ? "Veo" : "Seedance Fast"} (biaya nyata, ${durVid} detik)`}
             </Button>
             {genError ? <p className="text-sm text-red-600">{genError}</p> : null}
           </Card>
@@ -271,7 +334,7 @@ export default function VideoPage() {
           <Card className="flex flex-col items-start gap-3">
             <h3 className="text-sm font-semibold text-navy">3. Hasil</h3>
             <video src={videoUrl} controls playsInline className="w-full max-w-sm rounded-2xl border border-line" />
-            <a href={videoUrl} download={`keposting-veo-${Date.now()}.mp4`}
+            <a href={videoUrl} download={`keposting-${provider}-${Date.now()}.mp4`}
               className="text-sm font-medium text-primary hover:underline">Unduh MP4</a>
             <p className="text-xs text-navy/40">Video belum disimpan ke Riwayat (beta) — unduh sebelum menutup halaman.</p>
 
@@ -303,7 +366,7 @@ export default function VideoPage() {
               {logoVideoUrl ? (
                 <div className="flex flex-col items-start gap-2">
                   <video src={logoVideoUrl} controls playsInline className="w-full max-w-sm rounded-2xl border border-line" />
-                  <a href={logoVideoUrl} download={`keposting-veo-logo-${Date.now()}.mp4`}
+                  <a href={logoVideoUrl} download={`keposting-${provider}-logo-${Date.now()}.mp4`}
                     className="text-sm font-medium text-primary hover:underline">Unduh MP4 (dengan logo)</a>
                 </div>
               ) : null}

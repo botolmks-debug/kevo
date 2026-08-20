@@ -35,7 +35,10 @@ export async function POST(req: Request) {
       productDescription: body.productDescription.trim(),
       targetMarket: body.targetMarket.trim(),
       businessName: body.businessName?.trim(),
-      durationSeconds: body.durationSeconds === 4 || body.durationSeconds === 6 ? body.durationSeconds : 8,
+      durationSeconds:
+        body.durationSeconds === 4 || body.durationSeconds === 6 || body.durationSeconds === 10
+          ? body.durationSeconds
+          : 8,
     });
     return NextResponse.json(sb);
   } catch (e) {
