@@ -55,3 +55,20 @@ export async function publishImage(opts: {
   }
   return { mediaId: pubJson.id };
 }
+export async function refreshLongLivedToken(accessToken: string) {
+  const res = await fetch(
+    `https://graph.instagram.com/refresh_access_token?` +
+      new URLSearchParams({
+        grant_type: "ig_refresh_token",
+        access_token: accessToken,
+      }).toString(),
+    { cache: "no-store" }
+  );
+  const json = await res.json();
+  console.log("[IG refreshLongLivedToken]:", JSON.stringify(json));
+  if (!res.ok || json.error) {
+    throw new Error(json?.error?.message || `Gagal refresh token: ${res.status}`);
+  }
+  // { access_token, token_type, expires_in }
+  return json;
+}
