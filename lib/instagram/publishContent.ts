@@ -1,7 +1,4 @@
 // lib/instagram/publishContent.ts
-// Inti proses posting 1 konten ke Instagram:
-// ambil gambar konten -> konversi JPEG -> upload ke bucket publik -> publish -> tandai baris.
-// Dipakai oleh route publish manual DAN cron scheduler.
 import sharp from "sharp";
 import { publishImage } from "@/lib/instagram/api";
 import {
@@ -11,7 +8,6 @@ import {
 
 const BUCKET = "user-images";
 
-// Cari kolom gambar di baris generated_content (nama kolom berbeda antar era fitur).
 function pickImageRef(row: Record<string, unknown>): string | null {
   const candidates = [
     "image_path",
@@ -35,6 +31,10 @@ function publicUrl(path: string): string {
 export async function publishContentToIg(contentId: string, conn: IgConnection) {
   const db = createIgServiceClient();
 
+  console.log("[PUBLISH] conn.ig_user_id:", conn.ig_user_id);
+  console.log("[PUBLISH] conn.ig_username:", conn.ig_username);
+  console.log("[PUBLISH] contentId:", contentId);
+
   const { data: row, error } = await db
     .from("generated_content")
     .select("*")
@@ -45,11 +45,12 @@ export async function publishContentToIg(contentId: string, conn: IgConnection) 
   if (!row) throw new Error("Konten tidak ditemukan");
   if (row.ig_posted_at) return { skipped: true as const, reason: "Sudah terposting" };
 
-  const ref = pickImageRef(row);
+  const ref = pickImageRef(row as Record<string, unknown>);
+  console.log("[PUBLISH] image ref found:", ref);
   if (!ref) throw new Error("Konten belum punya gambar tersimpan");
   const srcUrl = ref.startsWith("http") ? ref : publicUrl(ref);
+  console.log("[PUBLISH] srcUrl:", srcUrl);
 
-  // Unduh PNG hasil render -> konversi JPEG (syarat Instagram Graph API)
   const imgRes = await fetch(srcUrl);
   if (!imgRes.ok) throw new Error(`Gagal ambil gambar konten (${imgRes.status})`);
   const png = Buffer.from(await imgRes.arrayBuffer());
@@ -64,16 +65,20 @@ export async function publishContentToIg(contentId: string, conn: IgConnection) 
     .upload(jpegPath, jpeg, { contentType: "image/jpeg", upsert: true });
   if (up.error) throw new Error(`Gagal upload JPEG: ${up.error.message}`);
 
+  const imageUrl = publicUrl(jpegPath);
+  console.log("[PUBLISH] imageUrl untuk IG:", imageUrl);
+
   const caption: string =
     (typeof row.caption === "string" && row.caption) ||
-    (typeof row.title === "string" && row.title) ||
+    (typeof (row as Record<string, unknown>).title === "string" && (row as Record<string, unknown>).title as string) ||
     "";
 
   try {
+    console.log("[PUBLISH] memanggil publishImage igUserId:", conn.ig_user_id);
     const { mediaId } = await publishImage({
       igUserId: conn.ig_user_id,
       accessToken: conn.access_token,
-      imageUrl: publicUrl(jpegPath),
+      imageUrl,
       caption,
     });
 
@@ -89,6 +94,7 @@ export async function publishContentToIg(contentId: string, conn: IgConnection) 
     return { skipped: false as const, mediaId };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Gagal publish";
+    console.log("[PUBLISH] ERROR:", msg);
     await db
       .from("generated_content")
       .update({ ig_post_error: msg })
