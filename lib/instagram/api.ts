@@ -35,6 +35,20 @@ async function graphGet(path: string, token: string, params: Record<string, stri
   return json;
 }
 
+async function graphPost(path: string, token: string, params: Record<string, string> = {}) {
+  const res = await fetch(`${GRAPH}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ access_token: token, ...params }).toString(),
+    cache: "no-store",
+  });
+  const json = await res.json();
+  if (!res.ok || json.error) {
+    throw new Error(json?.error?.message || `Graph API error (POST) di ${path}`);
+  }
+  return json;
+}
+
 export async function exchangeCodeForToken(
   code: string
 ): Promise<{ accessToken: string; expiresAt: Date }> {
@@ -168,50 +182,40 @@ export async function refreshLongLivedToken(
     expiresAt: new Date(Date.now() + expiresIn * 1000),
   };
 }
+
 export async function publishImage(opts: {
   igUserId: string;
   accessToken: string;
   imageUrl: string;
   caption: string;
 }) {
-  const container = await graphGet(
-    `/${opts.igUserId}/media`,
-    opts.accessToken,
-    {
-      image_url: opts.imageUrl,
-      caption: opts.caption.slice(0, 2200),
-    }
-  );
+  // Step 1: buat container media (WAJIB POST — GET bikin "Unsupported get request")
+  const container = await graphPost(`/${opts.igUserId}/media`, opts.accessToken, {
+    image_url: opts.imageUrl,
+    caption: opts.caption.slice(0, 2200),
+  });
+  console.log("[IG publishImage] container:", JSON.stringify(container));
+  if (!container.id) {
+    throw new Error(`Container ID tidak ada: ${JSON.stringify(container)}`);
+  }
 
+  // Step 2: tunggu container siap
   for (let i = 0; i < 10; i++) {
     const st = await graphGet(`/${container.id}`, opts.accessToken, {
       fields: "status_code",
     });
+    console.log("[IG publishImage] status:", st.status_code);
     if (st.status_code === "FINISHED") break;
     if (st.status_code === "ERROR") throw new Error("Instagram gagal memproses gambar");
     await new Promise((r) => setTimeout(r, 2000));
   }
 
+  // Step 3: publish
   const published = await graphPost(
     `/${opts.igUserId}/media_publish`,
     opts.accessToken,
     { creation_id: container.id }
   );
+  console.log("[IG publishImage] publish:", JSON.stringify(published));
   return { mediaId: published.id };
-}
-export async function refreshLongLivedToken(accessToken: string) {
-  const res = await fetch(
-    `https://graph.instagram.com/refresh_access_token?` +
-      new URLSearchParams({
-        grant_type: "ig_refresh_token",
-        access_token: accessToken,
-      }).toString(),
-    { cache: "no-store" }
-  );
-  const json = await res.json();
-  console.log("[IG refreshLongLivedToken]:", JSON.stringify(json));
-  if (!res.ok || json.error) {
-    throw new Error(json?.error?.message || `Gagal refresh token: ${res.status}`);
-  }
-  return json;
 }
