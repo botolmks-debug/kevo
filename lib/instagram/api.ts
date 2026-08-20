@@ -22,9 +22,10 @@ export function redirectUri() {
 
 // Scope minimum untuk publish + baca akun IG dari Page
 export const IG_SCOPES = [
-  "instagram_business_basic",
-  "instagram_business_content_publish",
+  "instagram_basic",
+  "instagram_content_publish",
   "pages_show_list",
+  "business_management",
 ].join(",");
 
 export function buildAuthUrl(state: string) {
