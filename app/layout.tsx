@@ -24,7 +24,10 @@ export const metadata: Metadata = {
     "aplikasi bikin konten jualan",
     "bikin caption otomatis",
   ],
-  icons: { icon: "/favicon.ico" },
+   icons: { icon: "/favicon.ico" },
+  other: {
+    "facebook-domain-verification": "huodl8bj509bvdtkbwna4ht1epap3m",
+  },
   openGraph: {
     type: "website",
     locale: "id_ID",
