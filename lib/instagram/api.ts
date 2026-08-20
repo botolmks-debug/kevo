@@ -1,6 +1,5 @@
 // lib/instagram/api.ts
 // Helper Meta Graph API: OAuth + pencarian akun IG Business.
-// Scope diperluas: business_management diperlukan bila Page dikelola lewat Business Manager.
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
@@ -36,12 +35,26 @@ async function graphGet(path: string, token: string, params: Record<string, stri
   return json;
 }
 
+async function graphPost(path: string, token: string, params: Record<string, string> = {}) {
+  const body = new URLSearchParams({ access_token: token, ...params });
+  const res = await fetch(`${GRAPH}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: body.toString(),
+    cache: "no-store",
+  });
+  const json = await res.json();
+  if (!res.ok || json.error) {
+    throw new Error(json?.error?.message || `Graph API POST error di ${path}`);
+  }
+  return json;
+}
+
 export async function exchangeCodeForToken(
   code: string
 ): Promise<{ accessToken: string; expiresAt: Date }> {
   const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL}/api/instagram/callback`;
 
-  // 1) code -> short-lived token
   const shortRes = await fetch(
     `${GRAPH}/oauth/access_token?` +
       new URLSearchParams({
@@ -57,7 +70,6 @@ export async function exchangeCodeForToken(
     throw new Error(shortJson?.error?.message || "Gagal tukar code");
   }
 
-  // 2) short-lived -> long-lived (±60 hari)
   const longRes = await fetch(
     `${GRAPH}/oauth/access_token?` +
       new URLSearchParams({
@@ -142,10 +154,6 @@ export async function listIgAccounts(accessToken: string): Promise<IgAccount[]> 
   return Array.from(found.values());
 }
 
-/**
- * Refresh long-lived token Meta (fb_exchange_token).
- * Dipakai cron /api/cron/instagram-refresh.
- */
 export async function refreshLongLivedToken(
   currentToken: string
 ): Promise<{ accessToken: string; expiresAt: Date }> {
@@ -168,4 +176,30 @@ export async function refreshLongLivedToken(
     accessToken: json.access_token as string,
     expiresAt: new Date(Date.now() + expiresIn * 1000),
   };
+}
+
+export async function publishImage(opts: {
+  igUserId: string;
+  accessToken: string;
+  imageUrl: string;
+  caption: string;
+}) {
+  const container = await graphPost(`/${opts.igUserId}/media`, opts.accessToken, {
+    image_url: opts.imageUrl,
+    caption: opts.caption.slice(0, 2200),
+  });
+
+  for (let i = 0; i < 10; i++) {
+    const st = await graphGet(`/${container.id}`, opts.accessToken, {
+      fields: "status_code",
+    });
+    if (st.status_code === "FINISHED") break;
+    if (st.status_code === "ERROR") throw new Error("Instagram gagal memproses gambar");
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+
+  const published = await graphPost(`/${opts.igUserId}/media_publish`, opts.accessToken, {
+    creation_id: container.id,
+  });
+  return { mediaId: published.id };
 }
