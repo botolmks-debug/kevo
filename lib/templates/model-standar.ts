@@ -9,34 +9,35 @@ import { defaultBrand } from "@/lib/templates/brand";
 function buildLayout(height: number, descCount: number, titleText?: string, descTexts?: string[]): TemplateLayout {
   const W = 1080;
   const footerY = height - 80;
-  const scrimH = Math.round(height * 0.44);
+
+  // Scrim lebih besar (52%) supaya ada ruang cukup untuk judul + deskripsi
+  const scrimH = Math.round(height * 0.52);
   const scrimY = height - scrimH;
   const titleY = scrimY + 32;
   const gap = 10;
 
   const count = Math.max(0, descCount);
 
-  // --- Judul: tinggi DINAMIS (sudah ada sebelumnya) ---
-  const titleMaxFont = 72;
+  // --- Judul: font lebih kecil (60px) supaya tidak makan terlalu banyak ruang ---
+  const titleMaxFont = 60;
   const titleCharsPerLine = Math.max(1, Math.floor((W - 120) / (titleMaxFont * 0.55)));
   const titleLines = titleText && titleText.trim()
-    ? Math.max(1, Math.ceil(titleText.trim().length / titleCharsPerLine))
+    ? Math.max(1, Math.min(3, Math.ceil(titleText.trim().length / titleCharsPerLine)))
     : 2;
 
-  // --- Deskripsi: tinggi DINAMIS per slot (sama logikanya dengan judul) ---
-  const descMaxFont = 34;
+  // --- Deskripsi: tinggi DINAMIS per slot ---
+  const descMaxFont = 32;
   const descCharsPerLine = Math.max(1, Math.floor((W - 120) / (descMaxFont * 0.55)));
   const descMaxLines = 3;
 
-  // Hitung tinggi tiap slot deskripsi berdasarkan panjang teksnya
   const descHeights = Array.from({ length: count }, (_, i) => {
     const txt = descTexts?.[i];
     const lines = txt && txt.trim()
       ? Math.min(descMaxLines, Math.max(1, Math.ceil(txt.trim().length / descCharsPerLine)))
-      : 2; // default 2 baris kalau teks belum ada
+      : 2;
     return Math.max(
-      Math.round(descMaxFont * 1.3),                          // min 1 baris
-      Math.round(lines * descMaxFont * 1.25) + 8,            // tinggi dinamis
+      Math.round(descMaxFont * 1.3),
+      Math.round(lines * descMaxFont * 1.25) + 8,
     );
   });
 
@@ -46,13 +47,13 @@ function buildLayout(height: number, descCount: number, titleText?: string, desc
 
   const maxTitleH = footerY - titleY - descsBlock - 16;
   const titleH = Math.max(
-    Math.round(titleMaxFont * 1.15),
-    Math.min(Math.round(titleLines * titleMaxFont * 1.08) + 8, maxTitleH),
+    Math.round(titleMaxFont * 1.2),
+    Math.min(Math.round(titleLines * titleMaxFont * 1.15) + 8, maxTitleH),
   );
 
-  // Hitung posisi Y tiap deskripsi berdasarkan tinggi dinamis masing-masing
+  // Posisi Y tiap deskripsi
   const descYPositions: number[] = [];
-  let curY = titleY + titleH + 8;
+  let curY = titleY + titleH + 10;
   for (let i = 0; i < count; i++) {
     descYPositions.push(curY);
     curY += descHeights[i] + gap;
@@ -69,7 +70,7 @@ function buildLayout(height: number, descCount: number, titleText?: string, desc
     },
     fontFamily: "Inter",
     maxFontSize: descMaxFont,
-    minFontSize: 18,
+    minFontSize: 16,
     maxLines: descMaxLines,
     align: "left" as const,
     color: "rgba(255,255,255,0.9)",
@@ -92,7 +93,6 @@ function buildLayout(height: number, descCount: number, titleText?: string, desc
       nameColor: "#ffffff",
     },
     decorations: [
-      // Scrim gelap tipis di bawah supaya teks tetap terbaca di atas gambar.
       {
         box: { x: 0, y: scrimY, width: W, height: scrimH },
         shape: "rect",
@@ -102,7 +102,6 @@ function buildLayout(height: number, descCount: number, titleText?: string, desc
       },
     ],
     slots: [
-      // Gambar full-bleed (cover)
       {
         id: "photo",
         type: "image",
@@ -112,15 +111,14 @@ function buildLayout(height: number, descCount: number, titleText?: string, desc
         label: "Gambar",
         placeholder: "Pilih gambar",
       },
-      // Judul besar
       {
         id: "title",
         type: "text",
         box: { x: 60, y: titleY, width: W - 120, height: titleH },
         fontFamily: "Poppins",
-        maxFontSize: 72,
-        minFontSize: 32,
-        maxLines: 2,
+        maxFontSize: titleMaxFont,
+        minFontSize: 28,
+        maxLines: 3,
         align: "left",
         color: "#ffffff",
         fontWeight: 700,
