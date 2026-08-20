@@ -37,48 +37,12 @@ export async function GET(req: Request) {
   if (!verifyState(state, user.id)) return back("ig=err&msg=State%20tidak%20valid");
 
   try {
-    console.log("[IG] Mulai exchangeCodeForToken");
+    console.log("[IG] SITE_URL:", process.env.NEXT_PUBLIC_SITE_URL);
     const { accessToken, expiresAt } = await exchangeCodeForToken(code);
-    console.log("[IG] Token OK, panjang:", accessToken?.length, "expires:", expiresAt?.toISOString());
-
-    // Test langsung Graph API dengan token ini
-    try {
-      const testRes = await fetch(
-        `https://graph.facebook.com/v21.0/me?fields=id,name&access_token=${accessToken}`,
-        { cache: "no-store" }
-      );
-      const testJson = await testRes.json();
-      console.log("[IG] /me test:", JSON.stringify(testJson));
-    } catch (te) {
-      console.log("[IG] /me test GAGAL:", te instanceof Error ? te.message : te);
-    }
-
-    // Test /me/accounts
-    try {
-      const accRes = await fetch(
-        `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,instagram_business_account{id,username}&limit=100&access_token=${accessToken}`,
-        { cache: "no-store" }
-      );
-      const accJson = await accRes.json();
-      console.log("[IG] /me/accounts raw:", JSON.stringify(accJson));
-    } catch (ae) {
-      console.log("[IG] /me/accounts GAGAL:", ae instanceof Error ? ae.message : ae);
-    }
-
-    // Test /me/businesses
-    try {
-      const bizRes = await fetch(
-        `https://graph.facebook.com/v21.0/me/businesses?limit=50&access_token=${accessToken}`,
-        { cache: "no-store" }
-      );
-      const bizJson = await bizRes.json();
-      console.log("[IG] /me/businesses raw:", JSON.stringify(bizJson));
-    } catch (be) {
-      console.log("[IG] /me/businesses GAGAL:", be instanceof Error ? be.message : be);
-    }
+    console.log("[IG] Token OK panjang:", accessToken?.length);
 
     const accounts = await listIgAccounts(accessToken);
-    console.log("[IG] accounts found:", JSON.stringify(accounts));
+    console.log("[IG] accounts final:", JSON.stringify(accounts));
 
     if (accounts.length === 0) {
       return back(
@@ -103,7 +67,7 @@ export async function GET(req: Request) {
     return back("ig=ok");
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Gagal menghubungkan";
-    console.log("[IG] ERROR UTAMA:", msg);
+    console.log("[IG] ERROR:", msg);
     return back(`ig=err&msg=${encodeURIComponent(msg)}`);
   }
 }

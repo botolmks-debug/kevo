@@ -1,5 +1,4 @@
 // app/api/instagram/connect/route.ts
-// GET: mulai alur hubungkan Instagram -> redirect ke Facebook OAuth.
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { buildAuthUrl } from "@/lib/instagram/api";
@@ -15,7 +14,6 @@ export async function GET(req: Request) {
     return NextResponse.redirect(new URL("/dashboard?ig=locked", req.url));
   }
 
-  // state = userId.nonce.signature -> dicek lagi di callback (anti-CSRF)
   const nonce = crypto.randomBytes(8).toString("hex");
   const payload = `${user.id}.${nonce}`;
   const sig = crypto

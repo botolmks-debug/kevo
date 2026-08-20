@@ -1,20 +1,22 @@
 // lib/instagram/api.ts
 // Helper Meta Graph API: OAuth + pencarian akun IG Business.
+// Scope: instagram_business_basic + instagram_business_content_publish (versi Jan 2025+)
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
 export const IG_SCOPES = [
+  "instagram_business_basic",
+  "instagram_business_content_publish",
   "pages_show_list",
-  "instagram_basic",
-  "pages_read_engagement",
-  "instagram_content_publish",
   "business_management",
 ].join(",");
 
 const APP_ID = process.env.META_APP_ID || "";
 const APP_SECRET = process.env.META_APP_SECRET || "";
 
-export function buildAuthorizeUrl(redirectUri: string, state: string): string {
+// Dipakai di connect/route.ts
+export function buildAuthUrl(state: string): string {
+  const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL}/api/instagram/callback`;
   const p = new URLSearchParams({
     client_id: APP_ID,
     redirect_uri: redirectUri,
@@ -120,20 +122,42 @@ export async function listIgAccounts(accessToken: string): Promise<IgAccount[]> 
   const FIELDS = "id,name,instagram_business_account{id,username}";
   const found = new Map<string, IgAccount>();
 
-  // Jalur 1: Page klasik milik user langsung
+  // Jalur 1: /me langsung (scope instagram_business_basic)
   try {
-    const me = await graphGet("/me/accounts", accessToken, {
+    const me = await graphGet("/me", accessToken, {
+      fields: "id,name,instagram_business_account{id,username}",
+    });
+    console.log("[IG] /me result:", JSON.stringify(me));
+    if (me.instagram_business_account?.id) {
+      found.set(me.id, {
+        igUserId: me.instagram_business_account.id,
+        igUsername: me.instagram_business_account.username || "",
+        pageId: me.id,
+        pageName: me.name || "",
+      });
+    }
+  } catch (e) {
+    console.log("[IG] /me gagal:", e instanceof Error ? e.message : e);
+  }
+
+  // Jalur 2: Page klasik (/me/accounts)
+  try {
+    const meAccounts = await graphGet("/me/accounts", accessToken, {
       fields: FIELDS,
       limit: "100",
     });
-    for (const acc of pagesToIgAccounts(me.data || [])) found.set(acc.pageId, acc);
+    console.log("[IG] /me/accounts result:", JSON.stringify(meAccounts));
+    for (const acc of pagesToIgAccounts(meAccounts.data || [])) {
+      found.set(acc.pageId, acc);
+    }
   } catch (e) {
-    console.log("me/accounts gagal:", e instanceof Error ? e.message : e);
+    console.log("[IG] /me/accounts gagal:", e instanceof Error ? e.message : e);
   }
 
-  // Jalur 2: Page milik Business Manager
+  // Jalur 3: Business Manager pages
   try {
     const biz = await graphGet("/me/businesses", accessToken, { limit: "50" });
+    console.log("[IG] /me/businesses result:", JSON.stringify(biz));
     for (const b of biz.data || []) {
       for (const edge of ["owned_pages", "client_pages"]) {
         try {
@@ -141,14 +165,16 @@ export async function listIgAccounts(accessToken: string): Promise<IgAccount[]> 
             fields: FIELDS,
             limit: "100",
           });
-          for (const acc of pagesToIgAccounts(pages.data || [])) found.set(acc.pageId, acc);
+          for (const acc of pagesToIgAccounts(pages.data || [])) {
+            found.set(acc.pageId, acc);
+          }
         } catch (e) {
-          console.log(`${edge} gagal utk business ${b.id}:`, e instanceof Error ? e.message : e);
+          console.log(`[IG] ${edge} gagal utk biz ${b.id}:`, e instanceof Error ? e.message : e);
         }
       }
     }
   } catch (e) {
-    console.log("me/businesses gagal:", e instanceof Error ? e.message : e);
+    console.log("[IG] /me/businesses gagal:", e instanceof Error ? e.message : e);
   }
 
   return Array.from(found.values());
