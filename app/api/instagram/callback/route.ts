@@ -1,6 +1,4 @@
 // app/api/instagram/callback/route.ts
-// GET: callback dari Facebook. Tukar code -> long-lived token,
-// cari akun IG Business dari Page user, simpan ke ig_connections.
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { exchangeCodeForToken, listIgAccounts } from "@/lib/instagram/api";
@@ -39,9 +37,48 @@ export async function GET(req: Request) {
   if (!verifyState(state, user.id)) return back("ig=err&msg=State%20tidak%20valid");
 
   try {
+    console.log("[IG] Mulai exchangeCodeForToken");
     const { accessToken, expiresAt } = await exchangeCodeForToken(code);
+    console.log("[IG] Token OK, panjang:", accessToken?.length, "expires:", expiresAt?.toISOString());
+
+    // Test langsung Graph API dengan token ini
+    try {
+      const testRes = await fetch(
+        `https://graph.facebook.com/v21.0/me?fields=id,name&access_token=${accessToken}`,
+        { cache: "no-store" }
+      );
+      const testJson = await testRes.json();
+      console.log("[IG] /me test:", JSON.stringify(testJson));
+    } catch (te) {
+      console.log("[IG] /me test GAGAL:", te instanceof Error ? te.message : te);
+    }
+
+    // Test /me/accounts
+    try {
+      const accRes = await fetch(
+        `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,instagram_business_account{id,username}&limit=100&access_token=${accessToken}`,
+        { cache: "no-store" }
+      );
+      const accJson = await accRes.json();
+      console.log("[IG] /me/accounts raw:", JSON.stringify(accJson));
+    } catch (ae) {
+      console.log("[IG] /me/accounts GAGAL:", ae instanceof Error ? ae.message : ae);
+    }
+
+    // Test /me/businesses
+    try {
+      const bizRes = await fetch(
+        `https://graph.facebook.com/v21.0/me/businesses?limit=50&access_token=${accessToken}`,
+        { cache: "no-store" }
+      );
+      const bizJson = await bizRes.json();
+      console.log("[IG] /me/businesses raw:", JSON.stringify(bizJson));
+    } catch (be) {
+      console.log("[IG] /me/businesses GAGAL:", be instanceof Error ? be.message : be);
+    }
+
     const accounts = await listIgAccounts(accessToken);
-    console.log("IG accounts found:", JSON.stringify(accounts));
+    console.log("[IG] accounts found:", JSON.stringify(accounts));
 
     if (accounts.length === 0) {
       return back(
@@ -52,8 +89,6 @@ export async function GET(req: Request) {
       );
     }
 
-    // Ambil akun pertama. (Kalau nanti banyak user punya multi-Page,
-    // tambahkan halaman pemilihan; untuk sekarang: pertama = umumnya satu-satunya.)
     const acc = accounts[0];
     await upsertConnection({
       business_id: user.id,
@@ -68,6 +103,7 @@ export async function GET(req: Request) {
     return back("ig=ok");
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Gagal menghubungkan";
+    console.log("[IG] ERROR UTAMA:", msg);
     return back(`ig=err&msg=${encodeURIComponent(msg)}`);
   }
 }

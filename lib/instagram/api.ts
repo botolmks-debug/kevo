@@ -1,215 +1,171 @@
 // lib/instagram/api.ts
-// Helper Instagram Graph API (via Facebook Login).
-// Env wajib: META_APP_ID, META_APP_SECRET, META_REDIRECT_URI
+// Helper Meta Graph API: OAuth + pencarian akun IG Business.
+// Scope diperluas: business_management diperlukan bila Page dikelola lewat Business Manager.
 
 const GRAPH = "https://graph.facebook.com/v21.0";
 
-function appId() {
-  const v = process.env.META_APP_ID;
-  if (!v) throw new Error("META_APP_ID belum diisi di env");
-  return v;
-}
-function appSecret() {
-  const v = process.env.META_APP_SECRET;
-  if (!v) throw new Error("META_APP_SECRET belum diisi di env");
-  return v;
-}
-export function redirectUri() {
-  const v = process.env.META_REDIRECT_URI;
-  if (!v) throw new Error("META_REDIRECT_URI belum diisi di env");
-  return v;
-}
-
 export const IG_SCOPES = [
-  "instagram_basic",
-  "instagram_content_publish",
   "pages_show_list",
+  "instagram_basic",
+  "pages_read_engagement",
+  "instagram_content_publish",
   "business_management",
 ].join(",");
 
-export function buildAuthUrl(state: string) {
+const APP_ID = process.env.META_APP_ID || "";
+const APP_SECRET = process.env.META_APP_SECRET || "";
+
+export function buildAuthorizeUrl(redirectUri: string, state: string): string {
   const p = new URLSearchParams({
-    client_id: appId(),
-    redirect_uri: redirectUri(),
+    client_id: APP_ID,
+    redirect_uri: redirectUri,
+    state,
     response_type: "code",
     scope: IG_SCOPES,
-    state,
   });
   return `https://www.facebook.com/v21.0/dialog/oauth?${p.toString()}`;
 }
 
-async function graphGet<T>(path: string, params: Record<string, string>): Promise<T> {
-  const p = new URLSearchParams(params);
+async function graphGet(path: string, token: string, params: Record<string, string> = {}) {
+  const p = new URLSearchParams({ access_token: token, ...params });
   const res = await fetch(`${GRAPH}${path}?${p.toString()}`, { cache: "no-store" });
   const json = await res.json();
   if (!res.ok || json.error) {
-    throw new Error(json?.error?.message || `Graph API error ${res.status}`);
+    throw new Error(json?.error?.message || `Graph API error di ${path}`);
   }
-  return json as T;
+  return json;
 }
 
-async function graphPost<T>(path: string, params: Record<string, string>): Promise<T> {
-  const res = await fetch(`${GRAPH}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams(params).toString(),
-  });
-  const json = await res.json();
-  if (!res.ok || json.error) {
-    throw new Error(json?.error?.message || `Graph API error ${res.status}`);
+export async function exchangeCodeForToken(
+  code: string
+): Promise<{ accessToken: string; expiresAt: Date }> {
+  const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL}/api/instagram/callback`;
+
+  // 1) code -> short-lived token
+  const shortRes = await fetch(
+    `${GRAPH}/oauth/access_token?` +
+      new URLSearchParams({
+        client_id: APP_ID,
+        client_secret: APP_SECRET,
+        redirect_uri: redirectUri,
+        code,
+      }).toString(),
+    { cache: "no-store" }
+  );
+  const shortJson = await shortRes.json();
+  if (!shortRes.ok || shortJson.error) {
+    throw new Error(shortJson?.error?.message || "Gagal tukar code");
   }
-  return json as T;
-}
 
-export async function exchangeCodeForToken(code: string) {
-  const short = await graphGet<{ access_token: string }>("/oauth/access_token", {
-    client_id: appId(),
-    client_secret: appSecret(),
-    redirect_uri: redirectUri(),
-    code,
-  });
-  const long = await graphGet<{ access_token: string; expires_in?: number }>(
-    "/oauth/access_token",
-    {
-      grant_type: "fb_exchange_token",
-      client_id: appId(),
-      client_secret: appSecret(),
-      fb_exchange_token: short.access_token,
-    }
+  // 2) short-lived -> long-lived (±60 hari)
+  const longRes = await fetch(
+    `${GRAPH}/oauth/access_token?` +
+      new URLSearchParams({
+        grant_type: "fb_exchange_token",
+        client_id: APP_ID,
+        client_secret: APP_SECRET,
+        fb_exchange_token: shortJson.access_token,
+      }).toString(),
+    { cache: "no-store" }
   );
-  const expiresAt = new Date(Date.now() + (long.expires_in ?? 60 * 24 * 3600) * 1000);
-  return { accessToken: long.access_token, expiresAt };
+  const longJson = await longRes.json();
+  if (!longRes.ok || longJson.error) {
+    throw new Error(longJson?.error?.message || "Gagal ambil long-lived token");
+  }
+
+  const expiresIn = Number(longJson.expires_in || 60 * 24 * 60 * 60);
+  return {
+    accessToken: longJson.access_token as string,
+    expiresAt: new Date(Date.now() + expiresIn * 1000),
+  };
 }
 
-export async function refreshLongLivedToken(token: string) {
-  const long = await graphGet<{ access_token: string; expires_in?: number }>(
-    "/oauth/access_token",
-    {
-      grant_type: "fb_exchange_token",
-      client_id: appId(),
-      client_secret: appSecret(),
-      fb_exchange_token: token,
-    }
-  );
-  const expiresAt = new Date(Date.now() + (long.expires_in ?? 60 * 24 * 3600) * 1000);
-  return { accessToken: long.access_token, expiresAt };
-}
-
-export type IgPageOption = {
+export type IgAccount = {
+  igUserId: string;
+  igUsername: string;
   pageId: string;
   pageName: string;
-  igUserId: string;
-  igUsername: string | null;
 };
 
-// Helper: ambil akun IG dari satu Page ID
-async function igFromPageId(
-  pageId: string,
-  pageName: string,
-  userToken: string
-): Promise<IgPageOption | null> {
-  try {
-    const detail = await graphGet<{
-      instagram_business_account?: { id: string; username?: string };
-    }>(`/${pageId}`, {
-      fields: "instagram_business_account{id,username}",
-      access_token: userToken,
-    });
-    const ig = detail.instagram_business_account;
-    if (ig?.id) {
-      return {
-        pageId,
-        pageName,
-        igUserId: ig.id,
-        igUsername: ig.username ?? null,
-      };
-    }
-  } catch {
-    // Page tidak punya IG atau tidak bisa diakses — lewati
-  }
-  return null;
+type PageNode = {
+  id: string;
+  name: string;
+  instagram_business_account?: { id: string; username?: string };
+};
+
+function pagesToIgAccounts(pages: PageNode[]): IgAccount[] {
+  return pages
+    .filter((p) => p.instagram_business_account?.id)
+    .map((p) => ({
+      igUserId: p.instagram_business_account!.id,
+      igUsername: p.instagram_business_account!.username || "",
+      pageId: p.id,
+      pageName: p.name,
+    }));
 }
 
-export async function listIgAccounts(userToken: string): Promise<IgPageOption[]> {
-  const out: IgPageOption[] = [];
-  const seen = new Set<string>();
+export async function listIgAccounts(accessToken: string): Promise<IgAccount[]> {
+  const FIELDS = "id,name,instagram_business_account{id,username}";
+  const found = new Map<string, IgAccount>();
 
-  // --- Jalur 1: Page langsung dari akun FB (/me/accounts) ---
+  // Jalur 1: Page klasik milik user langsung
   try {
-    const pages = await graphGet<{
-      data: Array<{ id: string; name: string }>;
-    }>("/me/accounts", { access_token: userToken, limit: "50" });
-
-    for (const page of pages.data ?? []) {
-      if (seen.has(page.id)) continue;
-      seen.add(page.id);
-      const r = await igFromPageId(page.id, page.name, userToken);
-      if (r) out.push(r);
-    }
-  } catch {
-    // /me/accounts gagal — lanjut ke jalur 2
+    const me = await graphGet("/me/accounts", accessToken, {
+      fields: FIELDS,
+      limit: "100",
+    });
+    for (const acc of pagesToIgAccounts(me.data || [])) found.set(acc.pageId, acc);
+  } catch (e) {
+    console.log("me/accounts gagal:", e instanceof Error ? e.message : e);
   }
 
-  // --- Jalur 2: Page via Business Manager (/me/businesses → owned_pages & client_pages) ---
+  // Jalur 2: Page milik Business Manager
   try {
-    const businesses = await graphGet<{
-      data: Array<{ id: string; name: string }>;
-    }>("/me/businesses", { access_token: userToken, limit: "50" });
-
-    for (const biz of businesses.data ?? []) {
-      // owned_pages
-      for (const field of ["owned_pages", "client_pages"] as const) {
+    const biz = await graphGet("/me/businesses", accessToken, { limit: "50" });
+    for (const b of biz.data || []) {
+      for (const edge of ["owned_pages", "client_pages"]) {
         try {
-          const pagesRes = await graphGet<{
-            data: Array<{ id: string; name: string }>;
-          }>(`/${biz.id}/${field}`, {
-            fields: "id,name",
-            access_token: userToken,
-            limit: "50",
+          const pages = await graphGet(`/${b.id}/${edge}`, accessToken, {
+            fields: FIELDS,
+            limit: "100",
           });
-          for (const page of pagesRes.data ?? []) {
-            if (seen.has(page.id)) continue;
-            seen.add(page.id);
-            const r = await igFromPageId(page.id, page.name, userToken);
-            if (r) out.push(r);
-          }
-        } catch {
-          // field tidak ada atau tidak diizinkan — lewati
+          for (const acc of pagesToIgAccounts(pages.data || [])) found.set(acc.pageId, acc);
+        } catch (e) {
+          console.log(`${edge} gagal utk business ${b.id}:`, e instanceof Error ? e.message : e);
         }
       }
     }
-  } catch {
-    // /me/businesses gagal (scope tidak ada) — tidak apa-apa
+  } catch (e) {
+    console.log("me/businesses gagal:", e instanceof Error ? e.message : e);
   }
 
-  return out;
+  return Array.from(found.values());
 }
 
-export async function publishImage(opts: {
-  igUserId: string;
-  accessToken: string;
-  imageUrl: string;
-  caption: string;
-}) {
-  const container = await graphPost<{ id: string }>(`/${opts.igUserId}/media`, {
-    image_url: opts.imageUrl,
-    caption: opts.caption.slice(0, 2200),
-    access_token: opts.accessToken,
-  });
-
-  for (let i = 0; i < 10; i++) {
-    const st = await graphGet<{ status_code?: string }>(`/${container.id}`, {
-      fields: "status_code",
-      access_token: opts.accessToken,
-    });
-    if (st.status_code === "FINISHED") break;
-    if (st.status_code === "ERROR") throw new Error("Instagram gagal memproses gambar");
-    await new Promise((r) => setTimeout(r, 2000));
+/**
+ * Refresh long-lived token Meta (fb_exchange_token).
+ * Dipakai cron /api/cron/instagram-refresh.
+ */
+export async function refreshLongLivedToken(
+  currentToken: string
+): Promise<{ accessToken: string; expiresAt: Date }> {
+  const res = await fetch(
+    `${GRAPH}/oauth/access_token?` +
+      new URLSearchParams({
+        grant_type: "fb_exchange_token",
+        client_id: APP_ID,
+        client_secret: APP_SECRET,
+        fb_exchange_token: currentToken,
+      }).toString(),
+    { cache: "no-store" }
+  );
+  const json = await res.json();
+  if (!res.ok || json.error) {
+    throw new Error(json?.error?.message || "Gagal refresh token");
   }
-
-  const published = await graphPost<{ id: string }>(`/${opts.igUserId}/media_publish`, {
-    creation_id: container.id,
-    access_token: opts.accessToken,
-  });
-  return { mediaId: published.id };
+  const expiresIn = Number(json.expires_in || 60 * 24 * 60 * 60);
+  return {
+    accessToken: json.access_token as string,
+    expiresAt: new Date(Date.now() + expiresIn * 1000),
+  };
 }
