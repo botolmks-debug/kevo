@@ -20,7 +20,6 @@ export function redirectUri() {
   return v;
 }
 
-// Scope minimum untuk publish + baca akun IG dari Page
 export const IG_SCOPES = [
   "instagram_basic",
   "instagram_content_publish",
@@ -62,7 +61,6 @@ async function graphPost<T>(path: string, params: Record<string, string>): Promi
   return json as T;
 }
 
-// --- OAuth: code -> short token -> long-lived token (60 hari) ---
 export async function exchangeCodeForToken(code: string) {
   const short = await graphGet<{ access_token: string }>("/oauth/access_token", {
     client_id: appId(),
@@ -83,7 +81,6 @@ export async function exchangeCodeForToken(code: string) {
   return { accessToken: long.access_token, expiresAt };
 }
 
-// Perpanjang long-lived token (dipanggil cron sebelum kadaluarsa)
 export async function refreshLongLivedToken(token: string) {
   const long = await graphGet<{ access_token: string; expires_in?: number }>(
     "/oauth/access_token",
@@ -98,7 +95,6 @@ export async function refreshLongLivedToken(token: string) {
   return { accessToken: long.access_token, expiresAt };
 }
 
-// --- Ambil Page + akun IG Business yang tertaut ---
 export type IgPageOption = {
   pageId: string;
   pageName: string;
@@ -106,41 +102,93 @@ export type IgPageOption = {
   igUsername: string | null;
 };
 
-export async function listIgAccounts(userToken: string): Promise<IgPageOption[]> {
-  const pages = await graphGet<{
-    data: Array<{ id: string; name: string; access_token: string }>;
-  }>("/me/accounts", { access_token: userToken, limit: "50" });
-
-  const out: IgPageOption[] = [];
-  for (const page of pages.data ?? []) {
-    try {
-      const detail = await graphGet<{
-        instagram_business_account?: { id: string; username?: string };
-      }>(`/${page.id}`, {
-        fields: "instagram_business_account{id,username}",
-        access_token: userToken,
-      });
-      const ig = detail.instagram_business_account;
-      if (ig?.id) {
-        out.push({
-          pageId: page.id,
-          pageName: page.name,
-          igUserId: ig.id,
-          igUsername: ig.username ?? null,
-        });
-      }
-    } catch {
-      // Page tanpa IG tertaut — lewati
+// Helper: ambil akun IG dari satu Page ID
+async function igFromPageId(
+  pageId: string,
+  pageName: string,
+  userToken: string
+): Promise<IgPageOption | null> {
+  try {
+    const detail = await graphGet<{
+      instagram_business_account?: { id: string; username?: string };
+    }>(`/${pageId}`, {
+      fields: "instagram_business_account{id,username}",
+      access_token: userToken,
+    });
+    const ig = detail.instagram_business_account;
+    if (ig?.id) {
+      return {
+        pageId,
+        pageName,
+        igUserId: ig.id,
+        igUsername: ig.username ?? null,
+      };
     }
+  } catch {
+    // Page tidak punya IG atau tidak bisa diakses — lewati
   }
+  return null;
+}
+
+export async function listIgAccounts(userToken: string): Promise<IgPageOption[]> {
+  const out: IgPageOption[] = [];
+  const seen = new Set<string>();
+
+  // --- Jalur 1: Page langsung dari akun FB (/me/accounts) ---
+  try {
+    const pages = await graphGet<{
+      data: Array<{ id: string; name: string }>;
+    }>("/me/accounts", { access_token: userToken, limit: "50" });
+
+    for (const page of pages.data ?? []) {
+      if (seen.has(page.id)) continue;
+      seen.add(page.id);
+      const r = await igFromPageId(page.id, page.name, userToken);
+      if (r) out.push(r);
+    }
+  } catch {
+    // /me/accounts gagal — lanjut ke jalur 2
+  }
+
+  // --- Jalur 2: Page via Business Manager (/me/businesses → owned_pages & client_pages) ---
+  try {
+    const businesses = await graphGet<{
+      data: Array<{ id: string; name: string }>;
+    }>("/me/businesses", { access_token: userToken, limit: "50" });
+
+    for (const biz of businesses.data ?? []) {
+      // owned_pages
+      for (const field of ["owned_pages", "client_pages"] as const) {
+        try {
+          const pagesRes = await graphGet<{
+            data: Array<{ id: string; name: string }>;
+          }>(`/${biz.id}/${field}`, {
+            fields: "id,name",
+            access_token: userToken,
+            limit: "50",
+          });
+          for (const page of pagesRes.data ?? []) {
+            if (seen.has(page.id)) continue;
+            seen.add(page.id);
+            const r = await igFromPageId(page.id, page.name, userToken);
+            if (r) out.push(r);
+          }
+        } catch {
+          // field tidak ada atau tidak diizinkan — lewati
+        }
+      }
+    }
+  } catch {
+    // /me/businesses gagal (scope tidak ada) — tidak apa-apa
+  }
+
   return out;
 }
 
-// --- Publish 1 gambar: create container -> publish ---
 export async function publishImage(opts: {
   igUserId: string;
   accessToken: string;
-  imageUrl: string; // harus JPEG, URL publik
+  imageUrl: string;
   caption: string;
 }) {
   const container = await graphPost<{ id: string }>(`/${opts.igUserId}/media`, {
@@ -149,7 +197,6 @@ export async function publishImage(opts: {
     access_token: opts.accessToken,
   });
 
-  // Tunggu container siap (IG memproses gambar dulu)
   for (let i = 0; i < 10; i++) {
     const st = await graphGet<{ status_code?: string }>(`/${container.id}`, {
       fields: "status_code",
