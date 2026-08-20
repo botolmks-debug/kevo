@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { BusyToast } from "@/components/ui/BusyToast";
 import { Button } from "@/components/ui/Button";
 import { CanvasEditor } from "@/components/editor/CanvasEditor";
+import { useLiveRender } from "@/components/editor/LivePreview";
 import { applyEditorOverrides, type EditorOverrides } from "@/lib/editor/layoutOverrides";
 import { buildFooterSocials } from "@/lib/onboarding/profileStorage";
 import { withFooterOverride } from "@/app/generate/withFooterOverride";
@@ -47,6 +48,7 @@ export function StandarContent({
   const [renderStatus, setRenderStatus] = useState<Status>("idle");
   const [renderError, setRenderError] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState(false);
 
   // Auto-caption (dari data onboarding + judul/deskripsi)
   const [caption, setCaption] = useState("");
@@ -148,6 +150,8 @@ export function StandarContent({
     : null;
 
   const baseTemplate = createStandarTemplate(descCount, values.title ?? "", descList);
+  const liveTemplate = photo ? applyEditorOverrides(template, ratio, overrides) : null;
+  const { url: liveUrl, rendering: liveRendering } = useLiveRender(liveTemplate, { ...values, photo: photo ?? "" }, ratio, !!photo && previewMode);
   const withFooter = footerOverride?.socials?.length
     ? withFooterOverride(baseTemplate, footerOverride.businessName, footerOverride.socials)
     : baseTemplate;
@@ -430,7 +434,18 @@ export function StandarContent({
 
         {/* KANAN: preview */}
         <div className="flex flex-col gap-2 lg:sticky lg:top-24 lg:self-start">
-          <p className="text-xs font-medium text-navy/60">Preview - geser & edit langsung</p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-navy/60">Preview - geser &amp; edit langsung</p>
+            {photo && (
+              <button
+                type="button"
+                onClick={() => setPreviewMode((m) => !m)}
+                className={`rounded-lg px-3 py-1 text-xs font-medium transition ${previewMode ? "bg-primary text-white hover:opacity-90" : "bg-navy/10 text-navy hover:bg-navy/15"}`}
+              >
+                {previewMode ? "✏ Edit cepat" : "👁 Lihat hasil asli"}
+              </button>
+            )}
+          </div>
           {!photo ? (
             <div
               className="flex items-center justify-center rounded-2xl border border-dashed border-line bg-navy/[0.02] p-8"
@@ -454,6 +469,8 @@ export function StandarContent({
           ) : (
             <CanvasEditor
               key={`${photo.slice(-20)}-${descCount}`}
+              ghostUrl={previewMode ? (liveUrl ?? undefined) : undefined}
+              rendering={previewMode ? liveRendering : false}
               layout={layout}
               values={values}
               overrides={overrides}
