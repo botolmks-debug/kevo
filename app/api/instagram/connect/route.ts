@@ -1,7 +1,7 @@
 // app/api/instagram/connect/route.ts
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { buildAuthUrl } from "@/lib/instagram/api";
+import { buildAuthorizeUrl } from "@/lib/instagram/api";
 import { igFeatureAllowed } from "@/lib/instagram/access";
 import { getRouteUser } from "@/lib/instagram/serverUser";
 
@@ -23,5 +23,6 @@ export async function GET(req: Request) {
     .slice(0, 16);
   const state = `${payload}.${sig}`;
 
-  return NextResponse.redirect(buildAuthUrl(state));
+  const redirectUri = `${process.env.NEXT_PUBLIC_SITE_URL}/api/instagram/callback`;
+return NextResponse.redirect(buildAuthorizeUrl(redirectUri, state));
 }
