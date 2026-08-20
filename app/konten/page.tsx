@@ -271,7 +271,7 @@ export default function KontenPage() {
 
   const baseTemplate =
     editTemplateId === "produk-latar" ? createProdukLatarTemplate(editBgColor)
-    : editTemplateId === "standar" ? createStandarTemplate(editDescCount ?? 1, editValues.title ?? editValues.caption)
+    : editTemplateId === "standar" ? createStandarTemplate(editDescCount ?? 1, editValues.title ?? editValues.caption, Array.from({ length: editDescCount ?? 1 }, (_, i) => editValues[`desc-${i}`] ?? ""))
     : editTemplateId === "teks-saja" ? createTeksSajaTemplate(editDescCount ?? 1)
     : editTemplateId === "carousel" ? createCarouselTemplate()
     : editTemplateId === "interaksi" ? interaksiTemplate
