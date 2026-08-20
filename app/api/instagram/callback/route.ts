@@ -40,6 +40,7 @@ export async function GET(req: Request) {
 
   try {
     const { accessToken, expiresAt } = await exchangeCodeForToken(code);
+    const accounts = await listIgAccounts(accessToken);
     console.log("IG accounts found:", JSON.stringify(accounts));
 
     if (accounts.length === 0) {
@@ -52,21 +53,4 @@ export async function GET(req: Request) {
     }
 
     // Ambil akun pertama. (Kalau nanti banyak user punya multi-Page,
-    // tambahkan halaman pemilihan; untuk sekarang: pertama = umumnya satu-satunya.)
-    const acc = accounts[0];
-    await upsertConnection({
-      business_id: user.id,
-      ig_user_id: acc.igUserId,
-      ig_username: acc.igUsername,
-      page_id: acc.pageId,
-      page_name: acc.pageName,
-      access_token: accessToken,
-      token_expires_at: expiresAt.toISOString(),
-    });
-
-    return back("ig=ok");
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Gagal menghubungkan";
-    return back(`ig=err&msg=${encodeURIComponent(msg)}`);
-  }
-}
+    // tambahkan halaman pemilihan; untuk sekarang:
