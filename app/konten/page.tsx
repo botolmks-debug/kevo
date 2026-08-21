@@ -343,6 +343,7 @@ export default function KontenPage() {
             )}
             {domMode ? (
               <DomEditor
+                key={selected.id} /* remount per konten: riwayat undo tidak bocor antar konten */
                 layout={editTemplate.layouts[selected.ratio]}
                 values={editValues}
                 overrides={overrides}

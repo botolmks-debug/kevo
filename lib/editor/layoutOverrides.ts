@@ -19,6 +19,41 @@ export type FooterOverride = {
   iconSize?: number;
   textSize?: number;
   gap?: number;
+  /** Tampilkan nama bisnis di atas ikon sosmed (default true — perilaku lama). */
+  showName?: boolean;
+};
+
+/**
+ * Efek per-elemen editor DOM (v4): opacity, rotasi, urutan layer.
+ * Key = "slot-<id>" | "logo" | "footer" | "delivery" | "badges" | "item-<id>".
+ * HANYA dipakai editor DOM + export html-to-image; mesin Satori (fallback)
+ * mengabaikannya — sengaja opsional supaya konten lama & fallback tetap jalan.
+ */
+export type ElementFx = { opacity?: number; rotation?: number; z?: number };
+
+/** Elemen bebas yang ditambah user (teks/gambar stiker) — editor DOM v4. */
+export type FreeItem = {
+  id: string;
+  kind: "text" | "image";
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** kind "text" */
+  text?: string;
+  fontFamily?: string;
+  fontSize?: number;
+  fontWeight?: number;
+  color?: string;
+  /** kind "image" — data URI (di-embed, aman untuk export). */
+  src?: string;
+};
+
+/** Lapisan warna/gradient di atas foto latar — editor DOM v4. */
+export type OverlayFx = {
+  type: "none" | "solid" | "bottom" | "top";
+  color: string;   // hex
+  opacity: number; // 0..1
 };
 
 export type EditorOverrides = {
@@ -31,6 +66,12 @@ export type EditorOverrides = {
   delivery?: DeliveryBadges;
   /** Badge sertifikasi (Halal/SNI/BPOM). */
   badges?: CertBadgesLayout;
+  /** v4: efek per elemen (opacity/rotasi/layer) — hanya editor DOM. */
+  fx?: Record<string, ElementFx>;
+  /** v4: elemen bebas tambahan (teks/gambar) — hanya editor DOM. */
+  items?: FreeItem[];
+  /** v4: overlay warna/gradient di atas foto — hanya editor DOM. */
+  overlay?: OverlayFx;
 };
 
 export function applyEditorOverrides(

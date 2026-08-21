@@ -1,34 +1,43 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { TemplateLayout, TextSlot, Decoration, FooterSocial } from "@/lib/templates/types";
-import type { EditorOverrides } from "@/lib/editor/layoutOverrides";
+import type { EditorOverrides, ElementFx, FreeItem, OverlayFx } from "@/lib/editor/layoutOverrides";
 import { fitFontSize } from "@/lib/render/fitText";
 import { FONT_OPTIONS } from "@/lib/templates/fonts";
 import { DELIVERY_PLATFORMS, DELIVERY_MAP } from "@/lib/social/delivery";
 import { CERT_BADGES, CERT_BADGE_MAP, CERT_BADGE_H, CERT_BADGE_GAP } from "@/lib/social/badges";
 
 /**
- * DomEditor v3 — EDITOR SATU-MESIN. Edit = hasil (dipotret html-to-image).
- * v3 (kemulusan & fitur):
- * - DRAG MULUS: saat geser, posisi diubah LANGSUNG di DOM (tanpa setState per
- *   gerakan → tanpa re-render berat); overrides di-commit SEKALI saat lepas.
- * - Gambar bisa digeser: semua <img> draggable=false + pointerEvents none —
- *   wrapper-nya yang menerima pointer (fix "elemen bergambar susah digerakkan").
- * - SNAP + garis bantu: nempel ke tengah kanvas (H & V) dan tepi, garis teal
- *   putus-putus muncul saat nempel (overlay data-noexport, tak ikut terpotret).
- * - Nudge keyboard: panah = geser 2px, Shift+panah = 10px (slot terpilih).
- * - Footer sosmed: toggle Mendatar/Menurun + slider ukuran ikon.
- * - Logo: slider ukuran.
+ * DomEditor v4 — EDITOR SATU-MESIN. Edit = hasil (dipotret html-to-image).
+ * Baru di v4:
+ * - OPACITY, ROTASI, LAYER (naik/turun) untuk SEMUA elemen — via overrides.fx.
+ * - RESIZE: handle kotak di pojok kanan-bawah elemen terpilih (slot/logo/item).
+ * - UNDO/REDO: tombol ↶ ↷ + Ctrl+Z / Ctrl+Shift+Z (riwayat overrides, maks 50).
+ * - ELEMEN BEBAS: + Teks / + Gambar (stiker) — overrides.items, bisa dihapus.
+ * - OVERLAY: lapisan warna/gradient di atas foto (gelap bawah/atas/penuh).
+ * Dari v3 (dipertahankan): drag mulus via DOM langsung, snap tengah/tepi +
+ * garis bantu, nudge panah, dobel-tap logo, footer/badge slider.
+ * CATATAN: fitur v4 hanya hidup di jalur export html-to-image. Fallback
+ * Satori (/api/render) MENGABAIKAN fx/items/overlay — hasil tetap tersimpan,
+ * hanya tanpa efek v4. (Lihat audit di CARA-PASANG-EDITOR-V4.md.)
  * Ekspor WAJIB pakai filter data-noexport (lihat konten/page.tsx).
  */
 
 const DISPLAY_W = 340;
 const MAX_SOCIALS = 3;
+const MAX_ITEMS = 10;
 const DRAG_THRESHOLD_PX = 4;
 const SNAP_PX = 8; // dalam px display
+const HIST_MAX = 50;
+const HIST_COALESCE_MS = 600;
 
-type DragKind = "slot" | "footer" | "logo" | "delivery" | "badges";
+// Urutan layer bawaan (sebelum user mengubah lewat tombol Naik/Turun).
+const DEFAULT_Z: Record<string, number> = { slot: 10, badges: 12, delivery: 13, footer: 14, logo: 15, item: 20 };
+const OVERLAY_Z = 6;
+const FRONT_DECO_Z = 8;
+
+type DragKind = "slot" | "footer" | "logo" | "delivery" | "badges" | "item";
 
 type Props = {
   layout: TemplateLayout;
@@ -65,10 +74,17 @@ function buildTextShadow(slot: TextSlot, scale: number): string | undefined {
   return parts.length ? parts.join(", ") : undefined;
 }
 
-function DecoView({ d, scale }: { d: Decoration; scale: number }) {
+function hexToRgba(hex: string, opacity: number): string {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0,2),16) || 0, g = parseInt(h.slice(2,4),16) || 0, b = parseInt(h.slice(4,6),16) || 0;
+  return `rgba(${r},${g},${b},${opacity})`;
+}
+
+function DecoView({ d, scale, z }: { d: Decoration; scale: number; z?: number }) {
   const base: React.CSSProperties = {
     position: "absolute", left: d.box.x*scale, top: d.box.y*scale,
     width: d.box.width*scale, height: d.box.height*scale, opacity: d.opacity ?? 1,
+    ...(z !== undefined ? { zIndex: z } : {}),
     ...(d.rotateDeg ? { transform: `rotate(${d.rotateDeg}deg)` } : {}),
   };
   const bg = d.color.startsWith("linear-gradient") ? { backgroundImage: d.color } : { backgroundColor: d.color };
@@ -87,10 +103,26 @@ export function DomEditor({
   const scale = DISPLAY_W / layout.canvas.width;
   const displayH = layout.canvas.height * scale;
   const slots = textSlots(layout);
-  const [selId, setSelId] = useState<string>(slots[0]?.id ?? "");
+  // selKey: "slot-<id>" | "logo" | "footer" | "delivery" | "badges" | "item-<id>" | ""
+  const [selKey, setSelKey] = useState<string>(slots[0] ? `slot-${slots[0].id}` : "");
+  // Dobel-klik teks → ketik langsung di kanvas (contentEditable, commit saat blur/Enter)
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const editRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (editingKey && editRef.current) {
+      editRef.current.focus();
+      const r = document.createRange();
+      r.selectNodeContents(editRef.current);
+      r.collapse(false); // kursor di akhir teks
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(r);
+    }
+  }, [editingKey]);
   const stageRef = useRef<HTMLDivElement>(null);
   const guideVRef = useRef<HTMLDivElement>(null);
   const guideHRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   // Elemen draggable — posisi diubah LANGSUNG saat drag (tanpa re-render).
   const elemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const dragRef = useRef<{
@@ -100,11 +132,55 @@ export function DomEditor({
     lastX: number; lastY: number;
     w: number; h: number;
   } | null>(null);
-  // Deteksi dobel-tap logo manual — preventDefault di pointerdown mematikan
-  // event dblclick bawaan, jadi dihitung sendiri (juga jalan di HP).
+  const resizeRef = useRef<{
+    key: string; startClientX: number; startClientY: number;
+    startW: number; startH: number; startSize: number; startFont: number;
+  } | null>(null);
   const logoTapRef = useRef<number>(0);
+  // Deteksi dobel-tap manual untuk teks — event dblclick bawaan tidak sampai
+  // ke elemen karena pointer capture dipegang stage saat drag.
+  const tapRef = useRef<{ key: string; t: number }>({ key: "", t: 0 });
+  // ----- riwayat undo/redo (snapshot overrides) -----
+  const histRef = useRef<{ past: EditorOverrides[]; future: EditorOverrides[]; lastPush: number }>(
+    { past: [], future: [], lastPush: 0 },
+  );
+  const [, forceHist] = useState(0); // supaya tombol undo/redo ikut enable/disable
 
-  const sel = slots.find((s) => s.id === selId) ?? slots[0];
+  function pushHist() {
+    const h = histRef.current;
+    h.past.push(overrides);
+    if (h.past.length > HIST_MAX) h.past.shift();
+    h.future = [];
+    h.lastPush = Date.now();
+    forceHist((n) => n + 1);
+  }
+  /** Commit + push riwayat (dirapel 600ms supaya geser slider = 1 langkah undo). */
+  function commit(next: EditorOverrides) {
+    if (Date.now() - histRef.current.lastPush > HIST_COALESCE_MS) pushHist();
+    onOverridesChange(next);
+  }
+  function undo() {
+    const h = histRef.current;
+    const prev = h.past.pop();
+    if (!prev) return;
+    h.future.push(overrides);
+    h.lastPush = 0;
+    onOverridesChange(prev);
+    forceHist((n) => n + 1);
+  }
+  function redo() {
+    const h = histRef.current;
+    const nxt = h.future.pop();
+    if (!nxt) return;
+    h.past.push(overrides);
+    h.lastPush = 0;
+    onOverridesChange(nxt);
+    forceHist((n) => n + 1);
+  }
+
+  const selSlot = selKey.startsWith("slot-") ? slots.find((s) => `slot-${s.id}` === selKey) : undefined;
+  const items = overrides.items ?? [];
+  const selItem = selKey.startsWith("item-") ? items.find((it) => `item-${it.id}` === selKey) : undefined;
   const decos = layout.decorations ?? [];
   const backDecos = decos.filter((d) => (d.layer ?? "back") === "back");
   const frontDecos = decos.filter((d) => d.layer === "front");
@@ -113,7 +189,32 @@ export function DomEditor({
   const isColumn = footerDirection === "column";
   const footerIconSize = overrides.footer?.iconSize ?? fl.iconSize;
   const footerTextSize = overrides.footer?.textSize ?? fl.textSize;
+  const footerShowName = overrides.footer?.showName ?? true;
   const visSocials = socials.slice(0, MAX_SOCIALS);
+  const overlay: OverlayFx = overrides.overlay ?? { type: "none", color: "#000000", opacity: 0.45 };
+
+  // ----- fx per elemen -----
+  function getFx(key: string): ElementFx {
+    return overrides.fx?.[key] ?? {};
+  }
+  function patchFx(key: string, patch: ElementFx) {
+    const cur = getFx(key);
+    commit({ ...overrides, fx: { ...(overrides.fx ?? {}), [key]: { ...cur, ...patch } } });
+  }
+  function defaultZ(key: string): number {
+    if (key.startsWith("slot-")) return DEFAULT_Z.slot;
+    if (key.startsWith("item-")) return DEFAULT_Z.item;
+    return DEFAULT_Z[key] ?? 10;
+  }
+  /** Style wrapper elemen: opacity + rotasi + layer dari fx. */
+  function fxStyle(key: string): React.CSSProperties {
+    const f = getFx(key);
+    return {
+      opacity: f.opacity ?? 1,
+      zIndex: f.z ?? defaultZ(key),
+      ...(f.rotation ? { transform: `rotate(${f.rotation}deg)` } : {}),
+    };
+  }
 
   // ----- delivery & cert badges -----
   const dScale = overrides.delivery?.scale ?? 1;
@@ -152,24 +253,70 @@ export function DomEditor({
     const cur = overrides.delivery;
     const ids = cur?.ids ?? [];
     const next = ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
-    onOverridesChange({ ...overrides, delivery: { ids: next, x: cur?.x ?? 60, y: cur?.y ?? deliveryDefaultY, label: cur?.label, scale: cur?.scale } });
+    commit({ ...overrides, delivery: { ids: next, x: cur?.x ?? 60, y: cur?.y ?? deliveryDefaultY, label: cur?.label, scale: cur?.scale } });
   }
   function toggleBadge(id: string) {
     const cur = overrides.badges;
     const ids = cur?.ids ?? [];
     const next = ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
-    onOverridesChange({ ...overrides, badges: { ids: next, x: cur?.x ?? 60, y: cur?.y ?? badgeDefaultY, scale: cur?.scale } });
+    commit({ ...overrides, badges: { ids: next, x: cur?.x ?? 60, y: cur?.y ?? badgeDefaultY, scale: cur?.scale } });
   }
 
   function patchSlot(id: string, patch: Record<string, unknown>) {
     const cur = overrides.slots[id] ?? {};
-    onOverridesChange({ ...overrides, slots: { ...overrides.slots, [id]: { ...cur, ...patch } } });
+    commit({ ...overrides, slots: { ...overrides.slots, [id]: { ...cur, ...patch } } });
+  }
+  function patchItem(id: string, patch: Partial<FreeItem>) {
+    commit({ ...overrides, items: items.map((it) => (it.id === id ? { ...it, ...patch } : it)) });
+  }
+  function deleteItem(id: string) {
+    commit({ ...overrides, items: items.filter((it) => it.id !== id) });
+    setSelKey(slots[0] ? `slot-${slots[0].id}` : "");
+  }
+
+  // ----- tambah elemen bebas -----
+  function addTextItem() {
+    if (items.length >= MAX_ITEMS) { window.alert(`Maksimal ${MAX_ITEMS} elemen tambahan.`); return; }
+    const id = `t${Date.now().toString(36)}`;
+    const w = 600, h = 120;
+    const item: FreeItem = {
+      id, kind: "text",
+      x: Math.round((layout.canvas.width - w) / 2), y: Math.round((layout.canvas.height - h) / 2),
+      w, h, text: "Teks baru", fontFamily: "Inter", fontSize: 64, fontWeight: 800, color: "#ffffff",
+    };
+    commit({ ...overrides, items: [...items, item] });
+    setSelKey(`item-${id}`);
+  }
+  function addImageItem(file: File) {
+    if (items.length >= MAX_ITEMS) { window.alert(`Maksimal ${MAX_ITEMS} elemen tambahan.`); return; }
+    if (file.size > 2 * 1024 * 1024) { window.alert("Gambar terlalu besar (maks 2MB). Kecilkan dulu ya."); return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const src = typeof reader.result === "string" ? reader.result : null;
+      if (!src) return;
+      const img = new Image();
+      img.onload = () => {
+        const w = 400;
+        const h = Math.max(40, Math.round((w * img.naturalHeight) / Math.max(1, img.naturalWidth)));
+        const id = `g${Date.now().toString(36)}`;
+        const item: FreeItem = {
+          id, kind: "image", src,
+          x: Math.round((layout.canvas.width - w) / 2), y: Math.round((layout.canvas.height - h) / 2), w, h,
+        };
+        commit({ ...overrides, items: [...items, item] });
+        setSelKey(`item-${id}`);
+      };
+      img.src = src;
+    };
+    reader.readAsDataURL(file);
   }
 
   function commitPosition(kind: DragKind, id: string | undefined, x: number, y: number) {
     if (kind === "slot" && id) {
       const s = slots.find((x2) => x2.id === id)!;
-      patchSlot(id, { box: { x, y, width: s.box.width, height: s.box.height } });
+      patchSlotRaw(id, { box: { x, y, width: s.box.width, height: s.box.height } });
+    } else if (kind === "item" && id) {
+      onOverridesChange({ ...overrides, items: items.map((it) => (it.id === id ? { ...it, x, y } : it)) });
     } else if (kind === "footer") {
       onOverridesChange({ ...overrides, footer: { ...(overrides.footer ?? {}), x, y } });
     } else if (kind === "logo") {
@@ -179,6 +326,11 @@ export function DomEditor({
     } else if (kind === "badges") {
       onOverridesChange({ ...overrides, badges: { ids: badgeIds, scale: overrides.badges?.scale, x, y } });
     }
+  }
+  // Versi tanpa riwayat (riwayat drag/resize sudah dipush di awal gestur).
+  function patchSlotRaw(id: string, patch: Record<string, unknown>) {
+    const cur = overrides.slots[id] ?? {};
+    onOverridesChange({ ...overrides, slots: { ...overrides.slots, [id]: { ...cur, ...patch } } });
   }
 
   function registerElem(key: string) {
@@ -206,11 +358,44 @@ export function DomEditor({
     stageRef.current!.setPointerCapture(e.pointerId);
   }
   function onPointerMove(e: React.PointerEvent) {
+    // ----- resize aktif? -----
+    const r = resizeRef.current;
+    if (r) {
+      const dW = (e.clientX - r.startClientX) / scale;
+      const dH = (e.clientY - r.startClientY) / scale;
+      if (r.key === "logo") {
+        const size = Math.max(40, Math.round(r.startSize + Math.max(dW, dH)));
+        onOverridesChange({ ...overrides, logo: { ...layout.logo, ...(overrides.logo ?? {}), size } });
+      } else if (r.key.startsWith("slot-")) {
+        const id = r.key.slice(5);
+        const s = slots.find((x) => x.id === id);
+        if (s) {
+          const width = Math.max(60, Math.round(r.startW + dW));
+          const height = Math.max(40, Math.round(r.startH + dH));
+          patchSlotRaw(id, { box: { x: s.box.x, y: s.box.y, width, height } });
+        }
+      } else if (r.key.startsWith("item-")) {
+        const id = r.key.slice(5);
+        const it = items.find((x) => x.id === id);
+        if (it) {
+          const w = Math.max(60, Math.round(r.startW + dW));
+          const h = it.kind === "image"
+            ? Math.max(40, Math.round((w * r.startH) / Math.max(1, r.startW))) // gambar: proporsional
+            : Math.max(40, Math.round(r.startH + dH));
+          const patch: Partial<FreeItem> = { w, h };
+          if (it.kind === "text") patch.fontSize = Math.max(12, Math.round(r.startFont * (w / Math.max(1, r.startW))));
+          onOverridesChange({ ...overrides, items: items.map((x) => (x.id === id ? { ...x, ...patch } : x)) });
+        }
+      }
+      return;
+    }
+
     const d = dragRef.current; if (!d) return;
     if (!d.active) {
       const moved = Math.hypot(e.clientX - d.startClientX, e.clientY - d.startClientY);
       if (moved < DRAG_THRESHOLD_PX) return;
       d.active = true;
+      pushHist(); // 1 langkah undo per gestur geser
       const el0 = elemRefs.current.get(d.key);
       if (el0) el0.style.cursor = "grabbing";
     }
@@ -242,6 +427,11 @@ export function DomEditor({
     showGuide(guideHRef, snapH);
   }
   function onPointerUp(e: React.PointerEvent) {
+    if (resizeRef.current) {
+      resizeRef.current = null;
+      try { stageRef.current!.releasePointerCapture(e.pointerId); } catch { /* ok */ }
+      return;
+    }
     const d = dragRef.current;
     dragRef.current = null;
     showGuide(guideVRef, false);
@@ -254,9 +444,30 @@ export function DomEditor({
     }
   }
 
-  // ----- nudge keyboard (slot terpilih) -----
+  // ----- resize handle -----
+  function startResize(e: React.PointerEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!selKey) return;
+    pushHist(); // 1 langkah undo per gestur resize
+    let startW = 0, startH = 0, startSize = 0, startFont = 0;
+    if (selKey === "logo") { startSize = lg.size; }
+    else if (selSlot) { startW = selSlot.box.width; startH = selSlot.box.height; }
+    else if (selItem) { startW = selItem.w; startH = selItem.h; startFont = selItem.fontSize ?? 64; }
+    else return;
+    resizeRef.current = { key: selKey, startClientX: e.clientX, startClientY: e.clientY, startW, startH, startSize, startFont };
+    stageRef.current!.setPointerCapture(e.pointerId);
+  }
+
+  // ----- nudge keyboard + undo/redo -----
   function onKeyDown(e: React.KeyboardEvent) {
-    if (!sel) return;
+    if (editingKey) return; // sedang mengetik di kanvas — biarkan keyboard untuk teks
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+      e.preventDefault();
+      if (e.shiftKey) redo(); else undo();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); return; }
     const step = e.shiftKey ? 10 : 2;
     let dx = 0, dy = 0;
     if (e.key === "ArrowLeft") dx = -step;
@@ -265,14 +476,53 @@ export function DomEditor({
     else if (e.key === "ArrowDown") dy = step;
     else return;
     e.preventDefault();
-    patchSlot(sel.id, { box: { x: sel.box.x + dx, y: sel.box.y + dy, width: sel.box.width, height: sel.box.height } });
+    if (selSlot) {
+      patchSlot(selSlot.id, { box: { x: selSlot.box.x + dx, y: selSlot.box.y + dy, width: selSlot.box.width, height: selSlot.box.height } });
+    } else if (selItem) {
+      patchItem(selItem.id, { x: selItem.x + dx, y: selItem.y + dy });
+    }
   }
 
-  const selBox = sel ? { x: sel.box.x*scale, y: sel.box.y*scale, w: sel.box.width*scale, h: sel.box.height*scale } : null;
+  // ----- kotak seleksi (semua jenis elemen) -----
+  let selBox: { x: number; y: number; w: number; h: number } | null = null;
+  let canResize = false;
+  if (selSlot) { selBox = { x: selSlot.box.x*scale, y: selSlot.box.y*scale, w: selSlot.box.width*scale, h: selSlot.box.height*scale }; canResize = true; }
+  else if (selItem) { selBox = { x: selItem.x*scale, y: selItem.y*scale, w: selItem.w*scale, h: selItem.h*scale }; canResize = true; }
+  else if (selKey === "logo" && logoUrl) { selBox = { x: lg.x*scale, y: lg.y*scale, w: lg.size*scale, h: lg.size*scale }; canResize = true; }
+  else if (selKey === "badges" && badgeItems.length > 0) selBox = { x: badgesX*scale, y: badgesY*scale, w: badgesW*scale, h: BADGE_H*scale };
+  else if (selKey === "delivery" && deliveryIds.length > 0) selBox = { x: deliveryX*scale, y: deliveryY*scale, w: Math.max(deliveryW,200)*scale, h: deliveryH*scale };
+  else if (selKey === "footer" && (visSocials.length > 0 || businessName)) {
+    const fw = 300, fh = isColumn ? visSocials.length*(footerIconSize+10) : footerIconSize;
+    selBox = { x: (overrides.footer?.x ?? fl.x)*scale, y: (overrides.footer?.y ?? fl.y)*scale, w: fw*scale, h: fh*scale };
+  }
+
+  const selFx = selKey ? getFx(selKey) : {};
+  const selLabel =
+    selSlot ? (selSlot.label ?? selSlot.id)
+    : selItem ? (selItem.kind === "text" ? "Teks tambahan" : "Gambar tambahan")
+    : selKey === "logo" ? "Logo" : selKey === "footer" ? "Sosmed" : selKey === "delivery" ? "Pesan-antar"
+    : selKey === "badges" ? "Sertifikasi" : "";
+
   const IMG_STYLE: React.CSSProperties = { pointerEvents: "none", userSelect: "none" };
+  const histState = histRef.current;
 
   return (
     <div>
+      {/* toolbar: undo/redo + tambah elemen */}
+      <div className="mx-auto mb-2 flex flex-wrap items-center gap-2" style={{ width: DISPLAY_W }}>
+        <button type="button" onClick={undo} disabled={histState.past.length === 0} title="Undo (Ctrl+Z)"
+          className="rounded-lg border border-navy/15 px-2.5 py-1 text-sm font-bold text-navy disabled:opacity-30">↶</button>
+        <button type="button" onClick={redo} disabled={histState.future.length === 0} title="Redo (Ctrl+Shift+Z)"
+          className="rounded-lg border border-navy/15 px-2.5 py-1 text-sm font-bold text-navy disabled:opacity-30">↷</button>
+        <span className="mx-1 h-5 w-px bg-navy/10" />
+        <button type="button" onClick={addTextItem}
+          className="rounded-lg border border-primary px-2.5 py-1 text-xs font-semibold text-primary">+ Teks</button>
+        <button type="button" onClick={()=>fileRef.current?.click()}
+          className="rounded-lg border border-primary px-2.5 py-1 text-xs font-semibold text-primary">+ Gambar</button>
+        <input ref={fileRef} type="file" accept="image/*" className="hidden"
+          onChange={(e)=>{ const f = e.target.files?.[0]; if (f) addImageItem(f); e.target.value = ""; }} />
+      </div>
+
       <div className="mx-auto" style={{ width: DISPLAY_W }}>
         <div ref={(el) => { stageRef.current = el; (exportRef as React.MutableRefObject<HTMLDivElement | null>).current = el; }}
           onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
@@ -284,7 +534,17 @@ export function DomEditor({
           {photo && <img src={photo} alt="" crossOrigin="anonymous" draggable={false}
             style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", ...IMG_STYLE }} />}
 
-          {frontDecos.map((d, i) => <DecoView key={"f"+i} d={d} scale={scale} />)}
+          {/* overlay warna/gradient di atas foto — ikut terekspor */}
+          {overlay.type !== "none" && (
+            <div style={{ position:"absolute", inset:0, zIndex:OVERLAY_Z, pointerEvents:"none",
+              ...(overlay.type === "solid"
+                ? { backgroundColor: hexToRgba(overlay.color, overlay.opacity) }
+                : overlay.type === "bottom"
+                ? { backgroundImage: `linear-gradient(to top, ${hexToRgba(overlay.color, overlay.opacity)} 0%, ${hexToRgba(overlay.color, 0)} 60%)` }
+                : { backgroundImage: `linear-gradient(to bottom, ${hexToRgba(overlay.color, overlay.opacity)} 0%, ${hexToRgba(overlay.color, 0)} 60%)` }) }} />
+          )}
+
+          {frontDecos.map((d, i) => <DecoView key={"f"+i} d={d} scale={scale} z={FRONT_DECO_Z} />)}
 
           {/* teks */}
           {slots.map((slot) => {
@@ -293,20 +553,80 @@ export function DomEditor({
             const justify = slot.align === "left" ? "flex-start" : slot.align === "right" ? "flex-end" : "center";
             return (
               <div key={slot.id} ref={registerElem(`slot-${slot.id}`)}
-                onPointerDown={(e)=>{ setSelId(slot.id); stageRef.current?.focus(); startDrag(e,"slot",slot.box.x,slot.box.y,`slot-${slot.id}`,slot.box.width,slot.box.height,slot.id); }}
+                onPointerDown={(e)=>{
+                  const k = `slot-${slot.id}`;
+                  setSelKey(k);
+                  const now = Date.now();
+                  if (tapRef.current.key === k && now - tapRef.current.t < 350) {
+                    tapRef.current = { key: "", t: 0 };
+                    dragRef.current = null;
+                    setEditingKey(k); // tap kedua = mulai ketik
+                    return;
+                  }
+                  tapRef.current = { key: k, t: now };
+                  stageRef.current?.focus();
+                  startDrag(e,"slot",slot.box.x,slot.box.y,k,slot.box.width,slot.box.height,slot.id);
+                }}
                 style={{ position:"absolute", left:slot.box.x*scale, top:slot.box.y*scale, width:slot.box.width*scale, height:slot.box.height*scale,
-                  display:"flex", alignItems:"flex-start", justifyContent:justify, cursor:"grab" }}>
-                <div style={{ fontFamily:`"${slot.fontFamily}"`, fontSize:fitted*scale, fontWeight:slot.fontWeight ?? 400,
-                  color:slot.color, textAlign:slot.align, lineHeight:1, textShadow:buildTextShadow(slot,scale), whiteSpace:"pre-wrap", userSelect:"none" }}>{value}</div>
+                  display:"flex", alignItems:"flex-start", justifyContent:justify, cursor:"grab", ...fxStyle(`slot-${slot.id}`) }}>
+                {editingKey === `slot-${slot.id}` ? (
+                  <div ref={editRef} contentEditable suppressContentEditableWarning
+                    onPointerDown={(e)=>e.stopPropagation()}
+                    onBlur={(e)=>{ onTextChange?.(slot.id, (e.target as HTMLDivElement).innerText); setEditingKey(null); }}
+                    onKeyDown={(e)=>{ e.stopPropagation(); if ((e.key === "Enter" && !e.shiftKey) || e.key === "Escape") { e.preventDefault(); (e.target as HTMLDivElement).blur(); } }}
+                    style={{ fontFamily:`"${slot.fontFamily}"`, fontSize:fitted*scale, fontWeight:slot.fontWeight ?? 400,
+                      color:slot.color, textAlign:slot.align, lineHeight:1, textShadow:buildTextShadow(slot,scale), whiteSpace:"pre-wrap",
+                      outline:"none", cursor:"text", minWidth:20 }}>{value}</div>
+                ) : (
+                  <div style={{ fontFamily:`"${slot.fontFamily}"`, fontSize:fitted*scale, fontWeight:slot.fontWeight ?? 400,
+                    color:slot.color, textAlign:slot.align, lineHeight:1, textShadow:buildTextShadow(slot,scale), whiteSpace:"pre-wrap", userSelect:"none" }}>{value}</div>
+                )}
               </div>
             );
           })}
 
+          {/* elemen bebas (teks/gambar tambahan) */}
+          {items.map((it) => (
+            <div key={it.id} ref={registerElem(`item-${it.id}`)}
+              onPointerDown={(e)=>{
+                const k = `item-${it.id}`;
+                setSelKey(k);
+                const now = Date.now();
+                if (it.kind === "text" && tapRef.current.key === k && now - tapRef.current.t < 350) {
+                  tapRef.current = { key: "", t: 0 };
+                  dragRef.current = null;
+                  setEditingKey(k); // tap kedua = mulai ketik
+                  return;
+                }
+                tapRef.current = { key: k, t: now };
+                stageRef.current?.focus();
+                startDrag(e,"item",it.x,it.y,k,it.w,it.h,it.id);
+              }}
+              style={{ position:"absolute", left:it.x*scale, top:it.y*scale, width:it.w*scale, height:it.h*scale, cursor:"grab", ...fxStyle(`item-${it.id}`) }}>
+              {it.kind === "text" ? (
+                editingKey === `item-${it.id}` ? (
+                  <div ref={editRef} contentEditable suppressContentEditableWarning
+                    onPointerDown={(e)=>e.stopPropagation()}
+                    onBlur={(e)=>{ patchItem(it.id, { text: (e.target as HTMLDivElement).innerText }); setEditingKey(null); }}
+                    onKeyDown={(e)=>{ e.stopPropagation(); if ((e.key === "Enter" && !e.shiftKey) || e.key === "Escape") { e.preventDefault(); (e.target as HTMLDivElement).blur(); } }}
+                    style={{ fontFamily:`"${it.fontFamily ?? "Inter"}"`, fontSize:(it.fontSize ?? 64)*scale, fontWeight:it.fontWeight ?? 800,
+                      color:it.color ?? "#ffffff", lineHeight:1.1, whiteSpace:"pre-wrap", outline:"none", cursor:"text", minWidth:20 }}>{it.text ?? ""}</div>
+                ) : (
+                  <div style={{ fontFamily:`"${it.fontFamily ?? "Inter"}"`, fontSize:(it.fontSize ?? 64)*scale, fontWeight:it.fontWeight ?? 800,
+                    color:it.color ?? "#ffffff", lineHeight:1.1, whiteSpace:"pre-wrap", userSelect:"none" }}>{it.text ?? ""}</div>
+                )
+              ) : (
+                <img src={it.src} alt="" draggable={false}
+                  style={{ width:"100%", height:"100%", objectFit:"contain", ...IMG_STYLE }} />
+              )}
+            </div>
+          ))}
+
           {/* badge sertifikasi */}
           {badgeItems.length > 0 && (
             <div ref={registerElem("badges")}
-              onPointerDown={(e)=>startDrag(e,"badges",badgesX,badgesY,"badges",badgesW,BADGE_H)}
-              style={{ position:"absolute", left:badgesX*scale, top:badgesY*scale, width:badgesW*scale, height:BADGE_H*scale, cursor:"grab" }}>
+              onPointerDown={(e)=>{ setSelKey("badges"); startDrag(e,"badges",badgesX,badgesY,"badges",badgesW,BADGE_H); }}
+              style={{ position:"absolute", left:badgesX*scale, top:badgesY*scale, width:badgesW*scale, height:BADGE_H*scale, cursor:"grab", ...fxStyle("badges") }}>
               {badgeItems.map((it) => (
                 <img key={it.id} src={`/badges/${it.id}.png`} alt="" crossOrigin="anonymous" draggable={false}
                   style={{ position:"absolute", left:it.offsetX*scale, top:0, width:it.w*scale, height:BADGE_H*scale, objectFit:"contain", ...IMG_STYLE }} />
@@ -317,8 +637,8 @@ export function DomEditor({
           {/* badge pesan-antar */}
           {deliveryIds.length > 0 && (
             <div ref={registerElem("delivery")}
-              onPointerDown={(e)=>startDrag(e,"delivery",deliveryX,deliveryY,"delivery",Math.max(deliveryW, 200),deliveryH)}
-              style={{ position:"absolute", left:deliveryX*scale, top:deliveryY*scale, cursor:"grab" }}>
+              onPointerDown={(e)=>{ setSelKey("delivery"); startDrag(e,"delivery",deliveryX,deliveryY,"delivery",Math.max(deliveryW, 200),deliveryH); }}
+              style={{ position:"absolute", left:deliveryX*scale, top:deliveryY*scale, cursor:"grab", ...fxStyle("delivery") }}>
               <div style={{ fontFamily:"Inter", fontWeight:700, fontSize:DELIVERY_HEADING_FONT*scale, color:"#ffffff",
                 height:DELIVERY_HEADING_H*scale, whiteSpace:"nowrap", userSelect:"none" }}>{deliveryLabel}</div>
               <div style={{ display:"flex", flexDirection:"row", gap:DELIVERY_GAP*scale, width:deliveryW*scale }}>
@@ -333,9 +653,9 @@ export function DomEditor({
           {/* footer: nama + sosmed */}
           {(visSocials.length > 0 || businessName) && (
             <div ref={registerElem("footer")}
-              onPointerDown={(e)=>startDrag(e,"footer",overrides.footer?.x ?? fl.x, overrides.footer?.y ?? fl.y,"footer",300,isColumn?visSocials.length*(footerIconSize+10):footerIconSize)}
-              style={{ position:"absolute", left:(overrides.footer?.x ?? fl.x)*scale, top:(overrides.footer?.y ?? fl.y)*scale, cursor:"grab" }}>
-              {businessName && (
+              onPointerDown={(e)=>{ setSelKey("footer"); startDrag(e,"footer",overrides.footer?.x ?? fl.x, overrides.footer?.y ?? fl.y,"footer",300,isColumn?visSocials.length*(footerIconSize+10):footerIconSize); }}
+              style={{ position:"absolute", left:(overrides.footer?.x ?? fl.x)*scale, top:(overrides.footer?.y ?? fl.y)*scale, cursor:"grab", ...fxStyle("footer") }}>
+              {businessName && footerShowName && (
                 <div style={{ position:"absolute", top:-(isColumn?30:34)*scale, left:0, whiteSpace:"nowrap",
                   fontFamily:"Poppins", fontWeight:700, fontSize:Math.max(18, Math.round(footerTextSize*0.9))*scale, color:fl.nameColor, userSelect:"none" }}>
                   {businessName}
@@ -357,6 +677,7 @@ export function DomEditor({
           {logoUrl && (
             <div ref={registerElem("logo")}
               onPointerDown={(e)=>{
+                setSelKey("logo");
                 const now = Date.now();
                 if (now - logoTapRef.current < 320) {
                   logoTapRef.current = 0;
@@ -366,47 +687,74 @@ export function DomEditor({
                 logoTapRef.current = now;
                 startDrag(e,"logo",lg.x,lg.y,"logo",lg.size,lg.size);
               }}
-              style={{ position:"absolute", left:lg.x*scale, top:lg.y*scale, width:lg.size*scale, height:lg.size*scale, cursor:"grab" }}>
+              style={{ position:"absolute", left:lg.x*scale, top:lg.y*scale, width:lg.size*scale, height:lg.size*scale, cursor:"grab", ...fxStyle("logo") }}>
               <img src={logoUrl} alt="" crossOrigin="anonymous" draggable={false}
                 style={{ width:"100%", height:"100%", objectFit:"contain", ...IMG_STYLE }} />
             </div>
           )}
 
           {/* garis bantu snap — data-noexport, dikontrol via ref (tanpa re-render) */}
-          <div ref={guideVRef} data-noexport="1" style={{ position:"absolute", left:DISPLAY_W/2-0.5, top:0, width:1, height:"100%",
+          <div ref={guideVRef} data-noexport="1" style={{ position:"absolute", left:DISPLAY_W/2-0.5, top:0, width:1, height:"100%", zIndex:98,
             borderLeft:"1.5px dashed #12B3A0", opacity:0, pointerEvents:"none", transition:"opacity 80ms" }} />
-          <div ref={guideHRef} data-noexport="1" style={{ position:"absolute", top:displayH/2-0.5, left:0, height:1, width:"100%",
+          <div ref={guideHRef} data-noexport="1" style={{ position:"absolute", top:displayH/2-0.5, left:0, height:1, width:"100%", zIndex:98,
             borderTop:"1.5px dashed #12B3A0", opacity:0, pointerEvents:"none", transition:"opacity 80ms" }} />
 
           {/* kotak seleksi — data-noexport */}
           {selBox && (
-            <div data-noexport="1" style={{ position:"absolute", left:selBox.x-3, top:selBox.y-3, width:selBox.w+6, height:selBox.h+6,
+            <div data-noexport="1" style={{ position:"absolute", left:selBox.x-3, top:selBox.y-3, width:selBox.w+6, height:selBox.h+6, zIndex:99,
               border:"1.5px dashed #12B3A0", borderRadius:4, pointerEvents:"none" }} />
           )}
+          {/* handle resize — pojok kanan-bawah elemen terpilih (slot/item/logo) */}
+          {selBox && canResize && (
+            <div data-noexport="1" onPointerDown={startResize}
+              style={{ position:"absolute", left:selBox.x+selBox.w-6, top:selBox.y+selBox.h-6, width:16, height:16, zIndex:100,
+                background:"#12B3A0", border:"2px solid #ffffff", borderRadius:4, cursor:"nwse-resize", touchAction:"none" }} />
+          )}
         </div>
-        <p className="mt-2 text-xs text-navy/50">Seret elemen langsung — nempel otomatis ke tengah/tepi. Panah = geser halus (Shift = cepat). Dobel-klik logo: terang/gelap.</p>
+        <p className="mt-2 text-xs text-navy/50">Seret elemen langsung — nempel otomatis ke tengah/tepi. Dobel-klik teks = ketik langsung. Kotak hijau di pojok = ubah ukuran. Panah = geser halus (Shift = cepat). Dobel-klik logo: terang/gelap.</p>
       </div>
+
+      {/* overlay foto */}
+      {photo && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+          <span className="font-semibold text-navy">Overlay foto:</span>
+          {([["none","Tanpa"],["bottom","Gelap bawah"],["top","Gelap atas"],["solid","Penuh"]] as const).map(([t, label]) => (
+            <button key={t} type="button"
+              onClick={()=>commit({ ...overrides, overlay: { ...overlay, type: t } })}
+              className={`rounded-lg border px-2.5 py-1 font-medium ${overlay.type===t?"border-primary bg-primary/10 text-primary":"border-navy/15 text-navy/70"}`}>
+              {label}
+            </button>
+          ))}
+          {overlay.type !== "none" && (
+            <>
+              <input type="color" value={overlay.color}
+                onChange={(e)=>commit({ ...overrides, overlay: { ...overlay, color: e.target.value } })}
+                className="h-7 w-8 rounded border border-navy/15" />
+              <input type="range" min={5} max={90} value={Math.round(overlay.opacity*100)} title="Kepekatan overlay"
+                onChange={(e)=>commit({ ...overrides, overlay: { ...overlay, opacity: Number(e.target.value)/100 } })} />
+            </>
+          )}
+        </div>
+      )}
 
       {/* footer sosmed: arah + ukuran */}
       {(visSocials.length > 0 || businessName) && (
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
           <span className="font-semibold text-navy">Sosmed:</span>
-          <button type="button" onClick={()=>onOverridesChange({ ...overrides, footer: { x: fl.x, y: fl.y, ...(overrides.footer ?? {}), direction: "row" } })}
+          <button type="button" onClick={()=>commit({ ...overrides, footer: { x: fl.x, y: fl.y, ...(overrides.footer ?? {}), direction: "row" } })}
             className={`rounded-lg border px-2.5 py-1 font-medium ${!isColumn?"border-primary bg-primary/10 text-primary":"border-navy/15 text-navy/70"}`}>Mendatar</button>
-          <button type="button" onClick={()=>onOverridesChange({ ...overrides, footer: { x: fl.x, y: fl.y, ...(overrides.footer ?? {}), direction: "column" } })}
+          <button type="button" onClick={()=>commit({ ...overrides, footer: { x: fl.x, y: fl.y, ...(overrides.footer ?? {}), direction: "column" } })}
             className={`rounded-lg border px-2.5 py-1 font-medium ${isColumn?"border-primary bg-primary/10 text-primary":"border-navy/15 text-navy/70"}`}>Menurun</button>
           <span className="ml-1 text-navy/50">Ukuran:</span>
           <input type="range" min={24} max={72} value={footerIconSize} title="Ukuran ikon sosmed"
-            onChange={(e)=>{ const v = Number(e.target.value); onOverridesChange({ ...overrides, footer: { x: fl.x, y: fl.y, ...(overrides.footer ?? {}), iconSize: v, textSize: Math.round(v*0.62) } }); }} />
-        </div>
-      )}
-
-      {/* logo: ukuran */}
-      {logoUrl && (
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-          <span className="font-semibold text-navy">Logo — Ukuran:</span>
-          <input type="range" min={40} max={280} value={lg.size} title="Ukuran logo"
-            onChange={(e)=>onOverridesChange({ ...overrides, logo: { ...layout.logo, ...(overrides.logo ?? {}), size: Number(e.target.value) } })} />
+            onChange={(e)=>{ const v = Number(e.target.value); commit({ ...overrides, footer: { x: fl.x, y: fl.y, ...(overrides.footer ?? {}), iconSize: v, textSize: Math.round(v*0.62) } }); }} />
+          {businessName && (
+            <button type="button" title="Tampilkan/sembunyikan nama bisnis di atas ikon sosmed"
+              onClick={()=>commit({ ...overrides, footer: { x: fl.x, y: fl.y, ...(overrides.footer ?? {}), showName: !footerShowName } })}
+              className={`rounded-lg border px-2.5 py-1 font-medium ${footerShowName?"border-primary bg-primary/10 text-primary":"border-navy/15 text-navy/70"}`}>
+              {footerShowName ? "Nama: Tampil" : "Nama: Sembunyi"}
+            </button>
+          )}
         </div>
       )}
 
@@ -421,7 +769,7 @@ export function DomEditor({
         ))}
         {deliveryIds.length > 0 && (
           <input type="range" min={50} max={200} value={Math.round(dScale*100)} title="Ukuran badge pesan-antar"
-            onChange={(e)=>onOverridesChange({ ...overrides, delivery: { ids: deliveryIds, x: deliveryX, y: deliveryY, label: overrides.delivery?.label, scale: Number(e.target.value)/100 } })} />
+            onChange={(e)=>commit({ ...overrides, delivery: { ids: deliveryIds, x: deliveryX, y: deliveryY, label: overrides.delivery?.label, scale: Number(e.target.value)/100 } })} />
         )}
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
@@ -434,81 +782,156 @@ export function DomEditor({
         ))}
         {badgeIds.length > 0 && (
           <input type="range" min={50} max={200} value={Math.round(bScale*100)} title="Ukuran badge sertifikasi"
-            onChange={(e)=>onOverridesChange({ ...overrides, badges: { ids: badgeIds, x: badgesX, y: badgesY, scale: Number(e.target.value)/100 } })} />
+            onChange={(e)=>commit({ ...overrides, badges: { ids: badgeIds, x: badgesX, y: badgesY, scale: Number(e.target.value)/100 } })} />
         )}
       </div>
 
-      {/* kontrol slot terpilih */}
-      {sel && (
-        <div className="mt-3 rounded-xl border border-navy/10 p-3">
-          <div className="mb-2 flex flex-wrap gap-1.5">
-            {slots.map((s) => (
-              <button key={s.id} type="button" onClick={()=>setSelId(s.id)}
-                className={`rounded-full px-3 py-1 text-xs font-semibold ${selId===s.id?"bg-primary text-white":"bg-navy/10 text-navy"}`}>
-                {s.label ?? s.id}
-              </button>
-            ))}
+      {/* pemilih elemen */}
+      <div className="mt-3 rounded-xl border border-navy/10 p-3">
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {slots.map((s) => (
+            <button key={s.id} type="button" onClick={()=>setSelKey(`slot-${s.id}`)}
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${selKey===`slot-${s.id}`?"bg-primary text-white":"bg-navy/10 text-navy"}`}>
+              {s.label ?? s.id}
+            </button>
+          ))}
+          {logoUrl && (
+            <button type="button" onClick={()=>setSelKey("logo")}
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${selKey==="logo"?"bg-primary text-white":"bg-navy/10 text-navy"}`}>Logo</button>
+          )}
+          {(visSocials.length > 0 || businessName) && (
+            <button type="button" onClick={()=>setSelKey("footer")}
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${selKey==="footer"?"bg-primary text-white":"bg-navy/10 text-navy"}`}>Sosmed</button>
+          )}
+          {deliveryIds.length > 0 && (
+            <button type="button" onClick={()=>setSelKey("delivery")}
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${selKey==="delivery"?"bg-primary text-white":"bg-navy/10 text-navy"}`}>Pesan-antar</button>
+          )}
+          {badgeItems.length > 0 && (
+            <button type="button" onClick={()=>setSelKey("badges")}
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${selKey==="badges"?"bg-primary text-white":"bg-navy/10 text-navy"}`}>Sertifikasi</button>
+          )}
+          {items.map((it, i) => (
+            <button key={it.id} type="button" onClick={()=>setSelKey(`item-${it.id}`)}
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${selKey===`item-${it.id}`?"bg-primary text-white":"bg-navy/10 text-navy"}`}>
+              {it.kind === "text" ? `Teks+${i+1}` : `Gbr+${i+1}`}
+            </button>
+          ))}
+        </div>
+
+        {/* kontrol umum: opacity + rotasi + layer (semua elemen) */}
+        {selKey && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
+            <span className="font-semibold text-navy">{selLabel}</span>
+            <label className="flex items-center gap-1.5 text-navy/70">
+              Transparansi
+              <input type="range" min={5} max={100} value={Math.round((selFx.opacity ?? 1)*100)}
+                onChange={(e)=>patchFx(selKey, { opacity: Number(e.target.value)/100 })} />
+            </label>
+            <label className="flex items-center gap-1.5 text-navy/70">
+              Rotasi
+              <input type="range" min={-180} max={180} value={selFx.rotation ?? 0}
+                onChange={(e)=>patchFx(selKey, { rotation: Number(e.target.value) })} />
+              <span className="w-9 tabular-nums">{selFx.rotation ?? 0}°</span>
+              {(selFx.rotation ?? 0) !== 0 && (
+                <button type="button" onClick={()=>patchFx(selKey, { rotation: 0 })}
+                  className="rounded border border-navy/15 px-1.5 py-0.5 text-navy/60">0°</button>
+              )}
+            </label>
+            <span className="flex items-center gap-1 text-navy/70">
+              Layer
+              <button type="button" title="Naikkan selapis" onClick={()=>patchFx(selKey, { z: Math.min(90, (selFx.z ?? defaultZ(selKey)) + 1) })}
+                className="rounded border border-navy/15 px-2 py-0.5 font-bold text-navy">▲</button>
+              <button type="button" title="Turunkan selapis" onClick={()=>patchFx(selKey, { z: Math.max(1, (selFx.z ?? defaultZ(selKey)) - 1) })}
+                className="rounded border border-navy/15 px-2 py-0.5 font-bold text-navy">▼</button>
+            </span>
+            {selItem && (
+              <button type="button" onClick={()=>deleteItem(selItem.id)}
+                className="rounded-lg border border-red-300 px-2.5 py-1 font-semibold text-red-500">Hapus</button>
+            )}
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            <input type="text" value={values[sel.id] ?? ""} onChange={(e)=>onTextChange?.(sel.id, e.target.value)}
+        )}
+
+        {/* kontrol slot teks template */}
+        {selSlot && (
+          <>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+              <input type="text" value={values[selSlot.id] ?? ""} onChange={(e)=>onTextChange?.(selSlot.id, e.target.value)}
+                className="min-w-[140px] flex-1 rounded-lg border border-navy/15 px-2 py-1.5" placeholder="Teks…" />
+              <select value={selSlot.fontFamily} onChange={(e)=>patchSlot(selSlot.id, { fontFamily: e.target.value })}
+                className="rounded-lg border border-navy/15 px-2 py-1.5">
+                {FONT_OPTIONS.map((f) => <option key={f.id} value={f.family}>{f.family}</option>)}
+              </select>
+              <input type="range" min={12} max={140} value={selSlot.maxFontSize} title="Ukuran font"
+                onChange={(e)=>patchSlot(selSlot.id, { fontSize: Number(e.target.value) })} />
+              <input type="color" value={/^#/.test(selSlot.color) ? selSlot.color.slice(0,7) : "#ffffff"} onChange={(e)=>patchSlot(selSlot.id, { color: e.target.value })}
+                className="h-8 w-9 rounded border border-navy/15" />
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+              <span className="font-medium text-navy/70">Rata:</span>
+              {(["left","center","right"] as const).map((a) => (
+                <button key={a} type="button" onClick={()=>patchSlot(selSlot.id, { align: a })}
+                  className={`rounded-lg border px-2.5 py-1 font-medium ${selSlot.align===a?"border-primary bg-primary/10 text-primary":"border-navy/15 text-navy/70"}`}>
+                  {a === "left" ? "Kiri" : a === "center" ? "Tengah" : "Kanan"}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+              <label className="flex items-center gap-1.5 font-medium text-navy/70">
+                <input type="checkbox" checked={!!selSlot.shadow}
+                  onChange={(e)=>patchSlot(selSlot.id, { shadow: e.target.checked ? { blur: 8, color: "#000000", opacity: 0.6 } : null })} />
+                Shadow
+              </label>
+              {selSlot.shadow && (
+                <>
+                  <input type="range" min={0} max={40} value={selSlot.shadow.blur} title="Blur"
+                    onChange={(e)=>patchSlot(selSlot.id, { shadow: { ...selSlot.shadow!, blur: Number(e.target.value) } })} />
+                  <input type="color" value={selSlot.shadow.color}
+                    onChange={(e)=>patchSlot(selSlot.id, { shadow: { ...selSlot.shadow!, color: e.target.value } })}
+                    className="h-7 w-8 rounded border border-navy/15" />
+                  <input type="range" min={10} max={100} value={Math.round(selSlot.shadow.opacity*100)} title="Opasitas"
+                    onChange={(e)=>patchSlot(selSlot.id, { shadow: { ...selSlot.shadow!, opacity: Number(e.target.value)/100 } })} />
+                </>
+              )}
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+              <label className="flex items-center gap-1.5 font-medium text-navy/70">
+                <input type="checkbox" checked={!!(selSlot.outline && selSlot.outline.width > 0)}
+                  onChange={(e)=>patchSlot(selSlot.id, { outline: e.target.checked ? { width: 3, color: "#000000" } : null })} />
+                Outline
+              </label>
+              {selSlot.outline && selSlot.outline.width > 0 && (
+                <>
+                  <input type="range" min={1} max={10} value={selSlot.outline.width} title="Tebal"
+                    onChange={(e)=>patchSlot(selSlot.id, { outline: { ...selSlot.outline!, width: Number(e.target.value) } })} />
+                  <input type="color" value={selSlot.outline.color}
+                    onChange={(e)=>patchSlot(selSlot.id, { outline: { ...selSlot.outline!, color: e.target.value } })}
+                    className="h-7 w-8 rounded border border-navy/15" />
+                </>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* kontrol teks tambahan */}
+        {selItem && selItem.kind === "text" && (
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+            <input type="text" value={selItem.text ?? ""} onChange={(e)=>patchItem(selItem.id, { text: e.target.value })}
               className="min-w-[140px] flex-1 rounded-lg border border-navy/15 px-2 py-1.5" placeholder="Teks…" />
-            <select value={sel.fontFamily} onChange={(e)=>patchSlot(sel.id, { fontFamily: e.target.value })}
+            <select value={selItem.fontFamily ?? "Inter"} onChange={(e)=>patchItem(selItem.id, { fontFamily: e.target.value })}
               className="rounded-lg border border-navy/15 px-2 py-1.5">
               {FONT_OPTIONS.map((f) => <option key={f.id} value={f.family}>{f.family}</option>)}
             </select>
-            <input type="range" min={12} max={140} value={sel.maxFontSize} title="Ukuran font"
-              onChange={(e)=>patchSlot(sel.id, { fontSize: Number(e.target.value) })} />
-            <input type="color" value={/^#/.test(sel.color) ? sel.color.slice(0,7) : "#ffffff"} onChange={(e)=>patchSlot(sel.id, { color: e.target.value })}
+            <input type="range" min={12} max={160} value={selItem.fontSize ?? 64} title="Ukuran font"
+              onChange={(e)=>patchItem(selItem.id, { fontSize: Number(e.target.value) })} />
+            <input type="color" value={selItem.color ?? "#ffffff"} onChange={(e)=>patchItem(selItem.id, { color: e.target.value })}
               className="h-8 w-9 rounded border border-navy/15" />
           </div>
-
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-            <span className="font-medium text-navy/70">Rata:</span>
-            {(["left","center","right"] as const).map((a) => (
-              <button key={a} type="button" onClick={()=>patchSlot(sel.id, { align: a })}
-                className={`rounded-lg border px-2.5 py-1 font-medium ${sel.align===a?"border-primary bg-primary/10 text-primary":"border-navy/15 text-navy/70"}`}>
-                {a === "left" ? "Kiri" : a === "center" ? "Tengah" : "Kanan"}
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-            <label className="flex items-center gap-1.5 font-medium text-navy/70">
-              <input type="checkbox" checked={!!sel.shadow}
-                onChange={(e)=>patchSlot(sel.id, { shadow: e.target.checked ? { blur: 8, color: "#000000", opacity: 0.6 } : null })} />
-              Shadow
-            </label>
-            {sel.shadow && (
-              <>
-                <input type="range" min={0} max={40} value={sel.shadow.blur} title="Blur"
-                  onChange={(e)=>patchSlot(sel.id, { shadow: { ...sel.shadow!, blur: Number(e.target.value) } })} />
-                <input type="color" value={sel.shadow.color}
-                  onChange={(e)=>patchSlot(sel.id, { shadow: { ...sel.shadow!, color: e.target.value } })}
-                  className="h-7 w-8 rounded border border-navy/15" />
-                <input type="range" min={10} max={100} value={Math.round(sel.shadow.opacity*100)} title="Opasitas"
-                  onChange={(e)=>patchSlot(sel.id, { shadow: { ...sel.shadow!, opacity: Number(e.target.value)/100 } })} />
-              </>
-            )}
-          </div>
-
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-            <label className="flex items-center gap-1.5 font-medium text-navy/70">
-              <input type="checkbox" checked={!!(sel.outline && sel.outline.width > 0)}
-                onChange={(e)=>patchSlot(sel.id, { outline: e.target.checked ? { width: 3, color: "#000000" } : null })} />
-              Outline
-            </label>
-            {sel.outline && sel.outline.width > 0 && (
-              <>
-                <input type="range" min={1} max={10} value={sel.outline.width} title="Tebal"
-                  onChange={(e)=>patchSlot(sel.id, { outline: { ...sel.outline!, width: Number(e.target.value) } })} />
-                <input type="color" value={sel.outline.color}
-                  onChange={(e)=>patchSlot(sel.id, { outline: { ...sel.outline!, color: e.target.value } })}
-                  className="h-7 w-8 rounded border border-navy/15" />
-              </>
-            )}
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
