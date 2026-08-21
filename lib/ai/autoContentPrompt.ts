@@ -92,7 +92,9 @@ const CAPTION_RULES_ID =
   "- Gunakan perumpamaan/analogi yang relevan.\n" +
   "- Sentuh PERASAAN pembaca: tunjukkan empati terhadap apa yang mereka rasakan, khawatirkan, atau impikan.\n" +
   "- Boleh dari sudut pandang pembaca (\"aku/kita\"), menyuarakan keseharian mereka.\n" +
-  "- Isi 2-4 kalimat, satu CTA halus, lalu WAJIB diakhiri 3-6 hashtag relevan (format #katakunci tanpa spasi di dalam tag). SEMUA hashtag WAJIB berbahasa Indonesia (samakan dengan bahasa caption). JANGAN PERNAH mengosongkan hashtag. Patuhi nada brand & hindari topik terlarang.";
+  "- FORMAT WAJIB: pecah caption jadi 2-4 PARAGRAF PENDEK (1-2 kalimat per paragraf), dipisah BARIS KOSONG (\\n\\n di dalam string JSON) — JANGAN PERNAH satu paragraf panjang menyambung. Hashtag jadi paragraf terakhir sendiri.\n" +
+  "- EMOJI: sisipkan 2-4 emoji total yang SESUAI mood teks (contoh: momen hangat ☕🌿, semangat usaha 💪✨, produk baru 🎉, tips 📌💡) — letakkan alami di akhir kalimat, maksimal 1-2 per paragraf, JANGAN menumpuk beruntun. HANYA emoji sopan & umum; DILARANG emoji kasar/vulgar/bermakna ganda (🖕😈🍆🍑💦 dan sejenisnya). Bagian hashtag tanpa emoji.\n" +
+  "- Isi total 3-6 kalimat, satu CTA halus di paragraf terakhir sebelum hashtag, lalu WAJIB diakhiri 3-6 hashtag relevan (format #katakunci tanpa spasi di dalam tag). SEMUA hashtag WAJIB berbahasa Indonesia (samakan dengan bahasa caption). JANGAN PERNAH mengosongkan hashtag. Patuhi nada brand & hindari topik terlarang.";
 
 const CAPTION_RULES_EN =
   "caption = a LIVING, empathetic Instagram caption, in English:\n" +
@@ -100,7 +102,9 @@ const CAPTION_RULES_EN =
   "- Use relevant metaphors/analogies that feel human, not corporate.\n" +
   "- Touch the reader's EMOTIONS: show empathy for what they feel, worry about, or dream of.\n" +
   "- Reader-first perspective is welcome (\"I/we\"), voicing their day-to-day.\n" +
-  "- 2-4 sentences, one subtle CTA, then MUST end with 3-6 relevant hashtags (format #keyword, no spaces inside the tag). ALL hashtags MUST be in English (match the caption's language) — never mix Indonesian hashtags into English captions, even for local audiences (use transliterated versions like #makassarbusiness instead of #makassarbisnis). NEVER omit hashtags. Match brand voice & avoid restricted topics.";
+  "- REQUIRED FORMAT: break the caption into 2-4 SHORT PARAGRAPHS (1-2 sentences each), separated by a BLANK LINE (\\n\\n inside the JSON string) — NEVER one long run-on paragraph. Hashtags go in their own final paragraph.\n" +
+  "- EMOJI: weave in 2-4 emojis total that MATCH the mood (cozy moment ☕🌿, hustle energy 💪✨, launch 🎉, tips 📌💡) — placed naturally at sentence ends, max 1-2 per paragraph, never stacked in a row. ONLY polite, universally safe emojis; NO rude/vulgar/double-meaning emojis (🖕😈🍆🍑💦 and similar). No emojis in the hashtag block.\n" +
+  "- 3-6 sentences total, one subtle CTA in the last paragraph before the hashtags, then MUST end with 3-6 relevant hashtags (format #keyword, no spaces inside the tag). ALL hashtags MUST be in English (match the caption's language) — never mix Indonesian hashtags into English captions, even for local audiences (use transliterated versions like #makassarbusiness instead of #makassarbisnis). NEVER omit hashtags. Match brand voice & avoid restricted topics.";
 
 function captionRules(lang?: Lang): string {
   return isEn(lang) ? CAPTION_RULES_EN : CAPTION_RULES_ID;
