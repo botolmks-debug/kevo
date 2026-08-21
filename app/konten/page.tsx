@@ -62,14 +62,18 @@ export default function KontenPage() {
   const [overrides, setOverrides] = useState<EditorOverrides>({ slots: {} });
   // false = mode edit cepat (Konva, ringan, default). true = render Satori asli
   // (akurat) — HANYA saat user klik "Lihat hasil asli". Tidak dirender saat buka.
-  const [previewMode, setPreviewMode] = useState(false);
+  // Default TRUE: preview = hasil render Satori asli (WYSIWYG, akurat 100%).
+  const [previewMode, setPreviewMode] = useState(true);
   // Uji coba editor DOM satu-mesin — KHUSUS admin (botolmks@gmail.com).
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [domMode, setDomMode] = useState(false);
   const domRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    createClient().auth.getUser().then(({ data }) => setIsAdminUser(isAdmin(data.user?.email)));
+    createClient().auth.getUser().then(({ data }) => {
+      setIsAdminUser(isAdmin(data.user?.email));
+    });
+    setDomMode(true); // Editor DOM = default untuk SEMUA user (editor lama = fallback)
   }, []);
   const [editTemplateId, setEditTemplateId] = useState<ContentLayoutState["templateId"]>("polos");
   const [editBgColor, setEditBgColor] = useState<string | undefined>(undefined);
@@ -99,7 +103,17 @@ export default function KontenPage() {
     if (ls) {
       // Konten baru: buka-ulang PERSIS dari snapshot editor.
       setEditValues({ ...ls.values, photo: bgPhoto });
-      setOverrides(ls.overrides ?? { slots: {} });
+      // Reset posisi box slot desc-N supaya dihitung ulang dari teks asli
+      // (posisi tersimpan mungkin dihitung dari teks kosong → meleset).
+      const cleanOverrides = ls.overrides ?? { slots: {} };
+      const cleanSlots = { ...cleanOverrides.slots };
+      Object.keys(cleanSlots).forEach((id) => {
+        if (id.startsWith("desc-")) {
+          // Reset box (posisi Y) dan align supaya dihitung ulang dari template baru
+          cleanSlots[id] = { ...cleanSlots[id], box: undefined, align: undefined };
+        }
+      });
+      setOverrides({ ...cleanOverrides, slots: cleanSlots });
       setEditTemplateId(ls.templateId);
       setEditBgColor(ls.bgColor);
       setEditDescCount(ls.descCount);
@@ -178,15 +192,23 @@ export default function KontenPage() {
       if (logoData) renderTpl = { ...editTemplate, brand: { ...editTemplate.brand, logoUrl: logoData } };
     }
     try {
-      let blob: Blob;
+      let blob: Blob | null = null;
       if (domMode && domRef.current) {
         // EDITOR DOM: potret elemen yang diedit → PNG (edit = hasil, identik).
-        await document.fonts.ready;
-        const pr = editTemplate.layouts[selected.ratio].canvas.width / 340;
-        const b = await htmlToImage.toBlob(domRef.current, { pixelRatio: pr, cacheBust: true });
-        if (!b) throw new Error("Gagal memotret editor DOM.");
-        blob = b;
-      } else {
+        // Kalau gagal (browser lama/HP tertentu) → jatuh otomatis ke jalur Satori.
+        try {
+          await document.fonts.ready;
+          const pr = editTemplate.layouts[selected.ratio].canvas.width / 340;
+          blob = await htmlToImage.toBlob(domRef.current, {
+            pixelRatio: pr, cacheBust: true,
+            filter: (n) => !(n instanceof HTMLElement && n.dataset?.noexport),
+          });
+        } catch (err) {
+          console.log("[DOM export] gagal, fallback ke Satori:", err);
+          blob = null;
+        }
+      }
+      if (!blob) {
         const res = await fetch("/api/render", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify(buildRenderInput(renderTpl, renderValues, selected.ratio)),
@@ -271,7 +293,7 @@ export default function KontenPage() {
 
   const baseTemplate =
     editTemplateId === "produk-latar" ? createProdukLatarTemplate(editBgColor)
-    : editTemplateId === "standar" ? createStandarTemplate(editDescCount ?? 1, editValues.title ?? editValues.caption, Array.from({ length: editDescCount ?? 1 }, (_, i) => editValues[`desc-${i}`] ?? ""))
+    : editTemplateId === "standar" ? createStandarTemplate(editDescCount ?? 1, editValues.title ?? editValues.caption)
     : editTemplateId === "teks-saja" ? createTeksSajaTemplate(editDescCount ?? 1)
     : editTemplateId === "carousel" ? createCarouselTemplate()
     : editTemplateId === "interaksi" ? interaksiTemplate
@@ -310,7 +332,7 @@ export default function KontenPage() {
               </h2>
               <button type="button" onClick={() => setSelected(null)} className="text-xs text-navy/50 hover:text-navy">✕ Tutup</button>
             </div>
-            {isAdminUser && (
+            {(isAdminUser || true) && (
               <button
                 type="button"
                 onClick={() => setDomMode((v) => !v)}

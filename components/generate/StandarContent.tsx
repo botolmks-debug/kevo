@@ -1,11 +1,15 @@
 "use client";
 
 import { getLang } from "@/lib/i18n";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { BusyToast } from "@/components/ui/BusyToast";
 import { Button } from "@/components/ui/Button";
 import { CanvasEditor } from "@/components/editor/CanvasEditor";
+import { DomEditor } from "@/components/editor/DomEditor";
+import * as htmlToImage from "html-to-image";
+import { isAdmin } from "@/lib/supabase/tokens";
+import { createClient } from "@/lib/supabase/client";
 import { useLiveRender } from "@/components/editor/LivePreview";
 import { applyEditorOverrides, type EditorOverrides } from "@/lib/editor/layoutOverrides";
 import { buildFooterSocials } from "@/lib/onboarding/profileStorage";
@@ -48,7 +52,20 @@ export function StandarContent({
   const [renderStatus, setRenderStatus] = useState<Status>("idle");
   const [renderError, setRenderError] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
-  const [previewMode, setPreviewMode] = useState(false);
+  // Default TRUE: preview = hasil render Satori asli (WYSIWYG, akurat 100%).
+  // Konva jadi layer interaksi — muncul hanya saat drag. "Edit cepat" untuk
+  // mematikan render live kalau koneksi lambat.
+  const [previewMode, setPreviewMode] = useState(true);
+  // Editor DOM (satu-mesin) — default AKTIF untuk admin (uji sebelum rilis umum).
+  const [domMode, setDomMode] = useState(false);
+  const [isAdminUser, setIsAdminUser] = useState(false);
+  const domRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data }: { data: { user: { email?: string } | null } }) => {
+      setIsAdminUser(isAdmin(data.user?.email));
+    });
+    setDomMode(true); // Editor DOM = default untuk SEMUA user
+  }, []);
 
   // Auto-caption (dari data onboarding + judul/deskripsi)
   const [caption, setCaption] = useState("");
@@ -150,8 +167,6 @@ export function StandarContent({
     : null;
 
   const baseTemplate = createStandarTemplate(descCount, values.title ?? "", descList);
-  const liveTemplate = photo ? applyEditorOverrides(template, ratio, overrides) : null;
-  const { url: liveUrl, rendering: liveRendering } = useLiveRender(liveTemplate, { ...values, photo: photo ?? "" }, ratio, !!photo && previewMode);
   const withFooter = footerOverride?.socials?.length
     ? withFooterOverride(baseTemplate, footerOverride.businessName, footerOverride.socials)
     : baseTemplate;
@@ -163,6 +178,10 @@ export function StandarContent({
   const template = withLogoOverride(withFooter, activeLogo);
   const editTemplate = applyEditorOverrides(template, ratio, overrides);
   const layout = editTemplate.layouts[ratio];
+  // Live render Satori (jalur CanvasEditor/non-DOM) — nonaktif saat Editor DOM.
+  const { url: liveUrl, rendering: liveRendering } = useLiveRender(
+    photo ? editTemplate : null, { ...values, photo: photo ?? "" }, ratio, !!photo && previewMode && !domMode,
+  );
 
   async function urlToDataUri(url: string): Promise<string | null> {
     try {
@@ -213,6 +232,43 @@ export function StandarContent({
     setRenderStatus("loading");
     setRenderError(null);
     try {
+      if (domMode && domRef.current) {
+        // EDITOR DOM: potret elemen yang diedit → PNG (edit = hasil, identik).
+        // Gagal (browser lama/HP) → lanjut otomatis ke jalur Satori di bawah.
+        let b: Blob | null = null;
+        try {
+          await document.fonts.ready;
+          const pr = template.layouts[ratio].canvas.width / 340;
+          b = await htmlToImage.toBlob(domRef.current, {
+            pixelRatio: pr, cacheBust: true,
+            filter: (n) => !(n instanceof HTMLElement && n.dataset?.noexport),
+          });
+        } catch (err) {
+          console.log("[DOM export] gagal, fallback ke Satori:", err);
+        }
+        if (b) {
+        const url0 = URL.createObjectURL(b);
+        const a0 = document.createElement("a");
+        a0.href = url0; a0.download = `kevo-standar-${Date.now()}.png`;
+        document.body.appendChild(a0); a0.click(); document.body.removeChild(a0);
+        URL.revokeObjectURL(url0);
+        const { photo: _p, ...textValues0 } = values;
+        const saved0 = await saveManualContent({
+          pngBlob: b,
+          backgroundSrc: renderValues.photo ?? "",
+          layoutState: { templateId: "standar", ratio, values: textValues0, overrides, logoVariant: activeLogoVariant, descCount },
+          onImageText: judul,
+          caption,
+          ratio,
+          jenis: "produk",
+          existingId: savedId,
+        });
+        if (saved0.ok) setSavedId(saved0.id);
+        else setRenderError(`PNG terunduh, tapi gagal simpan ke Riwayat: ${saved0.error}`);
+        setRenderStatus("success");
+        return;
+        }
+      }
       const res = await fetch("/api/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -466,9 +522,40 @@ export function StandarContent({
                 </p>
               )}
             </div>
+          ) : domMode ? (
+            <div>
+              {(isAdminUser || true) && (
+                <button type="button" onClick={() => setDomMode(false)}
+                  className="mb-2 self-start rounded-full bg-primary px-3 py-1 text-xs font-bold text-white">
+                  ● Editor DOM — AKTIF (klik utk editor lama)
+                </button>
+              )}
+              <DomEditor
+                layout={layout}
+                values={values}
+                overrides={overrides}
+                onOverridesChange={setOverrides}
+                onTextChange={(slotId, val) => setValues((v) => ({ ...v, [slotId]: val }))}
+                photo={photo}
+                logoUrl={activeLogo?.url ?? null}
+                socials={footerOverride?.socials ?? []}
+                businessName={businessProfile?.business.name}
+                logoVariant={activeLogoVariant}
+                canToggleLogo={!!(logoDark && logoLight)}
+                onLogoVariantChange={(v) => setOverrides((o) => ({ ...o, logoVariant: v }))}
+                exportRef={domRef}
+              />
+            </div>
           ) : (
+            <div>
+              {(isAdminUser || true) && (
+                <button type="button" onClick={() => setDomMode(true)}
+                  className="mb-2 self-start rounded-full border border-primary px-3 py-1 text-xs font-bold text-primary">
+                  ○ Coba Editor DOM
+                </button>
+              )}
             <CanvasEditor
-              key={`${photo.slice(-20)}-${descCount}`}
+              key={`${photo.slice(-20)}-${descCount}-${Array.from({ length: descCount }, (_, i) => values[`desc-${i}`] ?? "").join("|")}`}
               ghostUrl={previewMode ? (liveUrl ?? undefined) : undefined}
               rendering={previewMode ? liveRendering : false}
               layout={layout}
@@ -484,6 +571,7 @@ export function StandarContent({
               canToggleLogo={!!(logoDark && logoLight)}
               onLogoVariantChange={(v) => setOverrides((o) => ({ ...o, logoVariant: v }))}
             />
+            </div>
           )}
         </div>
       </div>

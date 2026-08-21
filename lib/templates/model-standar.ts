@@ -72,7 +72,7 @@ function buildLayout(height: number, descCount: number, titleText?: string, desc
     maxFontSize: descMaxFont,
     minFontSize: 16,
     maxLines: descMaxLines,
-    align: "left" as const,
+    align: "center" as const,
     color: "rgba(255,255,255,0.9)",
     fontWeight: 400,
     label: `Deskripsi ${i + 1}`,

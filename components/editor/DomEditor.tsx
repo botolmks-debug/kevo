@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { TemplateLayout, TextSlot, Decoration, FooterSocial } from "@/lib/templates/types";
 import type { EditorOverrides } from "@/lib/editor/layoutOverrides";
 import { fitFontSize } from "@/lib/render/fitText";
@@ -63,37 +63,6 @@ function buildTextShadow(slot: TextSlot, scale: number): string | undefined {
     parts.push(`0px 0px ${slot.shadow.blur*scale}px rgba(${r},${g},${b},${slot.shadow.opacity})`);
   }
   return parts.length ? parts.join(", ") : undefined;
-}
-
-/**
- * Teks auto-fit NYATA: setelah render, lebar/tinggi diukur langsung dari DOM,
- * font diturunkan sampai muat kotak (walau ukuran dikunci user via slider).
- * Export memotret DOM yang sama → hasil dijamin identik.
- */
-function FitText({ text, boxW, boxH, maxFont, minFont, fontFamily, fontWeight, color, align, textShadow }: {
-  text: string; boxW: number; boxH: number; maxFont: number; minFont: number;
-  fontFamily: string; fontWeight: number; color: string;
-  align: "left" | "center" | "right"; textShadow?: string;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const el = ref.current; if (!el) return;
-    let size = maxFont;
-    el.style.fontSize = `${size}px`;
-    let guard = 60;
-    while (guard-- > 0 && size > minFont &&
-      (el.scrollWidth > boxW + 0.5 || el.scrollHeight > boxH + 0.5)) {
-      size -= 1;
-      el.style.fontSize = `${size}px`;
-    }
-  }, [text, boxW, boxH, maxFont, minFont, fontFamily, fontWeight]);
-  return (
-    <div ref={ref} style={{
-      width: "100%", fontFamily: `"${fontFamily}"`, fontSize: maxFont, fontWeight,
-      color, textAlign: align, lineHeight: 1, textShadow,
-      whiteSpace: "pre-wrap", overflowWrap: "anywhere", userSelect: "none",
-    }}>{text}</div>
-  );
 }
 
 function DecoView({ d, scale }: { d: Decoration; scale: number }) {
@@ -327,12 +296,8 @@ export function DomEditor({
                 onPointerDown={(e)=>{ setSelId(slot.id); stageRef.current?.focus(); startDrag(e,"slot",slot.box.x,slot.box.y,`slot-${slot.id}`,slot.box.width,slot.box.height,slot.id); }}
                 style={{ position:"absolute", left:slot.box.x*scale, top:slot.box.y*scale, width:slot.box.width*scale, height:slot.box.height*scale,
                   display:"flex", alignItems:"flex-start", justifyContent:justify, cursor:"grab" }}>
-                <FitText text={value}
-                  boxW={slot.box.width*scale} boxH={slot.box.height*scale}
-                  maxFont={fitted*scale} minFont={10}
-                  fontFamily={slot.fontFamily} fontWeight={slot.fontWeight ?? 400}
-                  color={slot.color} align={slot.align}
-                  textShadow={buildTextShadow(slot,scale)} />
+                <div style={{ fontFamily:`"${slot.fontFamily}"`, fontSize:fitted*scale, fontWeight:slot.fontWeight ?? 400,
+                  color:slot.color, textAlign:slot.align, lineHeight:1, textShadow:buildTextShadow(slot,scale), whiteSpace:"pre-wrap", userSelect:"none" }}>{value}</div>
               </div>
             );
           })}
@@ -370,8 +335,12 @@ export function DomEditor({
             <div ref={registerElem("footer")}
               onPointerDown={(e)=>startDrag(e,"footer",overrides.footer?.x ?? fl.x, overrides.footer?.y ?? fl.y,"footer",300,isColumn?visSocials.length*(footerIconSize+10):footerIconSize)}
               style={{ position:"absolute", left:(overrides.footer?.x ?? fl.x)*scale, top:(overrides.footer?.y ?? fl.y)*scale, cursor:"grab" }}>
-              {/* Nama bisnis di atas sosmed dihapus (permintaan 21 Agu) —
-                  ikon + akun sosmed sudah cukup mewakili identitas. */}
+              {businessName && (
+                <div style={{ position:"absolute", top:-(isColumn?30:34)*scale, left:0, whiteSpace:"nowrap",
+                  fontFamily:"Poppins", fontWeight:700, fontSize:Math.max(18, Math.round(footerTextSize*0.9))*scale, color:fl.nameColor, userSelect:"none" }}>
+                  {businessName}
+                </div>
+              )}
               <div style={{ display:"flex", flexDirection:isColumn?"column":"row", alignItems:isColumn?(fl.align ?? "flex-start"):"center", gap:(overrides.footer?.gap ?? fl.gap)*scale }}>
                 {visSocials.map((s) => (
                   <div key={s.platformId} style={{ display:"flex", flexDirection:"row", alignItems:"center", gap:10*scale }}>
