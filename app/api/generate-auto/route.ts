@@ -6,6 +6,7 @@ import { checkSupabaseEnvPresence } from "@/lib/env";
 import { loadBusinessProfile } from "@/lib/supabase/businessProfile";
 import { listImages, publicImageUrl, type ImageRow } from "@/lib/supabase/images";
 import { logError } from "@/lib/monitoring/errorLog";
+import { describeProductImage } from "@/lib/ai/describeImage";
 import {
   insertGeneratedContent,
   listGeneratedContent,
@@ -184,6 +185,34 @@ export async function POST(request: NextRequest) {
   // Gabung produk aktif kalau user memilih lebih dari satu foto produk.
   const isGabung = body.jenis === "produk" && sourceImages.length > 1;
 
+  // ── Kenali produk dari FOTO (vision) kalau deskripsi user kosong/minim ──
+  // Judul & caption dibuat SEBELUM gambar; tanpa ini AI hanya pegang profil
+  // bisnis dan bisa salah sebut produk (kasus nyata: toko "botolmakassar"
+  // generate foto GELAS → judul menyebut BOTOL). describeProductImage sudah
+  // terbukti di /coba — di sini dipakai best-effort: gagal → jalan seperti
+  // biasa dengan deskripsi apa adanya. Foto yang sudah diunduh dipakai ulang
+  // untuk editImage di bawah (tidak download 2x).
+  let produkDesc = sourceImage?.description ?? "";
+  let produkBase64: string | null = null;
+  let produkMime = "image/jpeg";
+  if (body.jenis === "produk" && !isGabung && sourceImage && produkDesc.trim().length < 12) {
+    try {
+      const { data, error } = await createServiceRoleClient().storage.from(BUCKET).download(sourceImage.storage_path);
+      if (!error && data) {
+        produkMime = (data as Blob).type || "image/jpeg";
+        produkBase64 = Buffer.from(await data.arrayBuffer()).toString("base64");
+        const seen = await describeProductImage({
+          imageBase64: produkBase64,
+          mimeType: produkMime,
+          lang: body.language === "en" ? "en" : "id",
+        });
+        if (seen.ok && seen.description.trim()) produkDesc = seen.description.trim();
+      }
+    } catch {
+      // best-effort — deskripsi tetap yang lama
+    }
+  }
+
   // ── Catatan bisnis dari AI Check-in (tahap uji, khusus admin) ────────────
   // Disuntik ke prompt teks sbg "kabar terbaru pemilik" agar topik konten
   // mengikuti kondisi usaha terkini. Best-effort: tabel belum ada / kosong →
@@ -210,7 +239,7 @@ export async function POST(request: NextRequest) {
   const hookExtra = body.hook ? hookInstruction(body.language) : undefined;
   const contentPrompt = (
     isGabung ? buildGabungContentPrompt(profile, sourceImages.map((s) => s.description ?? ""), body.language, hookExtra)
-    : body.jenis === "produk" ? buildProdukContentPrompt(profile, sourceImage?.description ?? "", body.language, hookExtra)
+    : body.jenis === "produk" ? buildProdukContentPrompt(profile, produkDesc, body.language, hookExtra)
     : body.jenis === "general" ? buildGeneralContentPrompt(profile, body.language, hookExtra)
     : buildInteraksiContentPrompt(profile, body.language)
   ) + notesBlock;
@@ -250,6 +279,10 @@ export async function POST(request: NextRequest) {
   } else if (body.jenis === "produk") {
     if (!sourceImage) return fail("Pilih gambar produk dulu.", 400);
     let imageBase64: string; let mimeType: string;
+    if (produkBase64) {
+      // Sudah diunduh saat kenali-produk di atas — pakai ulang.
+      imageBase64 = produkBase64; mimeType = produkMime;
+    } else {
     try {
       const { data, error } = await createServiceRoleClient().storage.from(BUCKET).download(sourceImage.storage_path);
       if (error || !data) throw new Error(error?.message ?? "download gagal");
@@ -258,9 +291,10 @@ export async function POST(request: NextRequest) {
     } catch {
       return fail("Gagal mengambil gambar produk.", 502);
     }
+    }
     const prompt =
-      sourceImage.type === "makanan" ? buildFoodPrompt(profile, sourceImage.description ?? undefined, body.language)
-      : sourceImage.type === "skincare" ? buildSkincarePrompt(profile, sourceImage.description ?? undefined, body.language)
+      sourceImage.type === "makanan" ? buildFoodPrompt(profile, produkDesc.trim() ? produkDesc : undefined, body.language)
+      : sourceImage.type === "skincare" ? buildSkincarePrompt(profile, produkDesc.trim() ? produkDesc : undefined, body.language)
       : sourceImage.type === "software" ? buildSoftwarePrompt(profile, sourceImage.size_hint ?? undefined, body.language)
       : sourceImage.type === "suasana" ? buildRuanganPrompt(profile, sourceImage.size_hint ?? undefined, body.language)
       : sourceImage.type === "wajah" ? buildOrangPrompt(profile, body.language)
@@ -276,7 +310,7 @@ export async function POST(request: NextRequest) {
         referenceBase64: refMatch[2],
         referenceMime: refMatch[1],
         aspectRatio: body.ratio,
-        prompt: buildReferencePrompt(profile, sourceImage.description ?? undefined, body.language),
+        prompt: buildReferencePrompt(profile, produkDesc.trim() ? produkDesc : undefined, body.language),
       });
     } else {
       result = await editImage({ imageBase64, mimeType, aspectRatio: body.ratio, prompt });
