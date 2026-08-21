@@ -103,17 +103,10 @@ export default function KontenPage() {
     if (ls) {
       // Konten baru: buka-ulang PERSIS dari snapshot editor.
       setEditValues({ ...ls.values, photo: bgPhoto });
-      // Reset posisi box slot desc-N supaya dihitung ulang dari teks asli
-      // (posisi tersimpan mungkin dihitung dari teks kosong → meleset).
-      const cleanOverrides = ls.overrides ?? { slots: {} };
-      const cleanSlots = { ...cleanOverrides.slots };
-      Object.keys(cleanSlots).forEach((id) => {
-        if (id.startsWith("desc-")) {
-          // Reset box (posisi Y) dan align supaya dihitung ulang dari template baru
-          cleanSlots[id] = { ...cleanSlots[id], box: undefined, align: undefined };
-        }
-      });
-      setOverrides({ ...cleanOverrides, slots: cleanSlots });
+      // (Tambalan lama "reset box+align desc-N" era editor Konva DIHAPUS —
+      // editor DOM satu-mesin: override tersimpan = tampilan tersimpan, jadi
+      // rata & posisi deskripsi yang diatur user harus bertahan saat dibuka ulang.)
+      setOverrides(ls.overrides ?? { slots: {} });
       setEditTemplateId(ls.templateId);
       setEditBgColor(ls.bgColor);
       setEditDescCount(ls.descCount);

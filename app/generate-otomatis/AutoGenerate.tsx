@@ -7,6 +7,8 @@ import { BusyToast } from "@/components/ui/BusyToast";
 import { Card } from "@/components/ui/Card";
 import { Textarea } from "@/components/ui/Input";
 import { CanvasEditor } from "@/components/editor/CanvasEditor";
+import { DomEditor } from "@/components/editor/DomEditor";
+import * as htmlToImage from "html-to-image";
 import { applyEditorOverrides, type EditorOverrides } from "@/lib/editor/layoutOverrides";
 import type { ImageUsage } from "@/lib/images/categories";
 import type { BusinessProfile } from "@/lib/onboarding/businessProfile";
@@ -104,6 +106,9 @@ export function AutoGenerate() {
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
+  // Editor DOM v4 (default) — toggle ke editor lama tetap tersedia.
+  const [domMode, setDomMode] = useState(true);
+  const domRef = useRef<HTMLDivElement | null>(null);
   const [sharedBlob, setSharedBlob] = useState<Blob | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(null);
@@ -367,6 +372,33 @@ export function AutoGenerate() {
     setSaveStatus("loading");
     setSaveError(null);
     try {
+      if (domMode && domRef.current) {
+        // EDITOR DOM: potret elemen yang diedit → PNG (edit = hasil, identik).
+        // Gagal (browser lama/HP) → lanjut otomatis ke jalur Satori di bawah.
+        let b: Blob | null = null;
+        try {
+          await document.fonts.ready;
+          const pr = editTemplate.layouts[result.ratio].canvas.width / 340;
+          b = await htmlToImage.toBlob(domRef.current, {
+            pixelRatio: pr, cacheBust: true,
+            filter: (n) => !(n instanceof HTMLElement && n.dataset?.noexport),
+          });
+        } catch (err) {
+          console.log("[DOM export] gagal, fallback ke Satori:", err);
+        }
+        if (b) {
+          downloadBlob(b, `kevo-${result.jenis}-${result.id}.png`);
+          setSharedBlob(b);
+          const fd = new FormData();
+          fd.append("file", b, "hasil.png");
+          fd.append("onImageText", editValues.caption ?? "");
+          fd.append("caption", result.caption);
+          await fetch(`/api/generate-auto/${result.id}`, { method: "PATCH", body: fd });
+          await loadHistory();
+          setSaveStatus("success");
+          return;
+        }
+      }
       const res = await fetch("/api/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -601,20 +633,51 @@ export function AutoGenerate() {
           </p>
 
           <div className="mx-auto">
-            <CanvasEditor
-              layout={editTemplate.layouts[result.ratio]}
-              values={editValues}
-              overrides={editorOverrides}
-              onOverridesChange={setEditorOverrides}
-              onTextChange={(slotId, value) => setEditValues((v) => ({ ...v, [slotId]: value }))}
-              footerPreviewText={footerOverride?.socials[0]?.value}
-              socials={footerOverride?.socials ?? []}
-              businessName={businessProfile?.business.name}
-              logoUrl={activeLogo?.url ?? null}
-              logoVariant={activeLogoVariant}
-              canToggleLogo={!!(logoDark && logoLight)}
-              onLogoVariantChange={(v) => setEditorOverrides((o) => ({ ...o, logoVariant: v }))}
-            />
+            {domMode ? (
+              <div>
+                <button type="button" onClick={() => setDomMode(false)}
+                  className="mb-2 self-start rounded-full bg-primary px-3 py-1 text-xs font-bold text-white">
+                  ● Editor DOM — AKTIF (klik utk editor lama)
+                </button>
+                <DomEditor
+                  key={result.id} /* remount per hasil: riwayat undo tidak bocor antar konten */
+                  layout={editTemplate.layouts[result.ratio]}
+                  values={editValues}
+                  overrides={editorOverrides}
+                  onOverridesChange={setEditorOverrides}
+                  onTextChange={(slotId, value) => setEditValues((v) => ({ ...v, [slotId]: value }))}
+                  photo={editValues.photo ?? null}
+                  logoUrl={activeLogo?.url ?? null}
+                  socials={footerOverride?.socials ?? []}
+                  businessName={businessProfile?.business.name}
+                  logoVariant={activeLogoVariant}
+                  canToggleLogo={!!(logoDark && logoLight)}
+                  onLogoVariantChange={(v) => setEditorOverrides((o) => ({ ...o, logoVariant: v }))}
+                  exportRef={domRef}
+                />
+              </div>
+            ) : (
+              <div>
+                <button type="button" onClick={() => setDomMode(true)}
+                  className="mb-2 self-start rounded-full border border-primary px-3 py-1 text-xs font-bold text-primary">
+                  ○ Kembali ke Editor DOM
+                </button>
+                <CanvasEditor
+                  layout={editTemplate.layouts[result.ratio]}
+                  values={editValues}
+                  overrides={editorOverrides}
+                  onOverridesChange={setEditorOverrides}
+                  onTextChange={(slotId, value) => setEditValues((v) => ({ ...v, [slotId]: value }))}
+                  footerPreviewText={footerOverride?.socials[0]?.value}
+                  socials={footerOverride?.socials ?? []}
+                  businessName={businessProfile?.business.name}
+                  logoUrl={activeLogo?.url ?? null}
+                  logoVariant={activeLogoVariant}
+                  canToggleLogo={!!(logoDark && logoLight)}
+                  onLogoVariantChange={(v) => setEditorOverrides((o) => ({ ...o, logoVariant: v }))}
+                />
+              </div>
+            )}
           </div>
 
           <Textarea label={L("Caption (bisa disalin)", "Caption (copyable)")} value={result.caption} readOnly />

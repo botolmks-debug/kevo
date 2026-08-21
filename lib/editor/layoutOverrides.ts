@@ -45,6 +45,7 @@ export type FreeItem = {
   fontSize?: number;
   fontWeight?: number;
   color?: string;
+  align?: "left" | "center" | "right";
   /** kind "image" — data URI (di-embed, aman untuk export). */
   src?: string;
 };

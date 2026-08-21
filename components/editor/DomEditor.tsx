@@ -610,10 +610,11 @@ export function DomEditor({
                     onBlur={(e)=>{ patchItem(it.id, { text: (e.target as HTMLDivElement).innerText }); setEditingKey(null); }}
                     onKeyDown={(e)=>{ e.stopPropagation(); if ((e.key === "Enter" && !e.shiftKey) || e.key === "Escape") { e.preventDefault(); (e.target as HTMLDivElement).blur(); } }}
                     style={{ fontFamily:`"${it.fontFamily ?? "Inter"}"`, fontSize:(it.fontSize ?? 64)*scale, fontWeight:it.fontWeight ?? 800,
-                      color:it.color ?? "#ffffff", lineHeight:1.1, whiteSpace:"pre-wrap", outline:"none", cursor:"text", minWidth:20 }}>{it.text ?? ""}</div>
+                      color:it.color ?? "#ffffff", lineHeight:1.1, whiteSpace:"pre-wrap", textAlign:it.align ?? "left", width:"100%",
+                      outline:"none", cursor:"text", minWidth:20 }}>{it.text ?? ""}</div>
                 ) : (
                   <div style={{ fontFamily:`"${it.fontFamily ?? "Inter"}"`, fontSize:(it.fontSize ?? 64)*scale, fontWeight:it.fontWeight ?? 800,
-                    color:it.color ?? "#ffffff", lineHeight:1.1, whiteSpace:"pre-wrap", userSelect:"none" }}>{it.text ?? ""}</div>
+                    color:it.color ?? "#ffffff", lineHeight:1.1, whiteSpace:"pre-wrap", textAlign:it.align ?? "left", width:"100%", userSelect:"none" }}>{it.text ?? ""}</div>
                 )
               ) : (
                 <img src={it.src} alt="" draggable={false}
@@ -929,6 +930,15 @@ export function DomEditor({
               onChange={(e)=>patchItem(selItem.id, { fontSize: Number(e.target.value) })} />
             <input type="color" value={selItem.color ?? "#ffffff"} onChange={(e)=>patchItem(selItem.id, { color: e.target.value })}
               className="h-8 w-9 rounded border border-navy/15" />
+            <span className="flex items-center gap-1.5 text-xs">
+              <span className="font-medium text-navy/70">Rata:</span>
+              {(["left","center","right"] as const).map((a) => (
+                <button key={a} type="button" onClick={()=>patchItem(selItem.id, { align: a })}
+                  className={`rounded-lg border px-2.5 py-1 font-medium ${(selItem.align ?? "left")===a?"border-primary bg-primary/10 text-primary":"border-navy/15 text-navy/70"}`}>
+                  {a === "left" ? "Kiri" : a === "center" ? "Tengah" : "Kanan"}
+                </button>
+              ))}
+            </span>
           </div>
         )}
       </div>
