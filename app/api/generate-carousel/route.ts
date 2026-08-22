@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     content.scenes.map((scene) =>
       generateImage({
         prompt: buildCarouselSceneImagePrompt(scene, language),
-        aspectRatio: "1:1", // carousel = kotak (feed square)
+        aspectRatio: "4:5", // carousel = potret 4:5 (1080x1350, ukuran feed IG terbaik)
       }),
     ),
   );

@@ -66,9 +66,9 @@ async function loadImg(src: string): Promise<HTMLImageElement> {
  * menampilkan hasil yang persis sama, tanpa kode dekorasi baru.
  */
 function compositeOverlay(img: HTMLImageElement, hex: string, opacityPct: number): string {
-  // Carousel = KOTAK (1:1 feed square).
+  // Carousel = POTRET 4:5 (1080x1350) — ukuran feed IG terbaik.
   const W = 1080;
-  const H = 1080;
+  const H = 1350;
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
@@ -232,13 +232,13 @@ export function CarouselAuto({
         const ov = overridesPerSlide[i];
         const variant = ov.logoVariant ?? defaultLogoVariant;
         const logo = variant === "dark" ? (logoDark ?? logoLight) : (logoLight ?? logoDark);
-        const tmpl = applyEditorOverrides(withLogoOverride(withFooter, logo), "1:1", ov);
+        const tmpl = applyEditorOverrides(withLogoOverride(withFooter, logo), "4:5", ov);
         const vals = slideValues(i);
 
         const res = await fetch("/api/render", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(buildRenderInput(tmpl, vals, "1:1")),
+          body: JSON.stringify(buildRenderInput(tmpl, vals, "4:5")),
         });
         if (!res.ok) {
           const d = await res.json().catch(() => null);
@@ -260,7 +260,7 @@ export function CarouselAuto({
           backgroundSrc: backgrounds[i],
           layoutState: {
             templateId: "carousel",
-            ratio: "1:1",
+            ratio: "4:5",
             values: textValues,
             overrides: ov,
             logoVariant: variant,
@@ -270,7 +270,7 @@ export function CarouselAuto({
           },
           onImageText: vals.title || `Carousel slide ${i + 1}`,
           caption: i === 0 ? caption : "",
-          ratio: "1:1",
+          ratio: "4:5",
           jenis: "produk",
           existingId: newSavedIds[i],
         });
@@ -308,7 +308,7 @@ export function CarouselAuto({
                   key={img.id}
                   type="button"
                   onClick={() => setSelectedId(active ? null : img.id)}
-                  className={`relative aspect-square overflow-hidden rounded-xl border-2 transition ${
+                  className={`relative aspect-[4/5] overflow-hidden rounded-xl border-2 transition ${
                     active ? "border-primary" : "border-line hover:border-primary/50"
                   }`}
                 >
@@ -427,7 +427,7 @@ export function CarouselAuto({
           <div className="mx-auto">
             <CanvasEditor
               key={`carousel-${activeSlide}-${backgrounds[activeSlide]?.length ?? 0}`}
-              layout={applyEditorOverrides(withLogoOverride(withFooter, activeLogo), "1:1", activeOverrides).layouts["1:1"]}
+              layout={applyEditorOverrides(withLogoOverride(withFooter, activeLogo), "4:5", activeOverrides).layouts["4:5"]}
               values={slideValues(activeSlide)}
               overrides={activeOverrides}
               onOverridesChange={(ov) =>
