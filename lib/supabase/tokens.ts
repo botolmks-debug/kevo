@@ -10,7 +10,7 @@ export function isUnlimited(email?: string | null): boolean {
 }
 
 /** Email yang boleh membuka menu Admin. */
-const ADMIN_EMAILS = new Set(["botolmks@gmail.com"]);
+const ADMIN_EMAILS = new Set(["botolmks@gmail.com","andritjo@gmail.com"]);
 export function isAdmin(email?: string | null): boolean {
   return !!email && ADMIN_EMAILS.has(email.trim().toLowerCase());
 }
