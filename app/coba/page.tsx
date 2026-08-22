@@ -3,6 +3,18 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 
 /**
+ * TRACKING FUNNEL — Meta Pixel custom events.
+ * Pixel base code sudah dipasang di app/layout.tsx (root), jadi fbq tersedia.
+ * Lihat hasil: Meta Events Manager > keposting pixel > Ikhtisar / Uji Peristiwa.
+ */
+function track(event: string, params?: Record<string, unknown>) {
+  if (typeof window !== "undefined") {
+    const fbq = (window as unknown as { fbq?: (...args: unknown[]) => void }).fbq;
+    if (typeof fbq === "function") fbq("trackCustom", event, params || {});
+  }
+}
+
+/**
  * HALAMAN DEMO IKLAN — /coba
  * ---------------------------------------------------------------
  * Alur: upload foto -> pilih tipe bisnis -> masukkan email
@@ -195,17 +207,24 @@ export default function CobaPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Event 1: halaman terbuka
+  useEffect(() => {
+    track("CobaLanding");
+  }, []);
+
   const onPickFile = useCallback((f: File | null) => {
     if (!f) return;
     if (!f.type.startsWith("image/")) return;
     setFile(f);
     setPreview(URL.createObjectURL(f));
+    track("CobaFotoDipilih"); // Event 2: user pilih foto
     setStep("business");
   }, []);
 
   const validEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
   const runGenerate = useCallback(async () => {
+    track("CobaGenerateMulai", { businessType }); // Event 4: tombol generate ditekan
     setStep("loading");
     setGenError("");
 
@@ -226,12 +245,14 @@ export default function CobaPage() {
 
       if (res.status === 409) {
         clearInterval(timer);
+        track("CobaGenerateGagal", { reason: "email_used" });
         setStep("email");
         setEmailError("Email ini sudah pernah coba. Pakai email lain, atau langsung daftar — gratis 5 konten.");
         return;
       }
       if (res.status === 429) {
         clearInterval(timer);
+        track("CobaGenerateGagal", { reason: "quota_full" });
         setStep("email");
         setEmailError("Kuota coba gratis hari ini penuh. Coba lagi besok, atau daftar sekarang untuk 5 konten gratis.");
         return;
@@ -253,9 +274,11 @@ export default function CobaPage() {
       setEditableTitle(data.title || "");
       setTitleError("");
       setTitleXY({ x: 0.5, y: 0.82 });
+      track("CobaHasilTampil"); // Event 5: hasil muncul di layar
       setStep("result");
     } catch {
       clearInterval(timer);
+      track("CobaGenerateGagal", { reason: "error" });
       setGenError("Ada kendala saat membuat konten. Coba sekali lagi ya.");
       setStep("email");
     }
@@ -278,7 +301,10 @@ export default function CobaPage() {
           caption: editableCaption,
         }),
       });
-      if (res.ok) setSent(true);
+      if (res.ok) {
+        track("CobaKirimEmail"); // user kirim versi edit ke email
+        setSent(true);
+      }
     } catch {
       setTitleError("Gagal mengirim. Coba sekali lagi ya.");
     } finally {
@@ -326,14 +352,19 @@ export default function CobaPage() {
       {/* top bar — full width */}
       <header className="flex items-center justify-between px-6 py-4 max-w-6xl mx-auto">
         <img src="/Logo/logo-keposting.png" alt="Keposting" className="h-9 w-auto" />
-        <a href="/signup" className="text-sm font-bold px-4 py-2 rounded-full text-white" style={{ background: TEAL }}>
+        <a
+          href="/signup"
+          onClick={() => track("CobaKlikDaftar", { posisi: "header" })}
+          className="text-sm font-bold px-4 py-2 rounded-full text-white"
+          style={{ background: TEAL }}
+        >
           Daftar
         </a>
       </header>
 
       {/* ───── STEP 1: FOTO — dua kolom di desktop ───── */}
       {step === "photo" && (
-        <div className="max-w-6xl mx-auto px-6 pb-16 pt-4 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center" className2="">
+        <div className="max-w-6xl mx-auto px-6 pb-16 pt-4 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 
           {/* Kiri: bukti visual berputar */}
           <div className="hidden lg:flex flex-col gap-5">
@@ -454,7 +485,10 @@ export default function CobaPage() {
 
             <button
               disabled={!businessType}
-              onClick={() => setStep("email")}
+              onClick={() => {
+                track("CobaBisnisLanjut", { businessType }); // Event 3: jenis usaha dipilih
+                setStep("email");
+              }}
               className="mt-8 w-full rounded-full py-4 font-bold text-white text-[15px] transition active:scale-[0.99] disabled:opacity-40"
               style={{ background: TEAL }}
             >
@@ -676,6 +710,7 @@ export default function CobaPage() {
               </p>
               <a
                 href={`/signup?email=${encodeURIComponent(email.trim().toLowerCase())}`}
+                onClick={() => track("CobaKlikDaftar", { posisi: "hasil" })} // Event 6: klik CTA daftar
                 className="mt-4 inline-block w-full rounded-full py-4 font-bold text-[15px]"
                 style={{ background: "#fff", color: TEAL_DARK }}
               >
