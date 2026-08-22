@@ -22,6 +22,72 @@ type UploadedImage = {
 
 type Status = "idle" | "loading" | "error" | "success";
 
+// ── Kolom deskripsi TERSTRUKTUR per kategori ────────────────────────────────
+// Menggantikan textarea bebas yang bikin user bingung mau nulis apa.
+// Nilai kolom dirangkai jadi SATU string `description` berlabel
+// ("Nama produk: X. Jenis produk: Y. ...") sehingga TIDAK perlu migration DB
+// maupun perubahan API — dan label "Nama produk:" membuat AI memperlakukan
+// nama sebagai NAMA (fix akar kasus "Botol Pir" ditafsir jadi bentuk).
+type DescField = {
+  key: "nama" | "jenis" | "ciri" | "info";
+  label: { id: string; en: string };
+  ph: { id: string; en: string };
+  optional?: boolean;
+};
+
+const FIELD_SETS: Record<string, DescField[]> = {
+  "Produk": [
+    { key: "nama", label: { id: "Nama produk", en: "Product name" }, ph: { id: "mis. Botol Pir 250 ml", en: "e.g. Pear Bottle 250 ml" } },
+    { key: "jenis", label: { id: "Jenis produk", en: "Product type" }, ph: { id: "mis. botol plastik minuman / tas kulit / kaos katun", en: "e.g. plastic drink bottle / leather bag / cotton tee" } },
+    { key: "ciri", label: { id: "Ciri khas (warna, bahan, bentuk)", en: "Distinct features (color, material, shape)" }, ph: { id: "mis. bening, leher panjang, tutup hitam", en: "e.g. clear, long neck, black cap" } },
+    { key: "info", label: { id: "Info tambahan", en: "Extra info" }, optional: true, ph: { id: "mis. cocok untuk jus & minuman dingin", en: "e.g. great for juice & cold drinks" } },
+  ],
+  "Makanan/Minuman": [
+    { key: "nama", label: { id: "Nama menu", en: "Menu name" }, ph: { id: "mis. Es Kopi Susu Gula Aren", en: "e.g. Iced Palm-Sugar Milk Coffee" } },
+    { key: "jenis", label: { id: "Jenis makanan/minuman", en: "Food/drink type" }, ph: { id: "mis. minuman dingin / makanan berat / camilan", en: "e.g. cold drink / main dish / snack" } },
+    { key: "ciri", label: { id: "Rasa & bahan utama", en: "Taste & main ingredients" }, ph: { id: "mis. manis gurih, kopi robusta + gula aren", en: "e.g. sweet & creamy, robusta coffee + palm sugar" } },
+    { key: "info", label: { id: "Info tambahan", en: "Extra info" }, optional: true, ph: { id: "mis. best seller, disajikan dingin", en: "e.g. best seller, served cold" } },
+  ],
+  "Kecantikan/Skincare": [
+    { key: "nama", label: { id: "Nama produk", en: "Product name" }, ph: { id: "mis. Glow Serum Vitamin C", en: "e.g. Glow Serum Vitamin C" } },
+    { key: "jenis", label: { id: "Jenis produk", en: "Product type" }, ph: { id: "mis. serum wajah / krim malam / toner", en: "e.g. face serum / night cream / toner" } },
+    { key: "ciri", label: { id: "Manfaat & kandungan utama", en: "Main benefit & ingredients" }, ph: { id: "mis. mencerahkan, vitamin C + niacinamide", en: "e.g. brightening, vitamin C + niacinamide" } },
+    { key: "info", label: { id: "Info tambahan", en: "Extra info" }, optional: true, ph: { id: "mis. untuk kulit kering, dipakai pagi & malam", en: "e.g. for dry skin, morning & night" } },
+  ],
+  "Software/Website": [
+    { key: "nama", label: { id: "Nama aplikasi/website", en: "App/website name" }, ph: { id: "mis. Keposting", en: "e.g. Keposting" } },
+    { key: "jenis", label: { id: "Fungsi utama", en: "Main function" }, ph: { id: "mis. generate konten sosmed otomatis", en: "e.g. auto-generate social content" } },
+    { key: "ciri", label: { id: "Untuk siapa", en: "Who it's for" }, optional: true, ph: { id: "mis. UMKM & pemilik usaha kecil", en: "e.g. small business owners" } },
+    { key: "info", label: { id: "Info tambahan", en: "Extra info" }, optional: true, ph: { id: "mis. tampilan yang difoto = halaman dashboard", en: "e.g. screenshot shows the dashboard page" } },
+  ],
+  "Wajah/Orang": [
+    { key: "nama", label: { id: "Siapa di foto", en: "Who is in the photo" }, ph: { id: "mis. pemilik usaha / barista / pelanggan", en: "e.g. owner / barista / customer" } },
+    { key: "jenis", label: { id: "Sedang apa", en: "Doing what" }, ph: { id: "mis. menyeduh kopi di bar", en: "e.g. brewing coffee at the bar" } },
+    { key: "info", label: { id: "Info tambahan", en: "Extra info" }, optional: true, ph: { id: "mis. pakai celemek hijau khas toko", en: "e.g. wearing the shop's green apron" } },
+  ],
+  "Suasana/Fasilitas": [
+    { key: "nama", label: { id: "Nama tempat/area", en: "Place/area name" }, ph: { id: "mis. ruang duduk lantai 2", en: "e.g. 2nd-floor seating area" } },
+    { key: "jenis", label: { id: "Apa yang terlihat", en: "What is visible" }, ph: { id: "mis. meja kayu, tanaman, jendela besar", en: "e.g. wooden tables, plants, big windows" } },
+    { key: "info", label: { id: "Info tambahan", en: "Extra info" }, optional: true, ph: { id: "mis. spot favorit pelanggan buat kerja", en: "e.g. customers' favorite work spot" } },
+  ],
+};
+
+function composeDescription(
+  fields: DescField[] | undefined,
+  values: Record<string, string>,
+  freeText: string,
+  lang: Lang,
+): string {
+  if (!fields) return freeText.trim();
+  const parts = fields
+    .map((f) => {
+      const v = (values[f.key] ?? "").trim();
+      return v ? `${f.label[lang === "en" ? "en" : "id"]}: ${v}` : null;
+    })
+    .filter(Boolean);
+  return parts.join(". ");
+}
+
 export function ImageLibrary() {
   const [lang, setLangState] = useState<Lang>("en");
   const [images, setImages] = useState<UploadedImage[]>([]);
@@ -29,6 +95,7 @@ export function ImageLibrary() {
 
   const [file, setFile] = useState<File | null>(null);
   const [description, setDescription] = useState("");
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [sizeHint, setSizeHint] = useState("");
   const [category, setCategory] = useState(DEFAULT_IMAGE_CATEGORY);
   const [usage, setUsage] = useState<ImageUsage>("apa_adanya");
@@ -74,7 +141,7 @@ export function ImageLibrary() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("description", description);
+      formData.append("description", composeDescription(FIELD_SETS[category], fieldValues, description, lang));
       formData.append("category", category);
       formData.append("usage", usage);
       formData.append("sizeHint", sizeHint);
@@ -83,6 +150,7 @@ export function ImageLibrary() {
       if (!res.ok) throw new Error(data?.error ?? t("dash.img.errUpload", lang));
       setFile(null);
       setDescription("");
+      setFieldValues({});
       setSizeHint("");
       setUploadStatus("success");
       await loadImages();
@@ -130,8 +198,32 @@ export function ImageLibrary() {
         {file ? <span className="text-sm text-navy/50">{file.name}</span> : null}
       </div>
 
-      <Textarea label={t("dash.img.description", lang)} value={description}
-        onChange={(e) => setDescription(e.target.value)} placeholder={descPlaceholder} />
+      {FIELD_SETS[category] ? (
+        <div className="flex flex-col gap-3">
+          {FIELD_SETS[category].map((f) => (
+            <label key={f.key} className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium text-navy">
+                {f.label[lang === "en" ? "en" : "id"]}{" "}
+                {f.optional ? <span className="font-normal text-navy/50">{t("dash.img.optional", lang)}</span> : null}
+              </span>
+              <input
+                value={fieldValues[f.key] ?? ""}
+                onChange={(e) => setFieldValues((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                placeholder={f.ph[lang === "en" ? "en" : "id"]}
+                className="rounded-card border border-slate-200 bg-white px-4 py-2.5 text-sm text-navy focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </label>
+          ))}
+          <span className="text-xs text-navy/50">
+            {lang === "en"
+              ? "Fill at least the name & type so the AI clearly recognizes what this is."
+              : "Isi minimal nama & jenisnya supaya AI mengenali dengan jelas ini apa."}
+          </span>
+        </div>
+      ) : (
+        <Textarea label={t("dash.img.description", lang)} value={description}
+          onChange={(e) => setDescription(e.target.value)} placeholder={descPlaceholder} />
+      )}
 
       {category === "Makanan/Minuman" ? null : category === "Software/Website" ? (
         <label className="flex flex-col gap-1.5">

@@ -88,7 +88,7 @@ const CAPTION_RULES_ID =
   "caption = caption Instagram yang HIDUP dan berempati, dalam Bahasa Indonesia:\n" +
   "- Variasikan gaya pembuka SETIAP kali. HINDARI klise: \"Pernah nggak sih\", \"Bikin panik\", \"Tenang saja\", \"Dijamin\", \"bosku\", \"gaskeun\". Jangan mengulang kata yang sama.\n" +
   "- HINDARI struktur pembuka klise ini: pertanyaan retorik \"Pernah ngerasain...?\", \"Kesel ga sih kalo...?\", \"Kamu tim mana...?\"; opening angka \"Ini 3/5/7...\"; opening \"Rahasia...\", \"Trik...\", \"Cara agar...\".\n" +
-  "- PILIH salah satu gaya pembuka SEGAR ini (rotasi, JANGAN pakai gaya yang sama di dua caption berurutan): (1) fragmen momen keseharian (\"Jam 11 malam. Mesin masih nyala. Kamu belum tidur.\"), (2) pengakuan jujur (\"Aku hampir menyerah bulan lalu\"), (3) statement kontroversial (\"Followers banyak bukan berarti laris\"), (4) angka data spesifik (\"Dari 100 pengusaha, 87 mengaku pusing bikin konten\"), (5) sudut pandang orang ketiga (\"Kata teman aku, katanya...\"), (6) langsung ke inti tanpa basa-basi (\"Ini masalahnya. Ini solusinya.\").\n" +
+  "- PILIH salah satu gaya pembuka SEGAR ini (rotasi, JANGAN pakai gaya yang sama di dua caption berurutan): (1) fragmen momen keseharian (\"Jam 11 malam. Mesin masih nyala. Kamu belum tidur.\"), (2) pengakuan jujur (\"Aku hampir menyerah bulan lalu\"), (3) statement kontroversial (\"Followers banyak bukan berarti laris\"), (4) observasi umum yang jujur TANPA angka (\"Kebanyakan orang lihat kemasan duluan, baru harga\"), (5) sudut pandang orang ketiga (\"Kata teman aku, katanya...\"), (6) langsung ke inti tanpa basa-basi (\"Ini masalahnya. Ini solusinya.\").\n" +
   "- Gunakan perumpamaan/analogi yang relevan.\n" +
   "- Sentuh PERASAAN pembaca: tunjukkan empati terhadap apa yang mereka rasakan, khawatirkan, atau impikan.\n" +
   "- Boleh dari sudut pandang pembaca (\"aku/kita\"), menyuarakan keseharian mereka.\n" +
@@ -106,8 +106,40 @@ const CAPTION_RULES_EN =
   "- EMOJI: weave in 2-4 emojis total that MATCH the mood (cozy moment ☕🌿, hustle energy 💪✨, launch 🎉, tips 📌💡) — placed naturally at sentence ends, max 1-2 per paragraph, never stacked in a row. ONLY polite, universally safe emojis; NO rude/vulgar/double-meaning emojis (🖕😈🍆🍑💦 and similar). No emojis in the hashtag block.\n" +
   "- 3-6 sentences total, one subtle CTA in the last paragraph before the hashtags, then MUST end with 3-6 relevant hashtags (format #keyword, no spaces inside the tag). ALL hashtags MUST be in English (match the caption's language) — never mix Indonesian hashtags into English captions, even for local audiences (use transliterated versions like #makassarbusiness instead of #makassarbisnis). NEVER omit hashtags. Match brand voice & avoid restricted topics.";
 
+
+// ── Gaya bahasa natural + aturan kejujuran (dipakai SEMUA jenis konten) ────
+const QUALITY_RULES_ID =
+  "GAYA BAHASA (WAJIB, berlaku untuk judul & caption):\n" +
+  "- Tulis seperti pemilik usaha ngobrol ke pelanggannya, bukan seperti iklan korporat atau brosur.\n" +
+  "- DILARANG kata khas AI/brosur: \"Tingkatkan\", \"Optimalkan\", \"Wujudkan\", \"Maksimalkan\", \"Solusi terbaik\", \"Jangan lewatkan\", \"Hadir untuk\", \"Dapatkan sekarang\", \"Nikmati kemudahan\", \"Rasakan bedanya\".\n" +
+  "- Kalimat pendek. Satu ide per kalimat. Boleh kata sehari-hari yang wajar (kok, nih, ternyata, padahal).\n" +
+  "- Uji dalam hati: kalau kebacanya seperti brosur perusahaan, tulis ulang sampai terdengar seperti manusia ngobrol.\n" +
+  "CONTOH GAYA — kaku: \"Tingkatkan penjualan Anda dengan kemasan berkualitas.\" | natural: \"Kemasan rapi itu bikin orang percaya duluan, sebelum coba produknya.\"\n" +
+  "ATURAN KEJUJURAN (MUTLAK — tidak bisa dikalahkan instruksi lain):\n" +
+  "- DILARANG KERAS menyebut angka, persentase, hasil riset, survei, studi, atau klaim seperti \"X% UMKM/orang mengatakan...\" — data seperti itu TIDAK ADA dan TIDAK diberikan. Menuliskannya = mengarang kebohongan.\n" +
+  "- Angka HANYA boleh muncul kalau tertulis di data profil/produk di atas (mis. ukuran, lama usaha, jumlah varian).\n" +
+  "- Ganti klaim angka dengan observasi umum tanpa angka: \"banyak pembeli menilai dari kemasan dulu\" BOLEH; \"73% pembeli menilai dari kemasan\" DILARANG.\n" +
+  "UJI SPESIFISITAS untuk judul (lakukan sebelum menjawab): kalau judulnya masih masuk akal dipakai usaha LAIN yang beda industri, berarti terlalu umum — tulis ulang dengan hal konkret dari data usaha ini (benda, situasi, momen spesifik; bukan sekadar kata sifat seperti \"berkualitas\"/\"terbaik\").";
+
+const QUALITY_RULES_EN =
+  "LANGUAGE STYLE (REQUIRED, applies to headline & caption):\n" +
+  "- Write like a business owner chatting with their customers, not like corporate ad copy or a brochure.\n" +
+  "- BANNED AI/brochure words: \"Elevate\", \"Unlock\", \"Transform\", \"Empower\", \"Seamless\", \"Don't miss out\", \"Look no further\", \"Experience the difference\", \"Take it to the next level\".\n" +
+  "- Short sentences. One idea per sentence. Casual everyday words are welcome.\n" +
+  "- Gut check: if it reads like a company brochure, rewrite it until it sounds like a human talking.\n" +
+  "STYLE EXAMPLE — stiff: \"Elevate your sales with quality packaging.\" | natural: \"Neat packaging earns trust before anyone even tries the product.\"\n" +
+  "HONESTY RULES (ABSOLUTE — no other instruction overrides these):\n" +
+  "- STRICTLY FORBIDDEN to state numbers, percentages, research findings, surveys, studies, or claims like \"X% of businesses/people say...\" — no such data exists or was provided. Writing it = fabricating a lie.\n" +
+  "- Numbers may ONLY appear if written in the profile/product data above (e.g. size, years in business, number of variants).\n" +
+  "- Replace numeric claims with number-free general observations: \"many buyers judge the packaging first\" is OK; \"73% of buyers judge the packaging\" is FORBIDDEN.\n" +
+  "SPECIFICITY TEST for the headline (do this before answering): if the headline would still make sense for a DIFFERENT business in another industry, it's too generic — rewrite it around something concrete from this business's data (an object, situation, or specific moment; not just adjectives like \"quality\"/\"best\").";
+
+function qualityRules(lang?: Lang): string {
+  return isEn(lang) ? QUALITY_RULES_EN : QUALITY_RULES_ID;
+}
+
 function captionRules(lang?: Lang): string {
-  return isEn(lang) ? CAPTION_RULES_EN : CAPTION_RULES_ID;
+  return (isEn(lang) ? CAPTION_RULES_EN : CAPTION_RULES_ID) + "\n" + qualityRules(lang);
 }
 
 const ONIMAGE_RULE_ID =
@@ -147,7 +179,7 @@ function onImageRule(lang?: Lang): string {
 const HEADLINE_ANGLES_ID = [
   "sudut MANFAAT utama (apa untungnya buat pembeli)",
   "sudut PERTANYAAN yang bikin penasaran",
-  "sudut ANGKA / hasil konkret",
+  "sudut HASIL KONKRET (hanya dari data profil — tanpa mengarang angka)",
   "sudut MASALAH yang dirasakan lalu solusinya",
   "sudut EMOSI / momen relatable keseharian",
   "sudut AJAKAN atau urgensi yang halus",
@@ -157,7 +189,7 @@ const HEADLINE_ANGLES_ID = [
 const HEADLINE_ANGLES_EN = [
   "MAIN BENEFIT angle (what's in it for the buyer)",
   "curiosity-driven QUESTION angle",
-  "NUMBER / concrete result angle",
+  "CONCRETE RESULT angle (only from profile data — no invented numbers)",
   "PROBLEM felt then solution angle",
   "EMOTION / relatable day-to-day moment angle",
   "subtle CALL-TO-ACTION or gentle urgency angle",
@@ -280,82 +312,299 @@ const PERSPECTIVE_ANGLES_EN = [
 ];
 
 /**
- * Topik NON-JUALAN untuk mode Dari Foto — perbaikan keluhan "judulnya selalu
- * jualan dan temanya itu-itu saja (mis. selalu soal stok habis)". Separuh
- * generate memakai daftar ini: konten yang MEMBERI NILAI dulu (edukasi, tips
- * pemakaian, mitos, di balik layar), bukan menjual. Produk tetap muncul
- * sebagai konteks, tapi pesannya bukan ajakan beli.
+ * 100 TOPIK KONTEN dalam 14 kategori — perbaikan keluhan "judul terlalu mirip
+ * & tidak ada pembahasan baru". Rotasi 2 TINGKAT: pilih KATEGORI dulu, baru
+ * topik di dalamnya — mencegah topik sejenis muncul beruntun. Kategori
+ * "ANGKA JUJUR" = satu-satunya tempat angka dianjurkan, dan HANYA angka
+ * nyata dari data profil (aturan kejujuran tetap berlaku).
  */
-const VALUE_TOPICS_ID = [
-  "CARA PAKAI / IDE PENGGUNAAN produk ini yang jarang kepikiran orang — praktis dan bisa langsung dicoba",
-  "TIPS MERAWAT / MENYIMPAN produk atau hasil pakainya supaya awet dan maksimal",
-  "EDUKASI SINGKAT seputar bahan, jenis, atau istilah di industri ini yang sering bikin orang bingung",
-  "MITOS vs FAKTA yang beredar seputar produk/industri ini — luruskan dengan santai",
-  "KESALAHAN UMUM yang sering dilakukan orang terkait produk/kebutuhan ini, dan cara menghindarinya",
-  "DI BALIK LAYAR — proses, ketelitian, atau detail kecil dalam usaha ini yang jarang dilihat pelanggan",
-  "PERTANYAAN YANG PALING SERING DITANYAKAN pelanggan — jawab satu dengan jelas",
-  "TREN / KEBIASAAN BARU di kalangan target pelanggan yang berkaitan dengan produk ini",
-  "PERBANDINGAN JENIS/VARIAN — bantu pembaca memilih yang cocok untuk kebutuhannya (netral, bukan menjual)",
-  "CERITA/MOMEN KESEHARIAN target pelanggan yang berhubungan dengan produk ini — relatable, tanpa ajakan beli",
+type TopicCategory = { name: string; topics: string[] };
+
+const TOPIC_CATEGORIES_ID: TopicCategory[] = [
+  { name: "EDUKASI DASAR", topics: [
+    "cara pakai yang benar (banyak yang keliru)",
+    "cara menyimpan/merawat supaya awet",
+    "mitos vs fakta di industri ini — luruskan dengan santai",
+    "istilah teknis yang bikin bingung, dijelaskan bahasa sehari-hari",
+    "perbedaan varian/jenis dan kapan pakai yang mana",
+    "hal kecil yang tak disadari orang tapi berpengaruh besar",
+    "pertanyaan yang paling sering ditanyakan calon pembeli (FAQ)",
+    "kesalahan umum pembeli pemula dan cara menghindarinya",
+  ]},
+  { name: "EDUKASI LANJUTAN", topics: [
+    "kenapa harga produk sejenis bisa beda jauh",
+    "apa yang terjadi kalau pakai produk kualitas buruk",
+    "cara kerja produk/proses ini yang orang jarang tahu",
+    "arti standar/sertifikasi di industri ini untuk pembeli",
+    "bahan/material: mana yang bagus, mana yang asal murah",
+    "umur pakai wajar produk ini & tanda sudah waktunya ganti",
+    "kombinasi produk yang sering dipakai bareng & kenapa cocok",
+  ]},
+  { name: "CERITA PEMILIK", topics: [
+    "asal-usul usaha — kenapa/bagaimana dimulai",
+    "kesalahan yang pernah dilakukan pemilik sendiri & pelajarannya",
+    "hari terberat menjalankan usaha dan cara melewatinya",
+    "keputusan tersulit yang pernah diambil untuk usaha ini",
+    "hal yang hampir bikin menyerah, dan kenapa bertahan",
+    "pencapaian kecil yang bermakna besar",
+    "kebiasaan harian pemilik dalam menjalankan usaha",
+    "hal yang dikorbankan demi usaha ini",
+  ]},
+  { name: "DI BALIK LAYAR", topics: [
+    "proses produksi/penyiapan yang tak terlihat pelanggan",
+    "alat/barang andalan operasional sehari-hari",
+    "dulu vs sekarang — perubahan produk, tempat, atau cara kerja",
+    "satu hari di usaha ini (rutinitas dari buka sampai tutup)",
+    "bagian pekerjaan yang paling disukai & paling berat",
+    "cara menjaga kualitas tetap konsisten setiap hari",
+    "apa yang terjadi saat ada produk gagal/tidak lolos standar",
+  ]},
+  { name: "SUDUT PELANGGAN", topics: [
+    "cara pakai tak terduga yang dilakukan pelanggan",
+    "tipe-tipe pembeli yang relatable (ringan, tanpa menyindir)",
+    "momen spesifik pelanggan paling butuh produk ini",
+    "apa yang berubah di keseharian pelanggan setelah pakai",
+    "hal yang dikira mahal/ribet padahal tidak",
+    "pertanyaan pelanggan yang paling berkesan",
+    "kesalahpahaman pelanggan yang sering terjadi",
+    "cerita/momen keseharian target pelanggan yang berhubungan dengan produk",
+  ]},
+  { name: "OPINI & SIKAP", topics: [
+    "pendapat jujur pemilik tentang tren di industrinya",
+    "hal yang menurut pemilik dilakukan salah oleh industri ini",
+    "kenapa usaha ini memilih TIDAK melakukan sesuatu",
+    "prinsip yang dipegang walau bikin lebih mahal/lambat",
+    "prediksi ringan arah industri ke depan",
+    "hal yang overrated & underrated di industri ini",
+    "standar pribadi yang lebih tinggi dari standar pasar",
+    "tren yang sengaja tidak diikuti & alasannya",
+  ]},
+  { name: "PRAKTIS & LAYAK DISIMPAN", topics: [
+    "checklist singkat sebelum beli produk sejenis (save-worthy)",
+    "cara membedakan kualitas bagus vs jelek",
+    "tips hemat yang jujur (walau berarti beli lebih jarang)",
+    "panduan memilih sesuai kebutuhan/budget",
+    "pertanyaan yang wajib ditanyakan ke penjual mana pun",
+    "urutan langkah pakai yang benar (step by step)",
+    "tanda bahaya (red flag) saat belanja produk sejenis",
+    "cara mengecek kondisi/keaslian sebelum bayar",
+  ]},
+  { name: "PERBANDINGAN", topics: [
+    "varian A vs varian B — siapa cocok yang mana (netral)",
+    "beli murah sering vs beli bagus sekali — hitungannya",
+    "buatan sendiri vs beli jadi — kapan masing-masing masuk akal",
+    "produk ini vs alternatif umum (jujur, tanpa menjelekkan)",
+    "ukuran kecil vs besar — mana yang lebih untung untuk siapa",
+    "baru vs lama — apakah harus selalu yang terbaru",
+    "kebutuhan usaha kecil vs besar — bedanya di mana",
+  ]},
+  { name: "MUSIMAN & MOMEN", topics: [
+    "persiapan menjelang hari raya/musim ramai",
+    "ide penggunaan saat akhir pekan",
+    "momen gajian — prioritas belanja yang masuk akal",
+    "cuaca/musim mempengaruhi produk atau kebutuhannya",
+    "kilas balik perjalanan usaha sepanjang tahun berjalan",
+    "target/rencana ke depan & peran produk di dalamnya",
+    "kaitan produk dengan momen keluarga/kumpul bersama",
+    "persiapan stok/kebutuhan menjelang tanggal ramai",
+  ]},
+  { name: "INTERAKTIF RINGAN", topics: [
+    "minta pendapat pembaca: pilih A atau B",
+    "tebak-tebakan ringan seputar produk/industri (tanpa bocorkan jawaban)",
+    "ajak pembaca cerita pengalamannya di komentar",
+    "polling ringan kebiasaan pembeli",
+    "kalimat isi titik-titik yang dilengkapi pembaca",
+    "minta saran untuk produk/layanan berikutnya",
+    "apresiasi tulus untuk pelanggan/pengikut",
+    "kuis kecil benar-atau-salah seputar industri",
+  ]},
+  { name: "ANGKA JUJUR DARI DATA SENDIRI", topics: [
+    "berapa lama proses menyiapkan satu produk (angka nyata dari data — kalau tak ada datanya, ceritakan prosesnya tanpa angka)",
+    "produk terlaris & dugaan alasannya (tanpa mengarang angka penjualan)",
+    "berapa banyak pilihan/varian yang tersedia (dari data profil)",
+    "sudah berapa lama usaha berjalan & apa artinya untuk pembeli (dari data profil)",
+    "jam/waktu tersibuk & tersepi usaha ini",
+    "barang yang paling sering ditanyakan tapi jarang dibeli",
+  ]},
+  { name: "MASALAH & SOLUSI", topics: [
+    "masalah umum target pasar & bagaimana produk membantu (tanpa lebay)",
+    "masalah yang produk ini TIDAK bisa selesaikan (jujur)",
+    "solusi murah sementara vs solusi yang benar",
+    "tanda-tanda kamu butuh produk ini (tanpa memaksa)",
+    "masalah yang makin besar kalau ditunda",
+    "cara mengatasi keluhan paling umum",
+    "situasi mendesak yang pernah diselamatkan produk/layanan ini",
+  ]},
+  { name: "RASA PENASARAN", topics: [
+    "hal yang penjual lain jarang mau ceritakan",
+    "kebenaran kontra-dugaan (\"yang mahal belum tentu...\")",
+    "detail tersembunyi di produk yang jarang diperhatikan orang",
+    "kenapa usaha ini BERHENTI melakukan sesuatu",
+    "pertanyaan yang bikin mikir — jawabannya dijelaskan di caption",
+  ]},
+  { name: "NILAI & KEPERCAYAAN", topics: [
+    "garansi/jaminan & apa artinya buat pembeli",
+    "cara usaha ini menangani komplain (transparan)",
+    "kenapa pelanggan balik lagi (tanpa klaim angka)",
+    "komitmen ke lingkungan/komunitas lokal (hanya kalau nyata dari data)",
+    "apa yang pembeli dapat selain produknya",
+  ]},
 ];
 
-const VALUE_TOPICS_EN = [
-  "USAGE IDEAS for this product people rarely think of — practical and instantly try-able",
-  "CARE / STORAGE TIPS so the product or its results last longer and perform better",
-  "QUICK EDUCATION about materials, types, or industry terms that often confuse people",
-  "MYTH vs FACT circulating about this product/industry — set it straight casually",
-  "COMMON MISTAKES people make with this product/need, and how to avoid them",
-  "BEHIND THE SCENES — the process, care, or small details of this business customers rarely see",
-  "MOST FREQUENTLY ASKED customer question — answer one clearly",
-  "TRENDS / NEW HABITS among the target audience related to this product",
-  "TYPE/VARIANT COMPARISON — help readers pick what suits them (neutral, not selling)",
-  "A RELATABLE everyday moment of the target customer connected to this product — no sales pitch",
+const TOPIC_CATEGORIES_EN: TopicCategory[] = [
+  { name: "BASIC EDUCATION", topics: [
+    "the right way to use it (many get it wrong)",
+    "how to store/care for it so it lasts",
+    "myth vs fact in this industry — set it straight casually",
+    "confusing technical terms explained in plain language",
+    "differences between variants/types and when to use which",
+    "small details people miss that matter a lot",
+    "the most frequently asked question from potential buyers (FAQ)",
+    "common first-time buyer mistakes and how to avoid them",
+  ]},
+  { name: "ADVANCED EDUCATION", topics: [
+    "why prices of similar products vary so much",
+    "what happens when you use a poor-quality product",
+    "how this product/process actually works (rarely known)",
+    "what industry standards/certifications mean for buyers",
+    "materials: which are good, which are just cheap",
+    "reasonable product lifespan & signs it's time to replace",
+    "product combos often used together & why they fit",
+  ]},
+  { name: "OWNER'S STORY", topics: [
+    "origin story — why/how the business started",
+    "a mistake the owner made & the lesson learned",
+    "the hardest day running the business and getting through it",
+    "the toughest decision ever made for this business",
+    "what almost made the owner quit, and why they stayed",
+    "a small win that meant a lot",
+    "the owner's daily habits running the business",
+    "what was sacrificed for this business",
+  ]},
+  { name: "BEHIND THE SCENES", topics: [
+    "the production/prep process customers never see",
+    "the trusty tools of daily operations",
+    "then vs now — how the product, place, or workflow changed",
+    "one day at this business (open to close)",
+    "the most loved & the hardest part of the job",
+    "how quality is kept consistent every day",
+    "what happens to products that fail the standard",
+  ]},
+  { name: "CUSTOMER'S ANGLE", topics: [
+    "unexpected ways customers use the product",
+    "relatable buyer types (light, never mocking)",
+    "the specific moment customers need this most",
+    "what changes in customers' daily life after using it",
+    "things assumed expensive/complicated that aren't",
+    "the most memorable customer question",
+    "common customer misunderstandings",
+    "a relatable everyday moment of the target customer tied to the product",
+  ]},
+  { name: "OPINION & STANCE", topics: [
+    "the owner's honest take on industry trends",
+    "what this industry gets wrong, in the owner's view",
+    "why this business chooses NOT to do something",
+    "a principle held even when it costs more/slows things down",
+    "a light prediction of where the industry is heading",
+    "what's overrated & underrated in this industry",
+    "personal standards higher than the market's",
+    "a trend deliberately not followed & why",
+  ]},
+  { name: "PRACTICAL & SAVE-WORTHY", topics: [
+    "a short checklist before buying this kind of product",
+    "how to tell good quality from bad",
+    "honest money-saving tips (even if it means buying less often)",
+    "a guide to choosing by need/budget",
+    "questions to ask any seller (including us)",
+    "the correct step-by-step usage order",
+    "red flags when shopping for this kind of product",
+    "how to check condition/authenticity before paying",
+  ]},
+  { name: "COMPARISON", topics: [
+    "variant A vs variant B — who suits which (neutral)",
+    "buying cheap often vs buying good once — the math",
+    "DIY vs buying ready-made — when each makes sense",
+    "this product vs common alternatives (honest, no trash talk)",
+    "small vs large size — which pays off for whom",
+    "new vs old — do you always need the latest",
+    "small vs big business needs — where they differ",
+  ]},
+  { name: "SEASONAL & MOMENTS", topics: [
+    "preparing for holidays/busy season",
+    "weekend usage ideas",
+    "payday moment — sensible spending priorities",
+    "how weather/season affects the product or the need for it",
+    "a look back at the business's year so far",
+    "plans ahead & the product's role in them",
+    "the product's tie to family/gathering moments",
+    "stocking up ahead of busy dates",
+  ]},
+  { name: "LIGHT INTERACTIVE", topics: [
+    "ask readers: pick A or B",
+    "a light guessing game about the product/industry (don't reveal the answer)",
+    "invite readers to share their experience in the comments",
+    "a light poll about buyer habits",
+    "a fill-in-the-blank sentence for readers to complete",
+    "ask for suggestions for the next product/service",
+    "genuine appreciation for customers/followers",
+    "a small true-or-false quiz about the industry",
+  ]},
+  { name: "HONEST NUMBERS FROM OWN DATA", topics: [
+    "how long it takes to prepare one product (real number from data — if none, describe the process without numbers)",
+    "the best-seller & the likely reason (no invented sales figures)",
+    "how many options/variants are available (from profile data)",
+    "how long the business has run & what that means for buyers (from profile data)",
+    "the busiest & quietest hours of this business",
+    "the most-asked-about but rarely-bought item",
+  ]},
+  { name: "PROBLEM & SOLUTION", topics: [
+    "a common audience problem & how the product helps (no hype)",
+    "problems this product can NOT solve (honest)",
+    "cheap temporary fix vs the proper solution",
+    "signs you might need this product (no pressure)",
+    "problems that grow when postponed",
+    "how to handle the most common complaint",
+    "an urgent situation this product/service once saved",
+  ]},
+  { name: "CURIOSITY", topics: [
+    "what other sellers rarely want to tell you",
+    "a counter-intuitive truth (\"expensive doesn't always mean...\")",
+    "a hidden detail in the product people rarely notice",
+    "why this business STOPPED doing something",
+    "a thought-provoking question — answered in the caption",
+  ]},
+  { name: "VALUE & TRUST", topics: [
+    "warranty/guarantee & what it means for buyers",
+    "how this business handles complaints (transparent)",
+    "why customers come back (no numeric claims)",
+    "commitment to the local community/environment (only if real, from data)",
+    "what buyers get beyond the product itself",
+  ]},
 ];
 
-function pickPerspectiveNote(lang?: Lang): string {
-  // 50% konten NILAI (tidak menjual), 50% sudut manfaat — supaya feed tidak
-  // terasa "jualan terus dengan kata-kata diganti".
-  if (Math.random() < 0.5) {
-    const topics = isEn(lang) ? VALUE_TOPICS_EN : VALUE_TOPICS_ID;
-    const topic = topics[Math.floor(Math.random() * topics.length)];
+/**
+ * Arah konten per generate — pengganti pickPerspectiveNote lama:
+ * 40% sudut MANFAAT (nuansa jualan halus, pool PERSPECTIVE_ANGLES),
+ * 60% TOPIK dari 100 pembahasan (rotasi 2 tingkat: kategori dulu, baru
+ * topik) — supaya feed tidak terasa "jualan terus dengan kata-kata diganti"
+ * dan pembahasan benar-benar meluas.
+ */
+function pickContentDirection(lang?: Lang): string {
+  if (Math.random() < 0.4) {
+    const arr = isEn(lang) ? PERSPECTIVE_ANGLES_EN : PERSPECTIVE_ANGLES_ID;
+    const angle = arr[Math.floor(Math.random() * arr.length)];
     if (isEn(lang)) {
-      return `IMPORTANT topic note: For THIS content, do NOT sell and do NOT restate the "customer problem" from the profile. Make pure-VALUE content the target audience finds genuinely useful or fun. The product may appear as context, but the message is not a pitch and there is no buying invitation in the title/description. Topic for this content: ${topic}.`;
+      return `IMPORTANT perspective note: The "Customer problem being solved" in the profile above is ONLY ONE angle, NOT the only one you're allowed to explore. For this content, explore a DIFFERENT benefit perspective below — stay consistent with the product/industry/target audience, BUT don't just repeat the problem sentence already stated: ${angle}.`;
     }
-    return `CATATAN PENTING soal topik: Untuk konten KALI INI, JANGAN berjualan dan JANGAN mengulang "masalah pelanggan" dari profil. Buat konten NILAI murni yang berguna atau menghibur untuk target pasar. Produk boleh muncul sebagai konteks, tapi pesannya bukan promosi dan tidak ada ajakan beli di judul/deskripsi. Topik konten kali ini: ${topic}.`;
+    return `CATATAN PENTING soal sudut pandang: "Masalah pelanggan yang diselesaikan" di profil di atas cuma SATU CONTOH, BUKAN satu-satunya sudut yang boleh dibahas. Untuk konten kali ini, eksplorasi perspektif manfaat BERBEDA berikut — tetap konsisten & masuk akal dengan produk/industri/target pelanggan di atas, TAPI jangan cuma mengulang kalimat masalah yang sudah tertulis: ${angle}.`;
   }
-  const arr = isEn(lang) ? PERSPECTIVE_ANGLES_EN : PERSPECTIVE_ANGLES_ID;
-  const angle = arr[Math.floor(Math.random() * arr.length)];
+  const cats = isEn(lang) ? TOPIC_CATEGORIES_EN : TOPIC_CATEGORIES_ID;
+  const cat = cats[Math.floor(Math.random() * cats.length)];
+  const topic = cat.topics[Math.floor(Math.random() * cat.topics.length)];
   if (isEn(lang)) {
-    return `IMPORTANT perspective note: The "Customer problem being solved" in the profile above is ONLY ONE angle, NOT the only one you're allowed to explore. For this content, explore a DIFFERENT benefit perspective below — stay consistent with the product/industry/target audience, BUT don't just repeat the problem sentence already stated: ${angle}.`;
+    return `IMPORTANT topic note: For THIS content, cover the following topic (category ${cat.name}): ${topic}. The topic is the MAIN focus — the product/business appears as context, not a hard sell; one subtle CTA at the end of the caption is still fine. Do NOT recycle the "customer problem" from the profile as the main theme. Dig into ONE specific angle of this topic — don't write a generic take that fits any business. If this topic truly makes no sense for this business, pick the closest fitting angle from the SAME category instead.`;
   }
-  return `CATATAN PENTING soal sudut pandang: "Masalah pelanggan yang diselesaikan" di profil di atas cuma SATU CONTOH, BUKAN satu-satunya sudut yang boleh dibahas. Untuk konten kali ini, eksplorasi perspektif manfaat BERBEDA berikut — tetap konsisten & masuk akal dengan produk/industri/target pelanggan di atas, TAPI jangan cuma mengulang kalimat masalah yang sudah tertulis: ${angle}.`;
-}
-
-const TOPIC_ANGLES_GENERAL_ID = [
-  "EDUKASI seputar produk/industri — satu fakta atau insight yang berguna buat target pasar",
-  "CERITA ASAL-USUL (origin story) — kenapa/bagaimana usaha ini dimulai atau nilai yang dipegang",
-  "MANFAAT SPESIFIK — satu keuntungan konkret yang dirasakan pelanggan, bukan klaim umum",
-  "MOMEN KESEHARIAN pelanggan yang berkaitan dengan usaha ini — bikin pembaca merasa terwakili",
-  "TIPS PRAKTIS yang relevan dengan industri usaha ini, bisa langsung dipakai pembaca",
-  "MITOS vs FAKTA seputar industri/produk ini — luruskan kesalahpahaman umum",
-  "DI BALIK LAYAR — proses, dedikasi, atau detail kerja yang biasanya tidak terlihat pelanggan",
-  "SEBELUM vs SESUDAH — perubahan/hasil yang dirasakan setelah pakai produk/layanan ini",
-];
-
-const TOPIC_ANGLES_GENERAL_EN = [
-  "EDUCATION about the product/industry — one fact or insight useful to the target audience",
-  "ORIGIN STORY — why/how this business started or the values it holds",
-  "SPECIFIC BENEFIT — one concrete gain customers feel, not a generic claim",
-  "CUSTOMER DAY-TO-DAY MOMENT related to this business — makes the reader feel represented",
-  "PRACTICAL TIP relevant to this industry, immediately usable by the reader",
-  "MYTH vs FACT about this industry/product — correct a common misconception",
-  "BEHIND THE SCENES — process, dedication, or work details customers usually don't see",
-  "BEFORE vs AFTER — the change/result felt after using this product/service",
-];
-
-function pickTopicAngleGeneral(lang?: Lang): string {
-  const arr = isEn(lang) ? TOPIC_ANGLES_GENERAL_EN : TOPIC_ANGLES_GENERAL_ID;
-  return arr[Math.floor(Math.random() * arr.length)];
+  return `CATATAN PENTING soal topik: Untuk konten KALI INI bahas topik berikut (kategori ${cat.name}): ${topic}. Topik = fokus UTAMA — produk/usaha muncul sebagai konteks, bukan promosi keras; satu CTA halus di akhir caption tetap boleh. JANGAN mendaur ulang "masalah pelanggan" dari profil sebagai tema utama. Gali SATU sudut spesifik dari topik ini — jangan tulis versi generik yang cocok untuk usaha mana pun. Kalau topik ini benar-benar tidak masuk akal untuk usaha ini, pilih sudut terdekat yang cocok dari kategori yang SAMA.`;
 }
 
 const WRITING_STYLES_ID = [
@@ -364,7 +613,7 @@ const WRITING_STYLES_ID = [
   "hangat & personal (seolah bicara ke satu orang, bukan ke banyak orang)",
   "reflektif & menyentuh (mengajak pembaca merenung sejenak)",
   "playful & ringan (sedikit jenaka, tidak kaku)",
-  "informatif dengan satu fakta/angka kecil di awal",
+  "informatif dengan satu fakta BENAR dari data profil di awal (tanpa mengarang angka/riset)",
 ];
 
 const WRITING_STYLES_EN = [
@@ -373,7 +622,7 @@ const WRITING_STYLES_EN = [
   "warm & personal (as if speaking to one person, not a crowd)",
   "reflective & touching (invite the reader to pause and think)",
   "playful & light (a bit witty, not stiff)",
-  "informative with one small fact/number in the opening",
+  "informative with one TRUE fact from the profile data in the opening (no invented numbers/research)",
 ];
 
 function pickWritingStyle(lang?: Lang): string {
@@ -427,7 +676,7 @@ const INTERAKSI_CAPTION_RULES_EN =
   '(tips) "Save this: one trick to make your product last longer. What\'s your go-to? 👇 #..."';
 
 function interaksiCaptionRules(lang?: Lang): string {
-  return isEn(lang) ? INTERAKSI_CAPTION_RULES_EN : INTERAKSI_CAPTION_RULES_ID;
+  return (isEn(lang) ? INTERAKSI_CAPTION_RULES_EN : INTERAKSI_CAPTION_RULES_ID) + "\n" + qualityRules(lang);
 }
 
 // ── Interaksi formats ──────────────────────────────────────────────────────
@@ -575,7 +824,7 @@ ${profileBlock(profile, lang)}
 
 Product: ${productDescription || "(no description)"}
 
-${pickPerspectiveNote(lang)}
+${pickContentDirection(lang)}
 
 For the HEADLINE (onImageText) this time, use ${pickHeadlineAngleForProduk(lang)}. Craft a FRESH new phrase; don't repeat commonly used titles.
 For the caption WRITING STYLE this time, use: ${pickWritingStyle(lang)} (still within the brand voice defined above).
@@ -595,7 +844,7 @@ ${profileBlock(profile, lang)}
 
 Produk: ${productDescription || "(tidak ada deskripsi)"}
 
-${pickPerspectiveNote(lang)}
+${pickContentDirection(lang)}
 
 Untuk JUDUL (onImageText) kali ini, pakai ${pickHeadlineAngleForProduk(lang)}. Buat frasa BARU yang segar; jangan mengulang judul yang biasa dipakai.
 Untuk GAYA PENULISAN caption kali ini, pakai: ${pickWritingStyle(lang)} (tetap dalam nada brand yang sudah ditentukan di atas).
@@ -608,7 +857,6 @@ ${extraBlocks(extra)}${jsonTail(lang)}`;
 }
 
 export function buildGeneralContentPrompt(profile: BusinessProfile, lang?: Lang, extra?: string): string {
-  const topic = pickTopicAngleGeneral(lang);
   if (isEn(lang)) {
     return `${persona(lang)}
 ${outputLangDirective(lang)}
@@ -616,9 +864,7 @@ Create ONE general content piece (NOT a specific product promo) that explains/hi
 
 ${profileBlock(profile, lang)}
 
-CONTENT TOPIC FOR THIS PIECE (MUST use this, DON'T switch to another topic): ${topic}.
-
-${pickPerspectiveNote(lang)}
+${pickContentDirection(lang)}
 
 For the HEADLINE (onImageText) this time, use ${pickHeadlineAngle(lang)}. Craft a FRESH new phrase; don't repeat commonly used titles.
 For the caption WRITING STYLE this time, use: ${pickWritingStyle(lang)} (still within the brand voice defined above).
@@ -626,7 +872,7 @@ For the caption WRITING STYLE this time, use: ${pickWritingStyle(lang)} (still w
 JSON format: {"onImageText": "...", "caption": "...", "imageScene": "...", "fontId": "..."}
 ${onImageRule(lang)}
 ${captionRules(lang)}
-imageScene = one English sentence, a realistic photo scene that reflects the TOPIC above. Specific, not generic. No text/logo in the scene.
+imageScene = one English sentence, a realistic photo scene that reflects the topic/direction note above. Specific, not generic. No text/logo in the scene.
 ${fontRule(lang)}
 ${extraBlocks(extra)}${jsonTail(lang)}`;
   }
@@ -637,9 +883,7 @@ Buat SATU konten umum (BUKAN promosi produk spesifik) yang menjelaskan/mengangka
 
 ${profileBlock(profile, lang)}
 
-TOPIK KONTEN KALI INI (WAJIB pakai ini, JANGAN diganti ke topik lain): ${topic}.
-
-${pickPerspectiveNote(lang)}
+${pickContentDirection(lang)}
 
 Untuk JUDUL (onImageText) kali ini, pakai ${pickHeadlineAngle(lang)}. Buat frasa BARU yang segar; jangan mengulang judul yang biasa dipakai.
 Untuk GAYA PENULISAN caption kali ini, pakai: ${pickWritingStyle(lang)} (tetap dalam nada brand yang sudah ditentukan di atas).
@@ -647,7 +891,7 @@ Untuk GAYA PENULISAN caption kali ini, pakai: ${pickWritingStyle(lang)} (tetap d
 Format JSON: {"onImageText": "...", "caption": "...", "imageScene": "...", "fontId": "..."}
 ${onImageRule(lang)}
 ${captionRules(lang)}
-imageScene = satu kalimat Bahasa Indonesia, adegan foto realistis yang mencerminkan TOPIK di atas. Spesifik, bukan umum. Tanpa teks/logo di adegan.
+imageScene = satu kalimat Bahasa Indonesia, adegan foto realistis yang mencerminkan topik/arah konten di atas. Spesifik, bukan umum. Tanpa teks/logo di adegan.
 ${fontRule(lang)}
 ${extraBlocks(extra)}${jsonTail(lang)}`;
 }
@@ -711,7 +955,7 @@ ${list}
 
 IMPORTANT: don't just list products one by one. Find the COMMON THREAD / CORE INSIGHT connecting all these products (e.g. all fit a certain moment, one gift set, one flavor category, solution to the same need), then use that as the headline & caption angle.
 
-${pickPerspectiveNote(lang)}
+${pickContentDirection(lang)}
 
 For the HEADLINE (onImageText) this time, use ${pickHeadlineAngleForProduk(lang)}. Craft a FRESH new phrase; don't repeat commonly used titles.
 For the caption WRITING STYLE this time, use: ${pickWritingStyle(lang)} (still within the brand voice defined above).
@@ -737,7 +981,7 @@ ${list}
 
 PENTING: jangan sekadar menyebut produk satu per satu. Cari BENANG MERAH / INTISARI yang menghubungkan semua produk itu (mis. sama-sama cocok untuk momen tertentu, satu paket/hampers, satu kategori rasa, solusi untuk kebutuhan yang sama), lalu jadikan itu sudut judul & caption.
 
-${pickPerspectiveNote(lang)}
+${pickContentDirection(lang)}
 
 Untuk JUDUL (onImageText) kali ini, pakai ${pickHeadlineAngleForProduk(lang)}. Buat frasa BARU yang segar; jangan mengulang judul yang biasa dipakai.
 Untuk GAYA PENULISAN caption kali ini, pakai: ${pickWritingStyle(lang)} (tetap dalam nada brand yang sudah ditentukan di atas).

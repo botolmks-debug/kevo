@@ -22,6 +22,8 @@ import { buildScenePrompt, buildRuanganPrompt, buildOrangPrompt, buildSoftwarePr
 import { editImage, generateImage, composeProducts, editImageWithReference } from "@/lib/ai/geminiImage";
 import { generateJsonContent } from "@/lib/ai/geminiJson";
 import { notesPromptBlock } from "@/lib/ai/checkinPrompt";
+import { getRecentCaptions, buildAntiRepetisiBlock } from "@/lib/ai/antiRepetisi";
+import { buildMomenBlock } from "@/lib/ai/momenKalender";
 import {
   buildGeneralContentPrompt,
   buildInteraksiContentPrompt,
@@ -232,16 +234,34 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // ── Anti-repetisi: 12 caption terakhir jadi larangan pola (best-effort) ──
+  let antiRepetisiBlock = "";
+  try {
+    const recentCaptions = await getRecentCaptions(supabase, user.id);
+    antiRepetisiBlock = buildAntiRepetisiBlock(recentCaptions);
+  } catch {
+    // best-effort — generate tetap jalan tanpa blok ini
+  }
+
+  // ── Kalender momen Indonesia (WIB = UTC+7; server Vercel jalan di UTC).
+  // Hanya utk output Indonesia — momennya spesifik Indonesia.
+  const momenBlock =
+    body.language === "en" ? "" : buildMomenBlock(new Date(Date.now() + 7 * 60 * 60 * 1000));
+
   // ── Generate teks (headline + caption + fontId) ──────────────────────────
   // Tombol 🔥 (hook): kalau ON, suntik instruksi WTF-hook lewat param `extra`.
   // HANYA utk produk/gabung/general — Interaksi punya format sendiri (kuis/
-  // quote/tips) dan tidak ikut. Carousel punya alur generate terpisah.
+  // quote/tips) dan tidak ikut hook. Anti-repetisi & momen berlaku SEMUA
+  // jenis. Carousel punya alur generate terpisah.
   const hookExtra = body.hook ? hookInstruction(body.language) : undefined;
+  const sharedExtra = [antiRepetisiBlock, momenBlock].filter(Boolean).join("\n");
+  const extraAll = [hookExtra, sharedExtra].filter(Boolean).join("\n") || undefined;
+  const extraInteraksi = sharedExtra || undefined;
   const contentPrompt = (
-    isGabung ? buildGabungContentPrompt(profile, sourceImages.map((s) => s.description ?? ""), body.language, hookExtra)
-    : body.jenis === "produk" ? buildProdukContentPrompt(profile, produkDesc, body.language, hookExtra)
-    : body.jenis === "general" ? buildGeneralContentPrompt(profile, body.language, hookExtra)
-    : buildInteraksiContentPrompt(profile, body.language)
+    isGabung ? buildGabungContentPrompt(profile, sourceImages.map((s) => s.description ?? ""), body.language, extraAll)
+    : body.jenis === "produk" ? buildProdukContentPrompt(profile, produkDesc, body.language, extraAll)
+    : body.jenis === "general" ? buildGeneralContentPrompt(profile, body.language, extraAll)
+    : buildInteraksiContentPrompt(profile, body.language, extraInteraksi)
   ) + notesBlock;
 
   const contentResult = await generateJsonContent(contentPrompt);
