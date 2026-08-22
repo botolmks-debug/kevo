@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/supabase/tokens";
 import { buildStoryboard } from "@/lib/video/storyboard";
+import { loadBusinessProfile } from "@/lib/supabase/businessProfile";
 
 export const runtime = "nodejs";
 
@@ -31,10 +32,21 @@ export async function POST(req: Request) {
   }
 
   try {
+    // Ambil profil bisnis (onboarding) agar SUBJEK video = produk/bisnis ini,
+    // bukan objek yang kebetulan ada di foto referensi. Gagal muat != gagal total.
+    const prof = await loadBusinessProfile(supabase, user.id);
+    const p = prof.ok ? prof.profile : null;
+
     const sb = await buildStoryboard({
       productDescription: body.productDescription.trim(),
-      targetMarket: body.targetMarket.trim(),
-      businessName: body.businessName?.trim(),
+      targetMarket: (body.targetMarket?.trim() || p?.offering.targetCustomer || "").trim(),
+      businessName: body.businessName?.trim() || p?.business.name || undefined,
+      businessType: p?.business.industry || undefined,
+      flagshipProduct: p?.offering.flagshipProduct || undefined,
+      mainProducts: p?.offering.mainProducts || undefined,
+      customerProblem: p?.offering.customerProblem || undefined,
+      differentiator: p?.positioning.differentiator || undefined,
+      tone: p?.positioning.tone || undefined,
       durationSeconds:
         body.durationSeconds === 4 || body.durationSeconds === 6 || body.durationSeconds === 10
           ? body.durationSeconds

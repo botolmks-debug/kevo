@@ -55,6 +55,14 @@ export async function buildStoryboard(input: {
   targetMarket: string;
   businessName?: string;
   durationSeconds: number;
+  /** Konteks bisnis dari onboarding — supaya SUBJEK video = produk/bisnis ini,
+   *  bukan objek apa pun yang kebetulan terlihat di foto referensi. */
+  businessType?: string;      // industry
+  flagshipProduct?: string;
+  mainProducts?: string;
+  customerProblem?: string;
+  differentiator?: string;
+  tone?: string;
 }): Promise<Storyboard> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY belum di-set di .env.local");
@@ -73,11 +81,32 @@ export async function buildStoryboard(input: {
     "Balas HANYA JSON valid tanpa markdown, dengan bentuk persis: " +
     '{"videoPrompt": string, "naskah": string, "adegan": [{"detik": string, "deskripsi": string}]}';
 
+  // Subjek video ditentukan dari DATA BISNIS (onboarding), bukan dari isi foto.
+  // productDescription hanya dipakai sebagai catatan tampilan foto referensi.
+  const subjek =
+    (input.flagshipProduct && input.flagshipProduct.trim()) ||
+    (input.mainProducts && input.mainProducts.trim()) ||
+    input.productDescription;
+
   const user = [
-    `Produk: ${input.productDescription}`,
-    input.businessName ? `Bisnis: ${input.businessName}` : "",
+    `SUBJEK VIDEO (WAJIB jadi bintang utama): ${subjek}`,
+    input.businessName ? `Nama bisnis: ${input.businessName}` : "",
+    input.businessType ? `Jenis usaha: ${input.businessType}` : "",
+    input.mainProducts ? `Produk-produk: ${input.mainProducts}` : "",
+    input.customerProblem ? `Masalah pelanggan yang dijawab produk: ${input.customerProblem}` : "",
+    input.differentiator ? `Keunggulan/pembeda: ${input.differentiator}` : "",
+    input.tone ? `Nada komunikasi brand: ${input.tone}` : "",
     `Target market: ${input.targetMarket}`,
+    input.productDescription
+      ? `Catatan foto referensi (HANYA acuan tampilan produk, JANGAN jadikan ini subjek): ${input.productDescription}`
+      : "",
     `Durasi video: ${dur} detik (SANGAT pendek — maksimal 2-3 adegan).`,
+    "",
+    "ATURAN SUBJEK — SANGAT PENTING (jangan dilanggar):",
+    "- Bintang utama video HARUS produk/bisnis pada SUBJEK VIDEO di atas.",
+    "- Foto referensi kadang memuat benda lain (mis. smartphone, tangan, meja, layar aplikasi). Benda-benda itu BUKAN subjek dan TIDAK boleh jadi topik naskah maupun judul.",
+    "- JANGAN mendeskripsikan atau membahas alat/gadget yang terlihat di foto seolah itu produk yang dijual. Naskah bicara tentang SUBJEK VIDEO, bukan tentang isi foto.",
+    "- Kalau foto referensi tidak nyambung dengan subjek, abaikan isi foto dan tetap fokus ke SUBJEK VIDEO.",
     "",
     "STRUKTUR WAJIB — DRAMA DULU, PRODUK BELAKANGAN:",
     `- Detik 0-${dramaEnd}: DRAMA pembuka. Satu momen masalah/kejengkelan keseharian yang BERHUBUNGAN LANGSUNG dengan produk & bisnis ini — sesuatu yang pasti pernah dialami target market (pilih dari dunia produk itu sendiri, mis. kalau produknya wadah: makanan tumpah/repot; kalau minuman: kemasan bocor/tidak menarik). Orangnya kesal/mengeluh dengan ekspresi natural. JANGAN sebut atau perlihatkan produk di bagian ini.`,

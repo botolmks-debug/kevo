@@ -36,6 +36,11 @@ export default function VideoPage() {
   const [sbStatus, setSbStatus] = useState<Status>("idle");
   const [sbError, setSbError] = useState<string | null>(null);
 
+  // Gambar storyboard (keyframe) yang di-cek admin SEBELUM generate video (mahal).
+  const [keyframe, setKeyframe] = useState<string | null>(null);
+  const [kfStatus, setKfStatus] = useState<Status>("idle");
+  const [kfError, setKfError] = useState<string | null>(null);
+
   const [genStatus, setGenStatus] = useState<Status>("idle");
   const [genError, setGenError] = useState<string | null>(null);
   const [polling, setPolling] = useState(false);
@@ -136,6 +141,8 @@ export default function VideoPage() {
     setSbStatus("loading");
     setSbError(null);
     setSb(null);
+    setKeyframe(null);
+    setKfError(null);
     try {
       const res = await fetch("/api/video/veo/storyboard", {
         method: "POST",
@@ -149,6 +156,32 @@ export default function VideoPage() {
     } catch (e) {
       setSbStatus("error");
       setSbError(e instanceof Error ? e.message : "Gagal membuat storyboard.");
+    }
+  }
+
+  async function handleKeyframe() {
+    if (!sb) return;
+    setKfStatus("loading");
+    setKfError(null);
+    try {
+      // Adegan pembuka dipakai sebagai deskripsi keyframe; kalau kosong, pakai naskah.
+      const scene = sb.adegan[0]?.deskripsi || sb.naskah;
+      const res = await fetch("/api/video/veo/keyframe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sceneDescription: scene,
+          productImageUrl: selected?.publicUrl,
+          aspectRatio: aspect,
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d?.error ?? "Gagal membuat gambar storyboard.");
+      setKeyframe(d.dataUri);
+      setKfStatus("success");
+    } catch (e) {
+      setKfStatus("error");
+      setKfError(e instanceof Error ? e.message : "Gagal membuat gambar storyboard.");
     }
   }
 
@@ -319,10 +352,37 @@ export default function VideoPage() {
                 onChange={(e) => setSb({ ...sb, videoPrompt: e.target.value })}
                 className="resize-none rounded-xl border border-line px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15" />
             </label>
-            <Button type="button" variant="cta" onClick={handleGenerate} disabled={genStatus === "loading" || polling}>
+            {/* Langkah gambar storyboard: cek dulu SEBELUM bayar video */}
+            <div className="flex flex-col gap-2 border-t border-line pt-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-navy/60">Gambar storyboard (cek dulu, murah):</span>
+                <Button type="button" variant="secondary" onClick={handleKeyframe}
+                  disabled={kfStatus === "loading"} className="px-3 py-1.5 text-xs">
+                  {kfStatus === "loading" ? "Membuat gambar..." : keyframe ? "Ulangi Gambar" : "Buat Gambar Storyboard"}
+                </Button>
+              </div>
+              {kfError ? <p className="text-xs text-red-600">{kfError}</p> : null}
+              {keyframe ? (
+                <div className="flex flex-col gap-1.5">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={keyframe} alt="Gambar storyboard" className="w-40 rounded-xl border border-line" />
+                  <p className="text-xs text-navy/50">
+                    Kalau produk/label sudah benar, lanjut generate video. Kalau meleset, klik &ldquo;Ulangi Gambar&rdquo;.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-navy/50">
+                  Buat gambar dulu untuk memastikan AI menangkap produk & suasana yang benar sebelum video di-render.
+                </p>
+              )}
+            </div>
+
+            <Button type="button" variant="cta" onClick={handleGenerate}
+              disabled={genStatus === "loading" || polling || !keyframe}>
               {polling
                 ? `${provider === "veo" ? "Veo" : "Seedance"} sedang membuat video (±1-3 menit)...`
                 : genStatus === "loading" ? "Mengirim..."
+                : !keyframe ? "Buat gambar storyboard dulu ↑"
                 : `Generate via ${provider === "veo" ? "Veo" : "Seedance Fast"} (biaya nyata, ${durVid} detik)`}
             </Button>
             {genError ? <p className="text-sm text-red-600">{genError}</p> : null}
