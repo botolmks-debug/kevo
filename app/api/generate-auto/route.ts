@@ -312,13 +312,20 @@ export async function POST(request: NextRequest) {
       return fail("Gagal mengambil gambar produk.", 502);
     }
     }
-    const prompt =
+    // Sambungkan judul yang sudah digenerate ke prompt gambar — supaya
+    // adegan konsisten dgn topik konten (mis. judul soal menyimpan bawang
+    // goreng → adegan dapur, bukan kafe).
+    const headlineNote = content.onImageText?.trim()
+      ? `\n\nCONTENT HEADLINE that will be overlaid on this image: "${content.onImageText.trim()}" — if it implies a usage moment, activity, or place, keep the scene consistent with it (never contradict it).`
+      : "";
+    const prompt = (
       sourceImage.type === "makanan" ? buildFoodPrompt(profile, produkDesc.trim() ? produkDesc : undefined, body.language)
       : sourceImage.type === "skincare" ? buildSkincarePrompt(profile, produkDesc.trim() ? produkDesc : undefined, body.language)
       : sourceImage.type === "software" ? buildSoftwarePrompt(profile, sourceImage.size_hint ?? undefined, body.language)
       : sourceImage.type === "suasana" ? buildRuanganPrompt(profile, sourceImage.size_hint ?? undefined, body.language)
       : sourceImage.type === "wajah" ? buildOrangPrompt(profile, body.language)
-      : buildScenePrompt(profile, sourceImage.size_hint ?? undefined, body.language);
+      : buildScenePrompt(profile, sourceImage.size_hint ?? undefined, body.language, produkDesc)
+    ) + headlineNote;
     let result;
     if (body.referenceDataUri) {
       // Konten manual dengan referensi gaya: kirim foto produk + gambar referensi.

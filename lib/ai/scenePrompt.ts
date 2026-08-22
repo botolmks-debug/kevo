@@ -9,20 +9,23 @@ const ANGLES = [
   "Close-up dengan bokeh kuat.",
   "45 derajat dari samping.",
 ];
+// MOODS = murni gaya PENCAHAYAAN — TIDAK boleh menyebut jenis tempat
+// (dulu ada "Indoor cafe" → produk non-kafe ikut ditaruh di kafe).
+// Tempat/lingkungan ditentukan oleh SETTING RULE di STEP 3 berdasar produknya.
 const MOODS = [
-  "Indoor hangat, cahaya lampu lembut.",
-  "Indoor cozy, cahaya jendela sore.",
+  "Cahaya lampu hangat yang lembut.",
+  "Cahaya jendela sore yang cozy.",
   "Cahaya pagi lembut masuk dari samping.",
-  "Indoor cafe, pencahayaan warm tungsten.",
-  "Suasana dalam ruangan dengan cahaya aksen.",
-  "Indoor minimalis, soft diffused light.",
+  "Pencahayaan warm tungsten.",
+  "Cahaya aksen dramatis lembut.",
+  "Soft diffused light, bersih & minimalis.",
 ];
 
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-export function buildScenePrompt(profile: BusinessProfile, sizeHint?: string, lang?: Lang): string {
+export function buildScenePrompt(profile: BusinessProfile, sizeHint?: string, lang?: Lang, productDescription?: string): string {
   const sizeNote =
     sizeHint && sizeHint.trim()
       ? `\n\nPRODUCT SIZE (critical for scale): product is approximately "${sizeHint.trim()}". Render it at its REAL size relative to the scene. If LARGE (machine, fridge, furniture, vending machine): show it standing on the FLOOR as a big, dominant object in a real room; do NOT shrink it or place it like a small item on a table. If SMALL (packaging, bottle, food): a close-up on a table/surface is fine.`
@@ -49,8 +52,13 @@ Business context:
 - Location: ${profile.business.location || "-"}
 - Differentiator: ${profile.positioning.differentiator || "-"}
 - Target customers: ${profile.offering.targetCustomer || "-"}
+- The product in the photo: ${productDescription && productDescription.trim() ? productDescription.trim() : "(no description — identify it from the photo itself)"}
 
-Create a FRESH scene: ${pick(ANGLES)} ${pick(MOODS)}
+SETTING RULE (critical — the #1 mistake to avoid is a mismatched location):
+- FIRST decide WHERE this exact product is naturally USED, STORED, or FOUND in real life, based on what the product IS and who the target customers are. Examples: a food-storage jar or spice container → a home kitchen counter, pantry shelf, or small food-stall (warung) prep table; a beverage bottle → a drinks table or kitchen; a gym bottle → a gym; skincare → a vanity or bathroom shelf.
+- The scene MUST be that natural usage environment. Do NOT default to a coffee shop / cafe / restaurant unless the product genuinely belongs there. A wrong location makes the whole ad feel fake even if the lighting is perfect.
+
+Create a FRESH scene in that environment: ${pick(ANGLES)} Lighting mood: ${pick(MOODS)}
 - Prefer INDOOR settings with warm ambient lighting - NOT harsh daylight.
 - Use professional lighting: soft key light + gentle fill. Rich warm shadows, not flat.
 - Shallow depth of field (f/1.8): product sharp, background creamy bokeh.
