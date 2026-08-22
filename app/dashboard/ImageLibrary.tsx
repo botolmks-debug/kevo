@@ -37,10 +37,10 @@ type DescField = {
 
 const FIELD_SETS: Record<string, DescField[]> = {
   "Produk": [
-    { key: "nama", label: { id: "Nama produk", en: "Product name" }, ph: { id: "mis. Botol Pir 250 ml", en: "e.g. Pear Bottle 250 ml" } },
-    { key: "jenis", label: { id: "Jenis produk", en: "Product type" }, ph: { id: "mis. botol plastik minuman / tas kulit / kaos katun", en: "e.g. plastic drink bottle / leather bag / cotton tee" } },
-    { key: "ciri", label: { id: "Ciri khas (warna, bahan, bentuk)", en: "Distinct features (color, material, shape)" }, ph: { id: "mis. bening, leher panjang, tutup hitam", en: "e.g. clear, long neck, black cap" } },
-    { key: "info", label: { id: "Info tambahan", en: "Extra info" }, optional: true, ph: { id: "mis. cocok untuk jus & minuman dingin", en: "e.g. great for juice & cold drinks" } },
+    { key: "nama", label: { id: "Nama produk", en: "Product name" }, ph: { id: "mis. Kemeja Linen Sage / Lip Cream Rosewood", en: "e.g. Sage Linen Shirt / Rosewood Lip Cream" } },
+    { key: "jenis", label: { id: "Jenis produk", en: "Product type" }, ph: { id: "mis. kemeja pria / tas selempang kulit / lip cream matte", en: "e.g. men's shirt / leather sling bag / matte lip cream" } },
+    { key: "ciri", label: { id: "Ciri khas (warna, bahan, bentuk)", en: "Distinct features (color, material, shape)" }, ph: { id: "mis. hijau sage, bahan linen, potongan longgar / warna nude, hasil matte", en: "e.g. sage green, linen, loose fit / nude shade, matte finish" } },
+    { key: "info", label: { id: "Info tambahan", en: "Extra info" }, optional: true, ph: { id: "mis. tersedia ukuran M-XXL / tahan 8 jam, tidak bikin kering", en: "e.g. sizes M-XXL / lasts 8 hours, non-drying" } },
   ],
   "Makanan/Minuman": [
     { key: "nama", label: { id: "Nama menu", en: "Menu name" }, ph: { id: "mis. Es Kopi Susu Gula Aren", en: "e.g. Iced Palm-Sugar Milk Coffee" } },
