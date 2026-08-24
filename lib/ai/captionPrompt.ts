@@ -1,4 +1,5 @@
 import { outputLangDirective, type Lang } from "@/lib/ai/lang";
+import { qualityRules } from "@/lib/ai/autoContentPrompt";
 import type { BusinessProfile, ContentGoal } from "@/lib/onboarding/businessProfile";
 
 export type CaptionContent = {
@@ -24,28 +25,34 @@ export function buildCaptionPrompt(profile: BusinessProfile, content: CaptionCon
       .map(([label, value]) => `- ${label}: ${value}`)
       .join("\n") || "(tidak ada isi tambahan)";
 
-  return `${outputLangDirective(lang)}
-Kamu adalah ahli komunikasi marketing. Tulis SATU caption media sosial untuk bisnis berikut (ikuti OUTPUT LANGUAGE di atas).
+  const lines = [
+    `${outputLangDirective(lang)}`,
+    `Kamu adalah pemilik bisnis yang lagi nulis caption Instagram sendiri untuk bisnisnya — bukan agensi iklan. Tulis SATU caption media sosial untuk bisnis berikut (ikuti OUTPUT LANGUAGE di atas).`,
+    ``,
+    `Profil bisnis:`,
+    `- Nama: ${profile.business.name || "-"}`,
+    `- Industri: ${profile.business.industry || "-"}`,
+    `- Produk/layanan utama: ${profile.offering.mainProducts || "-"}`,
+    `- Target pelanggan: ${profile.offering.targetCustomer || "-"}`,
+    `- Pembeda/USP: ${profile.positioning.differentiator || "-"}`,
+    `- Tujuan konten: ${goals}`,
+    `- Nada/gaya brand: ${profile.positioning.tone || "netral"}`,
+    `- CTA yang biasa dipakai: ${profile.positioning.cta || "-"}`,
+    `- HAL YANG HARUS DIHINDARI (wajib dipatuhi, jangan singgung/klaim ini): ${profile.positioning.avoid || "-"}`,
+    ``,
+    `Konten yang sedang dibuat (template: ${content.templateName}):`,
+    contentLines,
+    ``,
+    `Instruksi penulisan:`,
+    `- Gaya ngobrol santai sehari-hari, kayak chat ke pelanggan langganan — BUKAN gaya brosur/iklan formal kaku.`,
+    `- Satu ide utama, ringkas, kalimat pendek. Boleh pakai kata sehari-hari yang wajar (kok, nih, ternyata).`,
+    `- Sertakan CTA yang relevan bila pas dengan konten.`,
+    `- WAJIB variasikan kalimat pembuka setiap kali diminta — jangan selalu memakai pola pembuka yang sama seperti "Pernah nggak sih...".`,
+    `- Patuhi nada brand dan hindari topik/klaim yang disebut di "hal yang harus dihindari" di atas.`,
+    `- Boleh sertakan beberapa hashtag relevan di akhir.`,
+    qualityRules(lang),
+    `- Keluarkan hanya teks caption, tanpa penjelasan tambahan atau tanda kutip pembungkus.`,
+  ];
 
-Profil bisnis:
-- Nama: ${profile.business.name || "-"}
-- Industri: ${profile.business.industry || "-"}
-- Produk/layanan utama: ${profile.offering.mainProducts || "-"}
-- Target pelanggan: ${profile.offering.targetCustomer || "-"}
-- Pembeda/USP: ${profile.positioning.differentiator || "-"}
-- Tujuan konten: ${goals}
-- Nada/gaya brand: ${profile.positioning.tone || "netral"}
-- CTA yang biasa dipakai: ${profile.positioning.cta || "-"}
-- HAL YANG HARUS DIHINDARI (wajib dipatuhi, jangan singgung/klaim ini): ${profile.positioning.avoid || "-"}
-
-Konten yang sedang dibuat (template: ${content.templateName}):
-${contentLines}
-
-Instruksi penulisan:
-- Gaya soft-selling, satu ide utama, ringkas.
-- Sertakan CTA yang relevan bila pas dengan konten.
-- WAJIB variasikan kalimat pembuka setiap kali diminta — jangan selalu memakai pola pembuka yang sama seperti "Pernah nggak sih...".
-- Patuhi nada brand dan hindari topik/klaim yang disebut di "hal yang harus dihindari" di atas.
-- Boleh sertakan beberapa hashtag relevan di akhir.
-- Keluarkan hanya teks caption, tanpa penjelasan tambahan atau tanda kutip pembungkus.`;
+  return lines.join("\n");
 }

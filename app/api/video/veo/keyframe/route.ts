@@ -39,11 +39,17 @@ export async function POST(req: Request) {
     sceneDescription?: string;
     productImageUrl?: string;
     aspectRatio?: "9:16" | "16:9";
+    refImageDataUri?: string; // panel acuan (panel 1) utk konsistensi
   } | null;
 
   const scene = body?.sceneDescription?.trim();
   if (!scene) {
     return NextResponse.json({ error: "Deskripsi adegan kosong." }, { status: 400 });
+  }
+
+  function dataUriToParts(u: string): { base64: string; mimeType: string } | null {
+    const m = u.match(/^data:([^;]+);base64,(.+)$/);
+    return m ? { mimeType: m[1], base64: m[2] } : null;
   }
 
   // OpenAI images hanya potret/persegi/lanskap tetap; 16:9 tak ada padanan pas,
@@ -53,16 +59,32 @@ export async function POST(req: Request) {
   const scenePrompt = [
     "Photorealistic still keyframe for a short vertical social-media video (single frame, not a collage).",
     "Candid, natural soft lighting, tidy pleasant everyday setting. No on-screen text, no app UI, no captions, no watermark, no borders.",
+    body?.refImageDataUri
+      ? "Keep the SAME person/character, SAME product, SAME styling and mood as the reference frame for consistency across the video."
+      : "",
     `SCENE: ${scene}`,
-  ].join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   try {
     let result;
     if (body?.productImageUrl) {
+      // Foto produk jadi dasar (label persis).
       const img = await fetchAsBase64(body.productImageUrl);
       result = await editOpenAIImage({
         imageBase64: img.base64,
         mimeType: img.mimeType,
+        aspectRatio: aspect,
+        prompt: scenePrompt,
+      });
+    } else if (body?.refImageDataUri) {
+      // Tanpa foto produk: pakai panel acuan sebagai dasar konsistensi.
+      const p = dataUriToParts(body.refImageDataUri);
+      if (!p) return NextResponse.json({ error: "refImageDataUri tidak valid." }, { status: 400 });
+      result = await editOpenAIImage({
+        imageBase64: p.base64,
+        mimeType: p.mimeType,
         aspectRatio: aspect,
         prompt: scenePrompt,
       });

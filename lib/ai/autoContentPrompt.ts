@@ -119,7 +119,8 @@ const QUALITY_RULES_ID =
   "- DILARANG KERAS menyebut angka, persentase, hasil riset, survei, studi, atau klaim seperti \"X% UMKM/orang mengatakan...\" — data seperti itu TIDAK ADA dan TIDAK diberikan. Menuliskannya = mengarang kebohongan.\n" +
   "- Angka HANYA boleh muncul kalau tertulis di data profil/produk di atas (mis. ukuran, lama usaha, jumlah varian).\n" +
   "- Ganti klaim angka dengan observasi umum tanpa angka: \"banyak pembeli menilai dari kemasan dulu\" BOLEH; \"73% pembeli menilai dari kemasan\" DILARANG.\n" +
-  "UJI SPESIFISITAS untuk judul (lakukan sebelum menjawab): kalau judulnya masih masuk akal dipakai usaha LAIN yang beda industri, berarti terlalu umum — tulis ulang dengan hal konkret dari data usaha ini (benda, situasi, momen spesifik; bukan sekadar kata sifat seperti \"berkualitas\"/\"terbaik\").";
+  "UJI SPESIFISITAS untuk judul (lakukan sebelum menjawab): kalau judulnya masih masuk akal dipakai usaha LAIN yang beda industri, berarti terlalu umum — tulis ulang dengan hal konkret dari data usaha ini (benda, situasi, momen spesifik; bukan sekadar kata sifat seperti \"berkualitas\"/\"terbaik\").\n" +
+  "ATURAN KOSAKATA (MUTLAK): DILARANG menciptakan/mengarang kata yang tidak ada di Bahasa Indonesia baku (KBBI) hanya karena terdengar mirip atau puitis — contoh kesalahan nyata: \"modal pezhalan\" (kata ini TIDAK ADA, seharusnya \"modal usaha\"/\"modal jualan\"). Kalau ragu apakah sebuah kata benar-benar lazim dipakai sehari-hari, JANGAN dipakai — ganti dengan kata umum yang sudah pasti familiar bagi pembaca awam.";
 
 const QUALITY_RULES_EN =
   "LANGUAGE STYLE (REQUIRED, applies to headline & caption):\n" +
@@ -132,9 +133,10 @@ const QUALITY_RULES_EN =
   "- STRICTLY FORBIDDEN to state numbers, percentages, research findings, surveys, studies, or claims like \"X% of businesses/people say...\" — no such data exists or was provided. Writing it = fabricating a lie.\n" +
   "- Numbers may ONLY appear if written in the profile/product data above (e.g. size, years in business, number of variants).\n" +
   "- Replace numeric claims with number-free general observations: \"many buyers judge the packaging first\" is OK; \"73% of buyers judge the packaging\" is FORBIDDEN.\n" +
-  "SPECIFICITY TEST for the headline (do this before answering): if the headline would still make sense for a DIFFERENT business in another industry, it's too generic — rewrite it around something concrete from this business's data (an object, situation, or specific moment; not just adjectives like \"quality\"/\"best\").";
+  "SPECIFICITY TEST for the headline (do this before answering): if the headline would still make sense for a DIFFERENT business in another industry, it's too generic — rewrite it around something concrete from this business's data (an object, situation, or specific moment; not just adjectives like \"quality\"/\"best\").\n" +
+  "VOCABULARY RULE (ABSOLUTE): NEVER invent or coin a word that isn't real, standard English, just because it sounds fitting or poetic. If you're unsure whether a word is genuinely common usage, don't use it — replace it with a plain, unmistakably familiar word instead.";
 
-function qualityRules(lang?: Lang): string {
+export function qualityRules(lang?: Lang): string {
   return isEn(lang) ? QUALITY_RULES_EN : QUALITY_RULES_ID;
 }
 

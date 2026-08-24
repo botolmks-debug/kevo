@@ -18,10 +18,19 @@ export async function POST(req: Request) {
     const videoPrompt = (body.videoPrompt || "").trim();
     if (!videoPrompt) return NextResponse.json({ error: "videoPrompt kosong" }, { status: 400 });
 
-    // Urutan referensi: keyframe (adegan pembuka yang sudah di-approve) dulu,
-    // lalu foto produk asli (kunci bentuk & label). Maks 3 gambar (batas Veo).
+    // Veo maks 3 gambar referensi. Prioritas: panel keyframe (alur adegan) dulu,
+    // lalu foto produk asli (kunci label). Dukung format lama (keyframeDataUri tunggal).
+    const keyframeList: string[] = Array.isArray(body.keyframeDataUris)
+      ? body.keyframeDataUris.filter(Boolean)
+      : body.keyframeDataUri
+        ? [body.keyframeDataUri]
+        : [];
+
     const imageUrls: string[] = [];
-    if (body.keyframeDataUri) imageUrls.push(body.keyframeDataUri);
+    for (const u of keyframeList) {
+      if (imageUrls.length >= 3) break;
+      imageUrls.push(u);
+    }
     for (const u of body.productImageUrls || []) {
       if (imageUrls.length >= 3) break;
       imageUrls.push(u);
@@ -31,8 +40,8 @@ export async function POST(req: Request) {
 
     const prompt =
       videoPrompt +
-      "\n\nThe FIRST reference image defines the opening composition and scene. " +
-      "The OTHER reference images are the real product - keep its shape, label and text EXACT.";
+      `\n\nThe reference images are the ordered storyboard panels of ONE continuous 8-second clip; ` +
+      `flow smoothly through these scenes in order. Keep the product's shape, label and text EXACT across the whole clip.`;
 
     const requestId = await submitVeoRef({ videoPrompt: prompt, imageUrls });
     return NextResponse.json({ requestId });

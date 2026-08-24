@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 // Daftar email admin — hanya email di sini yang bisa akses
 const ADMIN_EMAILS = new Set([
-  "botolmks@gmail.com",
+  "botolmks@gmail.com","andritjo@gmail.com"
 ]);
 
 export async function GET() {

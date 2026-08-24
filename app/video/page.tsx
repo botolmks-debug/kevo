@@ -36,8 +36,9 @@ export default function VideoPage() {
   const [sbStatus, setSbStatus] = useState<Status>("idle");
   const [sbError, setSbError] = useState<string | null>(null);
 
-  // Gambar storyboard (keyframe) yang di-cek admin SEBELUM generate video (mahal).
-  const [keyframe, setKeyframe] = useState<string | null>(null);
+  // Gambar storyboard PER PANEL adegan, di-cek admin SEBELUM generate video (mahal).
+  const [keyframes, setKeyframes] = useState<(string | null)[]>([]);
+  const [kfBusy, setKfBusy] = useState<number | null>(null);
   const [kfStatus, setKfStatus] = useState<Status>("idle");
   const [kfError, setKfError] = useState<string | null>(null);
 
@@ -141,7 +142,7 @@ export default function VideoPage() {
     setSbStatus("loading");
     setSbError(null);
     setSb(null);
-    setKeyframe(null);
+    setKeyframes([]);
     setKfError(null);
     try {
       const res = await fetch("/api/video/veo/storyboard", {
@@ -152,6 +153,7 @@ export default function VideoPage() {
       const d = await res.json();
       if (!res.ok) throw new Error(d?.error ?? "Gagal.");
       setSb(d);
+      setKeyframes(new Array((d?.adegan || []).length || 1).fill(null));
       setSbStatus("success");
     } catch (e) {
       setSbStatus("error");
@@ -159,31 +161,68 @@ export default function VideoPage() {
     }
   }
 
-  async function handleKeyframe() {
+  const panels = sb?.adegan?.length ? sb.adegan : sb ? [{ detik: "-", deskripsi: sb.naskah }] : [];
+
+  async function fetchPanelKeyframe(sceneDesc: string, refDataUri?: string): Promise<string> {
+    const res = await fetch("/api/video/veo/keyframe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sceneDescription: sceneDesc,
+        productImageUrl: selected?.publicUrl,
+        aspectRatio: aspect,
+        refImageDataUri: refDataUri,
+      }),
+    });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d?.error ?? "Gagal membuat gambar storyboard.");
+    return d.dataUri as string;
+  }
+
+  // Buat semua panel: panel 0 dulu → jadi acuan konsistensi panel lain.
+  async function handleAllKeyframes() {
     if (!sb) return;
     setKfStatus("loading");
     setKfError(null);
     try {
-      // Adegan pembuka dipakai sebagai deskripsi keyframe; kalau kosong, pakai naskah.
-      const scene = sb.adegan[0]?.deskripsi || sb.naskah;
-      const res = await fetch("/api/video/veo/keyframe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sceneDescription: scene,
-          productImageUrl: selected?.publicUrl,
-          aspectRatio: aspect,
-        }),
-      });
-      const d = await res.json();
-      if (!res.ok) throw new Error(d?.error ?? "Gagal membuat gambar storyboard.");
-      setKeyframe(d.dataUri);
+      const hasil: (string | null)[] = new Array(panels.length).fill(null);
+      let acuan: string | undefined;
+      for (let i = 0; i < panels.length; i++) {
+        setKfBusy(i);
+        const uri = await fetchPanelKeyframe(panels[i].deskripsi || sb.naskah, acuan);
+        hasil[i] = uri;
+        if (i === 0) acuan = uri;
+        setKeyframes([...hasil]);
+      }
       setKfStatus("success");
     } catch (e) {
       setKfStatus("error");
       setKfError(e instanceof Error ? e.message : "Gagal membuat gambar storyboard.");
+    } finally {
+      setKfBusy(null);
     }
   }
+
+  async function handleRedoKeyframe(i: number) {
+    if (!sb) return;
+    setKfBusy(i);
+    setKfError(null);
+    try {
+      const acuan = i > 0 ? keyframes[0] || undefined : undefined;
+      const uri = await fetchPanelKeyframe(panels[i].deskripsi || sb.naskah, acuan);
+      setKeyframes((prev) => {
+        const next = [...prev];
+        next[i] = uri;
+        return next;
+      });
+    } catch (e) {
+      setKfError(e instanceof Error ? e.message : "Gagal mengulang panel.");
+    } finally {
+      setKfBusy(null);
+    }
+  }
+
+  const allPanelsReady = sb ? keyframes.length === panels.length && keyframes.every(Boolean) : false;
 
   async function handleGenerate() {
     if (!sb) return;
@@ -206,6 +245,9 @@ export default function VideoPage() {
           prompt: sb.videoPrompt,
           negativePrompt: sb.negativePrompt,
           productImageUrl: selected?.publicUrl,
+          // Panel 1 (sudah di-approve) dikirim sebagai gambar awal opsional.
+          // Route generate lama yang belum membacanya akan mengabaikannya (aman).
+          startImageDataUri: keyframes[0] || undefined,
           aspectRatio: aspect,
           durationSeconds: durVid,
         }),
@@ -352,37 +394,58 @@ export default function VideoPage() {
                 onChange={(e) => setSb({ ...sb, videoPrompt: e.target.value })}
                 className="resize-none rounded-xl border border-line px-3 py-2 text-xs focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/15" />
             </label>
-            {/* Langkah gambar storyboard: cek dulu SEBELUM bayar video */}
+            {/* Panel storyboard: cek tiap adegan SEBELUM bayar video */}
             <div className="flex flex-col gap-2 border-t border-line pt-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-navy/60">Gambar storyboard (cek dulu, murah):</span>
-                <Button type="button" variant="secondary" onClick={handleKeyframe}
-                  disabled={kfStatus === "loading"} className="px-3 py-1.5 text-xs">
-                  {kfStatus === "loading" ? "Membuat gambar..." : keyframe ? "Ulangi Gambar" : "Buat Gambar Storyboard"}
+                <span className="text-xs font-medium text-navy/60">Panel storyboard (cek dulu, murah):</span>
+                <Button type="button" variant="secondary" onClick={handleAllKeyframes}
+                  disabled={kfStatus === "loading" || kfBusy !== null} className="px-3 py-1.5 text-xs">
+                  {kfStatus === "loading" ? "Membuat panel..." : keyframes.some(Boolean) ? "Buat Ulang Semua" : "Buat Gambar Storyboard"}
                 </Button>
               </div>
               {kfError ? <p className="text-xs text-red-600">{kfError}</p> : null}
-              {keyframe ? (
-                <div className="flex flex-col gap-1.5">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={keyframe} alt="Gambar storyboard" className="w-40 rounded-xl border border-line" />
+              {keyframes.some(Boolean) ? (
+                <div className="flex flex-col gap-2">
+                  {panels.map((a, i) => (
+                    <div key={i} className="flex gap-3 border-b border-line pb-2">
+                      <div className="w-24 flex-shrink-0">
+                        {keyframes[i] ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={keyframes[i] as string} alt={`panel ${i + 1}`} className="w-24 rounded-lg border border-line" />
+                        ) : (
+                          <div className="flex h-40 w-24 items-center justify-center rounded-lg bg-navy/5 text-[10px] text-navy/40">
+                            {kfBusy === i ? "..." : "kosong"}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 text-xs">
+                        <p className="font-semibold text-primary">{a.detik} dtk</p>
+                        <p className="mt-0.5 text-navy/70">{a.deskripsi}</p>
+                        <button type="button" onClick={() => handleRedoKeyframe(i)}
+                          disabled={kfBusy !== null || kfStatus === "loading"}
+                          className="mt-1 rounded-full border border-line px-3 py-1 text-[11px] text-navy hover:bg-navy/5 disabled:opacity-40">
+                          {kfBusy === i ? "Membuat..." : "Ulangi panel ini"}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                   <p className="text-xs text-navy/50">
-                    Kalau produk/label sudah benar, lanjut generate video. Kalau meleset, klik &ldquo;Ulangi Gambar&rdquo;.
+                    Panel 1 jadi acuan konsistensi. Video final = 1 klip; panel 1 dipakai sebagai gambar awal.
                   </p>
                 </div>
               ) : (
                 <p className="text-xs text-navy/50">
-                  Buat gambar dulu untuk memastikan AI menangkap produk & suasana yang benar sebelum video di-render.
+                  Buat gambar dulu untuk melihat alur video & memastikan produk/karakter benar sebelum render.
                 </p>
               )}
             </div>
 
             <Button type="button" variant="cta" onClick={handleGenerate}
-              disabled={genStatus === "loading" || polling || !keyframe}>
+              disabled={genStatus === "loading" || polling || !allPanelsReady}>
               {polling
                 ? `${provider === "veo" ? "Veo" : "Seedance"} sedang membuat video (±1-3 menit)...`
                 : genStatus === "loading" ? "Mengirim..."
-                : !keyframe ? "Buat gambar storyboard dulu ↑"
+                : !allPanelsReady ? "Lengkapi semua panel dulu ↑"
                 : `Generate via ${provider === "veo" ? "Veo" : "Seedance Fast"} (biaya nyata, ${durVid} detik)`}
             </Button>
             {genError ? <p className="text-sm text-red-600">{genError}</p> : null}

@@ -26,8 +26,9 @@ export default function SinematikPage() {
   const [sb, setSb] = useState<Storyboard | null>(null);
   const [productImageUrls, setProductImageUrls] = useState<string[]>([]);
 
-  // Keyframe (adegan pembuka)
-  const [keyframe, setKeyframe] = useState<string | null>(null);
+  // Keyframe PER PANEL adegan (null = belum dibuat). Panel 1 jadi acuan panel lain.
+  const [keyframes, setKeyframes] = useState<(string | null)[]>([]);
+  const [kfBusy, setKfBusy] = useState<number | null>(null); // index panel yg sedang dibuat
 
   // Video
   const [requestId, setRequestId] = useState<string | null>(null);
@@ -70,7 +71,7 @@ export default function SinematikPage() {
   async function buatStoryboard() {
     setErr(null);
     setSb(null);
-    setKeyframe(null);
+    setKeyframes([]);
     setFinalUrl(null);
     setBusy("Membuat storyboard...");
     try {
@@ -83,6 +84,7 @@ export default function SinematikPage() {
       if (!r.ok) throw new Error(d.error);
       setSb(d.storyboard);
       setProductImageUrls(d.productImageUrls || []);
+      setKeyframes(new Array((d.storyboard?.scenes || []).length).fill(null));
     } catch (e: any) {
       setErr(e.message || "Gagal membuat storyboard");
     } finally {
@@ -90,26 +92,65 @@ export default function SinematikPage() {
     }
   }
 
-  // ---------- Langkah 2: Keyframe (murah, boleh diulang) ----------
-  async function buatKeyframe() {
+  // ---------- Langkah 2: Gambar storyboard PER PANEL (murah, boleh diulang) ----------
+  // Buat satu keyframe. refDataUri = panel acuan (panel 1) utk jaga konsistensi.
+  async function fetchKeyframe(imagePrompt: string, refDataUri?: string): Promise<string> {
+    const r = await fetch("/api/video/sinematik/keyframe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imagePrompt, productImageUrls, refImageDataUri: refDataUri }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error);
+    return d.dataUri as string;
+  }
+
+  // Buat SEMUA panel berurutan: panel 0 dulu → jadi acuan panel berikutnya.
+  async function buatSemuaKeyframe() {
     if (!sb) return;
     setErr(null);
-    setBusy("Membuat gambar storyboard (keyframe)...");
     try {
-      const r = await fetch("/api/video/sinematik/keyframe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imagePrompt: sb.scenes[0].imagePrompt, productImageUrls }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error);
-      setKeyframe(d.dataUri);
+      const hasil: (string | null)[] = new Array(sb.scenes.length).fill(null);
+      let acuan: string | undefined;
+      for (let i = 0; i < sb.scenes.length; i++) {
+        setKfBusy(i);
+        setBusy(`Membuat gambar panel ${i + 1} dari ${sb.scenes.length}...`);
+        const uri = await fetchKeyframe(sb.scenes[i].imagePrompt, acuan);
+        hasil[i] = uri;
+        if (i === 0) acuan = uri; // panel 1 jadi acuan konsistensi
+        setKeyframes([...hasil]);
+      }
     } catch (e: any) {
-      setErr(e.message || "Gagal membuat keyframe");
+      setErr(e.message || "Gagal membuat gambar panel");
     } finally {
+      setKfBusy(null);
       setBusy(null);
     }
   }
+
+  // Ulangi satu panel saja.
+  async function ulangiKeyframe(i: number) {
+    if (!sb) return;
+    setErr(null);
+    setKfBusy(i);
+    setBusy(`Mengulang gambar panel ${i + 1}...`);
+    try {
+      const acuan = i > 0 ? keyframes[0] || undefined : undefined;
+      const uri = await fetchKeyframe(sb.scenes[i].imagePrompt, acuan);
+      setKeyframes((prev) => {
+        const next = [...prev];
+        next[i] = uri;
+        return next;
+      });
+    } catch (e: any) {
+      setErr(e.message || "Gagal mengulang panel");
+    } finally {
+      setKfBusy(null);
+      setBusy(null);
+    }
+  }
+
+  const semuaPanelSiap = sb ? keyframes.length === sb.scenes.length && keyframes.every(Boolean) : false;
 
   // ---------- Langkah 3: Generate video + poll ----------
   async function generateVideo() {
@@ -123,7 +164,7 @@ export default function SinematikPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           videoPrompt: sb.videoPrompt,
-          keyframeDataUri: keyframe,
+          keyframeDataUris: keyframes.filter(Boolean),
           productImageUrls,
         }),
       });
@@ -329,23 +370,45 @@ export default function SinematikPage() {
           <p style={{ fontSize: 12, color: "#94a3b8" }}>
             {sb.naskahVO.trim().split(/\s+/).filter(Boolean).length} kata — target 18-21 kata untuk 8 detik.
           </p>
-          <button onClick={buatKeyframe} disabled={!!busy} style={btnPrimary}>
-            {keyframe ? "Ulangi Gambar Storyboard" : "Buat Gambar Storyboard"}
+          <button onClick={buatSemuaKeyframe} disabled={!!busy} style={btnPrimary}>
+            {keyframes.some(Boolean) ? "Buat Ulang Semua Panel" : "Buat Gambar Storyboard (semua panel)"}
           </button>
         </section>
       )}
 
-      {/* Card 3: keyframe approve */}
-      {keyframe && (
+      {/* Card 3: panel storyboard berjejer (gambar + naskah + deskripsi per adegan) */}
+      {sb && keyframes.some(Boolean) && (
         <section style={card}>
-          <h2 style={h2}>3. Cek gambar pembuka — label produk harus PERSIS</h2>
-          <img src={keyframe} alt="keyframe" style={{ width: 240, borderRadius: 12, display: "block", marginBottom: 10 }} />
-          <p style={{ fontSize: 13, color: "#475569", marginBottom: 10 }}>
-            Kalau label/desain produk berubah, klik "Ulangi Gambar Storyboard" di atas (murah).
-            Kalau sudah pas, lanjut generate video.
+          <h2 style={h2}>3. Panel storyboard — cek tiap adegan (label & karakter harus konsisten)</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {sb.scenes.map((s, i) => (
+              <div key={i} style={{ display: "flex", gap: 12, borderBottom: "1px solid #f1f5f9", paddingBottom: 12 }}>
+                <div style={{ width: 120, flexShrink: 0 }}>
+                  {keyframes[i] ? (
+                    <img src={keyframes[i] as string} alt={`panel ${i + 1}`} style={{ width: 120, borderRadius: 10, display: "block" }} />
+                  ) : (
+                    <div style={{ width: 120, height: 213, borderRadius: 10, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#94a3b8" }}>
+                      {kfBusy === i ? "..." : "kosong"}
+                    </div>
+                  )}
+                </div>
+                <div style={{ flex: 1, fontSize: 13 }}>
+                  <p style={{ fontWeight: 700, color: "#0d9488", margin: 0 }}>{s.detik} dtk</p>
+                  <p style={{ margin: "4px 0", color: "#334155" }}>{s.deskripsi}</p>
+                  <button onClick={() => ulangiKeyframe(i)} disabled={!!busy}
+                    style={{ ...pillOff, marginTop: 4 }}>
+                    {kfBusy === i ? "Membuat..." : "Ulangi panel ini"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>
+            Panel 1 jadi acuan konsistensi untuk panel lain. Kalau ada yang meleset, klik "Ulangi panel ini" (murah).
+            Video final = 1 klip; semua panel + foto produk jadi referensi untuk Veo.
           </p>
-          <button onClick={generateVideo} disabled={!!busy} style={btnPrimary}>
-            Generate Video (±Rp26rb)
+          <button onClick={generateVideo} disabled={!!busy || !semuaPanelSiap} style={btnPrimary}>
+            {semuaPanelSiap ? "Generate Video (±Rp26rb)" : "Lengkapi semua panel dulu ↑"}
           </button>
         </section>
       )}
