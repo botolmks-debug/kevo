@@ -75,6 +75,21 @@ export default function RootLayout({
             alt=""
           />
         </noscript>
+
+        {/* Google tag (gtag.js) — dipakai untuk lacak konversi Google Ads.
+            Event konversi spesifik (mis. Signup Berhasil) dipanggil dari
+            komponen masing-masing via window.gtag. */}
+        <Script
+          async
+          src="https://www.googletagmanager.com/gtag/js?id=AW-18407073722"
+          strategy="afterInteractive"
+        />
+        <Script id="google-tag" strategy="afterInteractive">
+          {`window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'AW-18407073722');`}
+        </Script>
         {children}
       </body>
     </html>
