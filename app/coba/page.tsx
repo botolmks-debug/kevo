@@ -407,6 +407,30 @@ export default function CobaPage() {
                 <p className="text-sm text-neutral-500 mt-1">Upload 1 foto produk dan lihat hasilnya langsung di layar.</p>
               </div>
 
+              {/* Strip 3 langkah — biar prosesnya nggak terasa "kotak hitam" */}
+              <div className="mb-5 flex items-center justify-between text-center">
+                {[
+                  { n: "1", t: "Upload foto" },
+                  { n: "2", t: "AI proses ~30 detik" },
+                  { n: "3", t: "Hasil langsung tampil" },
+                ].map((s, i, arr) => (
+                  <div key={s.n} className="flex items-center flex-1">
+                    <div className="flex flex-col items-center gap-1 flex-1">
+                      <div
+                        className="w-6 h-6 rounded-full grid place-items-center text-[11px] font-bold text-white"
+                        style={{ background: TEAL }}
+                      >
+                        {s.n}
+                      </div>
+                      <p className="text-[10.5px] leading-tight text-neutral-500 max-w-[70px]">{s.t}</p>
+                    </div>
+                    {i < arr.length - 1 && (
+                      <div className="h-px w-4 mb-4" style={{ background: "#E6E2D8" }} />
+                    )}
+                  </div>
+                ))}
+              </div>
+
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => onPickFile(e.target.files?.[0] ?? null)} />
 
               <button
@@ -422,7 +446,7 @@ export default function CobaPage() {
               </button>
 
               <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 justify-center">
-                {["Gratis", "Tanpa daftar dulu", "Hasil langsung tampil"].map((t) => (
+                {["Gratis", "Tanpa daftar dulu", "Hasil langsung tampil", "Foto aman, cuma buat kamu"].map((t) => (
                   <span key={t} className="flex items-center gap-1 text-xs text-neutral-500">
                     <span style={{ color: TEAL }}>✓</span> {t}
                   </span>
@@ -546,7 +570,7 @@ export default function CobaPage() {
             </button>
 
             <p className="mt-3 text-center text-xs text-neutral-400">
-              Email dipakai untuk menyimpan & mengirim hasil kontenmu.
+              Nggak buat spam — email cuma dipakai buat menyimpan & mengirim hasil kontenmu. Biasanya kelar dalam 30–60 detik.
             </p>
           </section>
         )}
@@ -704,10 +728,10 @@ export default function CobaPage() {
               style={{ background: TEAL }}
             >
               <p className="text-white font-black text-[19px] leading-snug">
-                Ini baru sebagian kecilnya
+                Ini baru contoh sederhananya
               </p>
               <p className="text-white/90 text-sm mt-1.5">
-                Daftar Sekarang
+                Daftar dan dapat 5 konten gratis, dengan gaya & tata letak yang bisa kamu atur lebih lengkap.
               </p>
               <a
                 href={`/signup?email=${encodeURIComponent(email.trim().toLowerCase())}`}
@@ -715,7 +739,7 @@ export default function CobaPage() {
                 className="mt-4 inline-block w-full rounded-full py-4 font-bold text-[15px]"
                 style={{ background: "#fff", color: TEAL_DARK }}
               >
-                Buka fitur lengkap — gratis
+                Daftar & coba 5 konten gratis
               </a>
             </div>
 
@@ -732,7 +756,7 @@ export default function CobaPage() {
               className="mt-6 block w-full text-center rounded-full py-4 font-bold text-[15px] text-white"
               style={{ background: TEAL }}
             >
-              Buka fitur lengkap — gratis
+              Daftar & coba 5 konten gratis
             </a>
           </section>
         )}
