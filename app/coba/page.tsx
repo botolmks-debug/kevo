@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { FaqSection } from "@/components/coba/FaqSection";
 
 /**
  * TRACKING FUNNEL — Meta Pixel custom events.
@@ -721,6 +722,18 @@ export default function CobaPage() {
             <p className="mt-5 text-center text-xs text-neutral-400">
               Hasil yang tampil ini produk aslimu — bukan gambar AI palsu.
             </p>
+
+            <FaqSection />
+
+            {/* CTA kedua — ringan, buat yang baru yakin setelah baca FAQ */}
+            <a
+              href={`/signup?email=${encodeURIComponent(email.trim().toLowerCase())}`}
+              onClick={() => track("CobaKlikDaftar", { posisi: "faq" })}
+              className="mt-6 block w-full text-center rounded-full py-4 font-bold text-[15px] text-white"
+              style={{ background: TEAL }}
+            >
+              Buka fitur lengkap — gratis
+            </a>
           </section>
         )}
       </div>
