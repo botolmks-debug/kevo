@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/serviceRole";
 import { consumeTokens, refundTokens } from "@/lib/supabase/tokens";
+import { hasVideoCeritaAccess } from "@/lib/supabase/videoCeritaAccess";
 import { checkSupabaseEnvPresence } from "@/lib/env";
 import { loadBusinessProfile } from "@/lib/supabase/businessProfile";
 import { listImages } from "@/lib/supabase/images";
@@ -50,14 +51,21 @@ type CarouselContentData = { slides: CarouselSlide[]; scenes: string[]; caption:
  * Validasi + ALASAN GAGAL spesifik (bukan cuma true/false) — supaya kalau AI
  * balikin bentuk salah, log-nya langsung nunjuk field mana yang bermasalah,
  * tidak perlu tebak-tebak dari dump JSON mentah lagi.
+ *
+ * TOLERAN terhadap KELEBIHAN item: AI kadang balikin scenes/slides 1 LEBIH
+ * BANYAK dari yang diminta (mis. 5 scenes padahal diminta 4) — daripada
+ * gagal total & user harus klik ulang, kelebihannya DIPOTONG otomatis
+ * (ambil N pertama). TETAP GAGAL kalau KURANG dari yang diminta — mengarang
+ * slide/scene yang hilang lebih berisiko daripada minta user coba lagi.
  */
 function validateCarouselContent(data: Record<string, unknown>): { ok: true; data: CarouselContentData } | { ok: false; reason: string } {
   if (!Array.isArray(data.slides)) return { ok: false, reason: `"slides" bukan array (dapat: ${typeof data.slides})` };
-  if (data.slides.length !== CERITA_SLIDE_COUNT) {
+  if (data.slides.length < CERITA_SLIDE_COUNT) {
     return { ok: false, reason: `"slides" isinya ${data.slides.length}, seharusnya ${CERITA_SLIDE_COUNT}` };
   }
-  for (let i = 0; i < data.slides.length; i++) {
-    const s = data.slides[i];
+  const slides = data.slides.length > CERITA_SLIDE_COUNT ? data.slides.slice(0, CERITA_SLIDE_COUNT) : data.slides;
+  for (let i = 0; i < slides.length; i++) {
+    const s = slides[i];
     if (!s || typeof s !== "object") return { ok: false, reason: `slides[${i}] bukan object (dapat: ${typeof s})` };
     const slide = s as Record<string, unknown>;
     if (typeof slide.title !== "string" || slide.title.trim().length === 0) {
@@ -68,11 +76,13 @@ function validateCarouselContent(data: Record<string, unknown>): { ok: true; dat
     }
   }
   if (!Array.isArray(data.scenes)) return { ok: false, reason: `"scenes" bukan array (dapat: ${typeof data.scenes})` };
-  if (data.scenes.length !== CERITA_SLIDE_COUNT - 1) {
-    return { ok: false, reason: `"scenes" isinya ${data.scenes.length}, seharusnya ${CERITA_SLIDE_COUNT - 1}` };
+  const sceneCount = CERITA_SLIDE_COUNT - 1;
+  if (data.scenes.length < sceneCount) {
+    return { ok: false, reason: `"scenes" isinya ${data.scenes.length}, seharusnya ${sceneCount}` };
   }
-  for (let i = 0; i < data.scenes.length; i++) {
-    const sc = data.scenes[i];
+  const scenes = data.scenes.length > sceneCount ? data.scenes.slice(0, sceneCount) : data.scenes;
+  for (let i = 0; i < scenes.length; i++) {
+    const sc = scenes[i];
     if (typeof sc !== "string" || sc.trim().length === 0) {
       return { ok: false, reason: `scenes[${i}] kosong/bukan string (dapat: ${JSON.stringify(sc)})` };
     }
@@ -80,7 +90,10 @@ function validateCarouselContent(data: Record<string, unknown>): { ok: true; dat
   if (typeof data.caption !== "string" || data.caption.trim().length === 0) {
     return { ok: false, reason: `"caption" kosong/bukan string (dapat: ${JSON.stringify(data.caption)?.slice(0, 200)})` };
   }
-  return { ok: true, data: data as unknown as CarouselContentData };
+  return {
+    ok: true,
+    data: { slides: slides as CarouselSlide[], scenes: scenes as string[], caption: data.caption },
+  };
 }
 
 function isSegments(data: Record<string, unknown>): data is { segments: string[] } {
@@ -100,6 +113,9 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum login." }, { status: 401 });
+  if (!(await hasVideoCeritaAccess(supabase, user.id, user.email))) {
+    return NextResponse.json({ error: "Fitur ini belum diaktifkan untuk akunmu. Hubungi admin." }, { status: 403 });
+  }
 
   let body: RequestBody = {};
   try {
@@ -178,12 +194,14 @@ export async function POST(request: NextRequest) {
   const contentPrompt = buildCarouselPrompt(profile, imageDescription, theme, language, antiRepetisiBlock, CERITA_SLIDE_COUNT);
   let contentResult = await generateJsonContent(contentPrompt);
   let validated = contentResult.ok ? validateCarouselContent(contentResult.data) : null;
-  if (!validated || !validated.ok) {
-    // Retry OTOMATIS 1x kalau bentuk JSON salah (mis. jumlah slide kurang) —
-    // best-effort, tidak nambah biaya token ke user (token sudah dipotong di
-    // awal, cuma 1 percobaan ulang ke Gemini kalau percobaan pertama gagal).
+  // Retry OTOMATIS maks 2x kalau bentuk JSON kurang lengkap (mis. jumlah
+  // slide kurang) — best-effort, tidak nambah biaya token ke user (token
+  // sudah dipotong di awal). Kelebihan item (bukan kekurangan) sudah
+  // ditoleransi di validateCarouselContent sendiri (dipotong, bukan gagal),
+  // jadi retry di sini cuma buat kasus yang beneran kurang.
+  for (let attempt = 1; (!validated || !validated.ok) && attempt <= 2; attempt++) {
     console.error(
-      "[video-cerita-storyboard] Percobaan 1 gagal:",
+      `[video-cerita-storyboard] Percobaan ${attempt} gagal:`,
       contentResult.ok ? (validated?.reason ?? "-") : contentResult.error,
     );
     contentResult = await generateJsonContent(contentPrompt);

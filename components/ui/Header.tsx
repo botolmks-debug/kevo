@@ -17,8 +17,11 @@ const navLinks: { href: string; key: string; match?: string }[] = [
   { href: "/gambar", key: "nav.gambar" },
   { href: "/konten", key: "nav.editKonten" },
   { href: "/jadwal", key: "nav.jadwal" },
-  { href: "/videocerita", key: "nav.videoCerita" },
 ];
+// "Video Cerita" TIDAK di navLinks (bukan buat semua orang) — link ini
+// PER-USER, muncul cuma kalau admin ATAU akun di-toggle ON oleh admin
+// (lihat useEffect fetch /api/video/cerita/access + app/admin/AdminOverview.tsx).
+const videoCeritaLink: { href: string; key: string; match?: string } = { href: "/videocerita", key: "nav.videoCerita" };
 // Menu Dashboard DIHAPUS dari nav — klik logo Keposting sudah mengarah ke /dashboard.
 
 // Menu khusus admin (botolmakassar).
@@ -32,6 +35,7 @@ export function Header() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isAdminUser, setIsAdminUser] = useState(false);
+  const [hasVideoCeritaAccess, setHasVideoCeritaAccess] = useState(false);
   const [lang, setLangState] = useState<Lang>("id");
   const [panduanOpen, setPanduanOpen] = useState(false);
 
@@ -40,6 +44,10 @@ export function Header() {
     createClient()
       .auth.getUser()
       .then(({ data }) => setIsAdminUser(isAdmin(data.user?.email)))
+      .catch(() => {});
+    fetch("/api/video/cerita/access")
+      .then((r) => r.json())
+      .then((d) => setHasVideoCeritaAccess(!!d?.access))
       .catch(() => {});
     // Panduan muncul OTOMATIS sekali untuk user baru (per-browser), lalu tidak lagi.
     try {
@@ -50,7 +58,11 @@ export function Header() {
     } catch {}
   }, []);
 
-  const links = isAdminUser ? [...navLinks, ...adminLinks] : navLinks;
+  const links = [
+    ...navLinks,
+    ...(hasVideoCeritaAccess ? [videoCeritaLink] : []),
+    ...(isAdminUser ? adminLinks : []),
+  ];
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -61,7 +73,7 @@ export function Header() {
 
   function linkClass(href: string, match?: string) {
     const active = match ? pathname.startsWith(match) : pathname === href;
-    return `rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
+    return `whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
       active ? "bg-primary/10 text-primary" : "text-navy/60 hover:bg-navy/5 hover:text-navy"
     }`;
   }
@@ -69,16 +81,16 @@ export function Header() {
   return (
     <>
       <header className="sticky top-0 z-20 border-b border-line bg-surface/80 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-5 py-3.5 sm:px-6">
-          <Link href="/dashboard" data-tour="/dashboard" className="flex items-center gap-2" onClick={() => setOpen(false)}>
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-5 py-3.5 sm:px-6">
+          <Link href="/dashboard" data-tour="/dashboard" className="flex shrink-0 items-center gap-2" onClick={() => setOpen(false)}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/keposty-icon.png" alt="Keposting" className="h-8 w-8" />
             <span className="text-lg font-bold text-navy">Keposting</span>
           </Link>
 
           {/* Menu desktop */}
-          <div className="hidden items-center gap-1 md:flex">
-            <nav className="flex items-center gap-1">
+          <div className="hidden min-w-0 items-center gap-1 md:flex">
+            <nav className="flex items-center gap-0.5">
               {links.map((link) => (
                 <Link key={link.href} href={link.href} data-tour={link.href} className={linkClass(link.href, link.match)}>
                   {t(link.key, lang)}
@@ -87,13 +99,13 @@ export function Header() {
             </nav>
             <button
               onClick={() => setPanduanOpen(true)}
-              className="ml-1 rounded-full px-3.5 py-1.5 text-sm font-medium text-navy/60 transition-colors hover:bg-navy/5 hover:text-navy"
+              className="ml-1 shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium text-navy/60 transition-colors hover:bg-navy/5 hover:text-navy"
             >
               {t("nav.panduan", lang)}
             </button>
             <button
               onClick={handleSignOut}
-              className="ml-2 rounded-full px-3.5 py-1.5 text-sm font-medium text-navy/60 transition-colors hover:bg-navy/5 hover:text-navy"
+              className="ml-1 shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium text-navy/60 transition-colors hover:bg-navy/5 hover:text-navy"
             >
               {t("nav.keluar", lang)}
             </button>
