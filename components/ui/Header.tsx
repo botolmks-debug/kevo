@@ -17,11 +17,8 @@ const navLinks: { href: string; key: string; match?: string }[] = [
   { href: "/gambar", key: "nav.gambar" },
   { href: "/konten", key: "nav.editKonten" },
   { href: "/jadwal", key: "nav.jadwal" },
+  { href: "/videocerita", key: "nav.videoCerita" },
 ];
-// "Video Cerita" TIDAK di navLinks (bukan buat semua orang) — link ini
-// PER-USER, muncul cuma kalau admin ATAU akun di-toggle ON oleh admin
-// (lihat useEffect fetch /api/video/cerita/access + app/admin/AdminOverview.tsx).
-const videoCeritaLink: { href: string; key: string; match?: string } = { href: "/videocerita", key: "nav.videoCerita" };
 // Menu Dashboard DIHAPUS dari nav — klik logo Keposting sudah mengarah ke /dashboard.
 
 // Menu khusus admin (botolmakassar).
@@ -35,7 +32,6 @@ export function Header() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isAdminUser, setIsAdminUser] = useState(false);
-  const [hasVideoCeritaAccess, setHasVideoCeritaAccess] = useState(false);
   const [lang, setLangState] = useState<Lang>("id");
   const [panduanOpen, setPanduanOpen] = useState(false);
 
@@ -44,10 +40,6 @@ export function Header() {
     createClient()
       .auth.getUser()
       .then(({ data }) => setIsAdminUser(isAdmin(data.user?.email)))
-      .catch(() => {});
-    fetch("/api/video/cerita/access")
-      .then((r) => r.json())
-      .then((d) => setHasVideoCeritaAccess(!!d?.access))
       .catch(() => {});
     // Panduan muncul OTOMATIS sekali untuk user baru (per-browser), lalu tidak lagi.
     try {
@@ -58,11 +50,7 @@ export function Header() {
     } catch {}
   }, []);
 
-  const links = [
-    ...navLinks,
-    ...(hasVideoCeritaAccess ? [videoCeritaLink] : []),
-    ...(isAdminUser ? adminLinks : []),
-  ];
+  const links = isAdminUser ? [...navLinks, ...adminLinks] : navLinks;
 
   async function handleSignOut() {
     const supabase = createClient();

@@ -12,7 +12,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/serviceRole";
 import { consumeTokens, refundTokens } from "@/lib/supabase/tokens";
-import { hasVideoCeritaAccess } from "@/lib/supabase/videoCeritaAccess";
 import { checkSupabaseEnvPresence } from "@/lib/env";
 import { loadBusinessProfile } from "@/lib/supabase/businessProfile";
 import { listImages } from "@/lib/supabase/images";
@@ -113,9 +112,6 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum login." }, { status: 401 });
-  if (!(await hasVideoCeritaAccess(supabase, user.id, user.email))) {
-    return NextResponse.json({ error: "Fitur ini belum diaktifkan untuk akunmu. Hubungi admin." }, { status: 403 });
-  }
 
   let body: RequestBody = {};
   try {
