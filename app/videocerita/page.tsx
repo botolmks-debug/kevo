@@ -109,6 +109,7 @@ export default function VideoCeritaPage() {
   const [assembleError, setAssembleError] = useState<string | null>(null);
   const [assembleStep, setAssembleStep] = useState("");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [saveHistoryStatus, setSaveHistoryStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
 
   useEffect(() => {
     fetch("/api/images").then((r) => r.json()).then((d) => setImages(d.images ?? [])).catch(() => {});
@@ -324,6 +325,7 @@ export default function VideoCeritaPage() {
     setAssembleStatus("loading");
     setAssembleError(null);
     setVideoUrl(null);
+    setSaveHistoryStatus("idle");
     try {
       // ── 1) Render semua slide (foto AI + 1 foto user/edited) ────────────
       setAssembleStep(`Merender ${SLIDE_COUNT} slide...`);
@@ -408,9 +410,25 @@ export default function VideoCeritaPage() {
 
       const out = await ffmpeg.readFile("out.mp4");
       if (typeof out === "string") throw new Error("Output video tidak valid.");
-      setVideoUrl(URL.createObjectURL(new Blob([out.buffer as ArrayBuffer], { type: "video/mp4" })));
+      const videoBlob = new Blob([out.buffer as ArrayBuffer], { type: "video/mp4" });
+      setVideoUrl(URL.createObjectURL(videoBlob));
       setAssembleStatus("success");
       setAssembleStep("");
+
+      // Simpan otomatis ke riwayat Edit Konten — best-effort, TIDAK
+      // menggagalkan hasil video kalau gagal (video sudah jadi & bisa
+      // diunduh langsung apapun hasil simpan-ke-riwayat ini).
+      setSaveHistoryStatus("saving");
+      try {
+        const form = new FormData();
+        form.append("video", videoBlob, "video-cerita.mp4");
+        form.append("title", slides[0]?.title ?? "");
+        form.append("caption", caption);
+        const saveRes = await fetch("/api/video/cerita/save", { method: "POST", body: form });
+        setSaveHistoryStatus(saveRes.ok ? "success" : "error");
+      } catch {
+        setSaveHistoryStatus("error");
+      }
     } catch (e) {
       setAssembleStatus("error");
       setAssembleError(
@@ -587,6 +605,11 @@ export default function VideoCeritaPage() {
             >
               Unduh Video
             </a>
+            <p className="mt-2 text-xs text-navy/50">
+              {saveHistoryStatus === "saving" ? "Menyimpan ke riwayat..." : null}
+              {saveHistoryStatus === "success" ? "Tersimpan di riwayat (lihat di Edit Konten)." : null}
+              {saveHistoryStatus === "error" ? "Gagal menyimpan ke riwayat — video tetap bisa diunduh." : null}
+            </p>
 
             {caption ? (
               <div className="mt-6">

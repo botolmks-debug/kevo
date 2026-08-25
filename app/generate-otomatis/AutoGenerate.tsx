@@ -74,6 +74,7 @@ const JENIS_LABEL: Record<GeneratedContentJenis, { id: string; en: string }> = {
   produk: { id: "Produk", en: "Product" },
   general: { id: "General", en: "General" },
   interaksi: { id: "Interaksi", en: "Interaction" },
+  video_cerita: { id: "Video Cerita", en: "Story Video" },
 };
 
 // Dua gangguan sesaat bisa bikin request gagal walau semuanya sebenarnya baik:

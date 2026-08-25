@@ -5,7 +5,7 @@ import { BUCKET } from "./images";
 import { DEV_BUSINESS_ID } from "./devBusiness";
 import { describeSupabaseError } from "./logError";
 
-export type GeneratedContentJenis = "produk" | "general" | "interaksi";
+export type GeneratedContentJenis = "produk" | "general" | "interaksi" | "video_cerita";
 export type GeneratedContentStatus = "draft" | "selesai";
 
 export type GeneratedContentRow = {
@@ -163,6 +163,68 @@ export async function insertGeneratedContent(
   if (error || !data) {
     console.error(`insertGeneratedContent (insert row) failed: ${describeSupabaseError(error)}`);
     return { ok: false, error: "Gambar tersimpan tapi gagal menyimpan datanya. Coba lagi." };
+  }
+  return { ok: true, row: data as GeneratedContentRow };
+}
+
+export type InsertVideoGeneratedContentInput = {
+  businessId?: string;
+  videoBuffer: Buffer;
+  title: string; // dipakai sbg on_image_text (label ringkas di kartu riwayat)
+  caption: string;
+  ratio: AspectRatio;
+};
+
+/**
+ * Simpan hasil "Video Cerita Produk" (mp4) ke generated_content, jenis
+ * 'video_cerita' — MUNCUL di riwayat Edit Konten tapi TIDAK BISA DIEDIT di
+ * sana (lihat app/konten/page.tsx, cuma tombol Unduh + Salin Caption).
+ * Reuse FIFO cap yang sama dgn insertGeneratedContent (video ikut kena
+ * batas 60 konten/user, storage-nya juga ikut dibersihkan otomatis).
+ */
+export async function insertVideoGeneratedContent(
+  client: SupabaseClient,
+  input: InsertVideoGeneratedContentInput,
+  storageClient: SupabaseClient = client,
+): Promise<InsertGeneratedContentResult> {
+  const businessId = input.businessId ?? DEV_BUSINESS_ID;
+  const storagePath = `${businessId}/generated/${randomUUID()}.mp4`;
+
+  await enforceContentCap(storageClient, businessId);
+
+  let uploadError: unknown = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const res = await storageClient.storage.from(BUCKET).upload(storagePath, input.videoBuffer, {
+      contentType: "video/mp4",
+      upsert: true,
+    });
+    uploadError = res.error;
+    if (!uploadError) break;
+    if (attempt < 3) await new Promise((r) => setTimeout(r, 500 * attempt));
+  }
+  if (uploadError) {
+    const detail = describeSupabaseError(uploadError);
+    console.error(`insertVideoGeneratedContent (storage) failed after retries: ${detail}`);
+    return { ok: false, error: `Gagal mengunggah video: ${detail}` };
+  }
+
+  const { data, error } = await client
+    .from("generated_content")
+    .insert({
+      business_id: businessId,
+      jenis: "video_cerita",
+      storage_path: storagePath,
+      on_image_text: input.title,
+      caption: input.caption,
+      ratio: input.ratio,
+      status: "selesai",
+    })
+    .select()
+    .single();
+
+  if (error || !data) {
+    console.error(`insertVideoGeneratedContent (insert row) failed: ${describeSupabaseError(error)}`);
+    return { ok: false, error: "Video tersimpan tapi gagal menyimpan datanya." };
   }
   return { ok: true, row: data as GeneratedContentRow };
 }

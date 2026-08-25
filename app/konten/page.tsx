@@ -43,7 +43,7 @@ type ContentItem = {
 };
 
 const JENIS_LABEL: Record<GeneratedContentJenis, string> = {
-  produk: "Produk", general: "General", interaksi: "Interaksi",
+  produk: "Produk", general: "General", interaksi: "Interaksi", video_cerita: "Video Cerita",
 };
 
 /** Tanggal hari ini (waktu lokal) sebagai YYYY-MM-DD. */
@@ -111,6 +111,7 @@ export default function KontenPage() {
   }, []);
 
   function openEdit(item: ContentItem) {
+    if (item.jenis === "video_cerita") return; // video tidak bisa diedit — cuma unduh + salin caption
     setSelected(item);
     // Pakai gambar bersih (backgroundUrl) kalau ada, fallback ke imageUrl.
     const bgPhoto = item.backgroundUrl ?? item.imageUrl;
@@ -453,6 +454,30 @@ export default function KontenPage() {
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               {items.map((item) => (
+                item.jenis === "video_cerita" ? (
+                  <div key={item.id} className="flex flex-col gap-2 rounded-2xl border border-line p-2">
+                    <video src={item.imageUrl} muted playsInline preload="metadata"
+                      className="aspect-[9/16] w-full rounded-xl border border-line object-cover bg-navy/5" />
+                    <span className="text-[11px] text-navy/40">{formatCreatedAt(item.createdAt)}</span>
+                    <span className="inline-flex w-fit rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                      {JENIS_LABEL[item.jenis]}
+                    </span>
+                    <p className="line-clamp-2 text-xs text-navy/60">{item.caption}</p>
+                    <div className="mt-auto flex flex-wrap gap-x-3 gap-y-1 pt-1">
+                      <a href={item.imageUrl} download={`kevo-video-cerita-${item.id}.mp4`}
+                        className="text-xs font-medium text-primary hover:underline">Unduh</a>
+                      <button type="button" onClick={() => handleCopy(item.id, item.caption)}
+                        className="text-xs font-medium text-primary hover:underline">
+                        {copiedId === item.id ? "Tersalin!" : "Salin Caption"}
+                      </button>
+                      <button type="button" disabled={deletingId === item.id}
+                        onClick={() => handleDelete(item.id)}
+                        className="text-xs font-medium text-red-500 hover:underline disabled:opacity-50">
+                        {deletingId === item.id ? "..." : "Hapus"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
                 <div key={item.id}
                   className={`flex flex-col gap-2 rounded-2xl border p-2 cursor-pointer transition ${selected?.id === item.id ? "border-primary ring-2 ring-primary/20" : "border-line hover:border-primary/40"}`}
                   onClick={() => openEdit(item)}>
@@ -484,6 +509,7 @@ export default function KontenPage() {
                     </button>
                   </div>
                 </div>
+                )
               ))}
             </div>
           )}

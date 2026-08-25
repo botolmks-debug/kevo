@@ -39,7 +39,7 @@ type ContentItem = {
 };
 
 const JENIS_LABEL: Record<GeneratedContentJenis, string> = {
-  produk: "Produk", general: "General", interaksi: "Interaksi",
+  produk: "Produk", general: "General", interaksi: "Interaksi", video_cerita: "Video Cerita",
 };
 
 /** Tanggal hari ini (waktu lokal) sebagai YYYY-MM-DD. */
