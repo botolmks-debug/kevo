@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { BusinessProfile, ContentGoal, LogoPosition, ToneOfVoice } from "@/lib/onboarding/businessProfile";
+import type { BusinessProfile, ContentGoal, CustomerType, LogoPosition, ToneOfVoice } from "@/lib/onboarding/businessProfile";
 import { publicImageUrl } from "./images";
 import { DEV_BUSINESS_ID } from "./devBusiness";
 import { describeSupabaseError } from "./logError";
@@ -14,6 +14,7 @@ export type BusinessProfileRow = {
   flagship_product: string;
   price_range: string;
   target_customer: string;
+  customer_types: string[];
   customer_problem: string;
   differentiator: string;
   content_goals: string[];
@@ -54,6 +55,7 @@ export function businessProfileToRow(
     flagship_product: profile.offering.flagshipProduct,
     price_range: profile.offering.priceRange,
     target_customer: profile.offering.targetCustomer,
+    customer_types: profile.offering.customerTypes,
     customer_problem: profile.offering.customerProblem,
     differentiator: profile.positioning.differentiator,
     content_goals: profile.positioning.contentGoals,
@@ -79,6 +81,7 @@ export function rowToBusinessProfile(row: BusinessProfileRow, client: SupabaseCl
       flagshipProduct: row.flagship_product,
       priceRange: row.price_range,
       targetCustomer: row.target_customer,
+      customerTypes: (row.customer_types as CustomerType[]) ?? [],
       customerProblem: row.customer_problem,
     },
     positioning: {

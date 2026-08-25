@@ -527,12 +527,16 @@ export function DomEditor({
         <div ref={(el) => { stageRef.current = el; (exportRef as React.MutableRefObject<HTMLDivElement | null>).current = el; }}
           onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
           onKeyDown={onKeyDown} tabIndex={0}
-          style={{ position:"relative", width:DISPLAY_W, height:displayH, borderRadius:10, overflow:"hidden", background:"#111", touchAction:"none", outline:"none" }}>
+          style={{ position:"relative", width:DISPLAY_W, height:displayH, borderRadius:0, overflow:"hidden", background:"#111", touchAction:"none", outline:"none" }}>
 
           {backDecos.map((d, i) => <DecoView key={"b"+i} d={d} scale={scale} />)}
 
+          {/* Zoom overscan ~4% — sama seperti renderTemplate.tsx (Satori):
+              nutupin tepi/sudut cacat dari AI (mis. lekukan/vignette) yang
+              kadang lolos dari instruksi prompt. Tanpa ini, DomEditor tidak
+              sinkron dengan hasil server-render. */}
           {photo && <img src={photo} alt="" crossOrigin="anonymous" draggable={false}
-            style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", ...IMG_STYLE }} />}
+            style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", transform:"scale(1.04)", transformOrigin:"center", ...IMG_STYLE }} />}
 
           {/* overlay warna/gradient di atas foto — ikut terekspor */}
           {overlay.type !== "none" && (

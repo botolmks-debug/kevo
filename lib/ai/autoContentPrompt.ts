@@ -28,10 +28,42 @@ const CONTENT_GOAL_LABELS_EN: Record<ContentGoal, string> = {
   loyalitas_pelanggan: "customer loyalty",
 };
 
+function customerTypeLabel(profile: BusinessProfile, lang?: Lang): string {
+  const t = profile.offering.customerTypes ?? [];
+  const hasB2c = t.includes("b2c");
+  const hasB2b = t.includes("b2b");
+  if (isEn(lang)) {
+    if (hasB2c && hasB2b) return "Both direct consumers (B2C) and other businesses (B2B)";
+    if (hasB2b) return "Other businesses (B2B) — buying for resale or business operations, NOT personal use";
+    if (hasB2c) return "Direct consumers (B2C) — buying for personal/own use";
+    return "-";
+  }
+  if (hasB2c && hasB2b) return "Konsumen langsung (B2C) dan sesama pebisnis (B2B) sekaligus";
+  if (hasB2b) return "Sesama pebisnis (B2B) — beli buat dijual lagi/operasional usaha, BUKAN konsumsi pribadi";
+  if (hasB2c) return "Konsumen langsung (B2C) — beli buat dipakai/dikonsumsi sendiri";
+  return "-";
+}
+
 function profileBlock(profile: BusinessProfile, lang?: Lang): string {
   const labels = isEn(lang) ? CONTENT_GOAL_LABELS_EN : CONTENT_GOAL_LABELS_ID;
   const goals =
     profile.positioning.contentGoals.map((goal) => labels[goal] ?? goal).join(", ") || "-";
+  const custTypes = profile.offering.customerTypes ?? [];
+  const hasB2c = custTypes.includes("b2c");
+  const hasB2b = custTypes.includes("b2b");
+  const custTypeGuard = !custTypes.length
+    ? ""
+    : isEn(lang)
+      ? hasB2b && hasB2c
+        ? "\nCUSTOMER-TYPE RULE: this business sells to BOTH individual consumers and other businesses — keep framing broad enough to fit either, or pick whichever fits the specific product/photo at hand without contradicting the other."
+        : hasB2b
+          ? "\nCUSTOMER-TYPE RULE (hard): this business sells B2B — the reader is a business owner/buyer restocking or sourcing for their OWN business, not an end consumer. NEVER use personal-consumer framing (personal payday/\"gajian\", self-treat, personal enjoyment). Frame around business needs: restocking, inventory, order quantity, margin, reliability for their operations."
+          : "\nCUSTOMER-TYPE RULE (hard): this business sells B2C — the reader is an individual end consumer. Frame around personal use/enjoyment, not wholesale/business-operations language (don't talk about \"restocking inventory\" or \"margin\")."
+      : hasB2b && hasB2c
+        ? "\nATURAN TIPE PELANGGAN: bisnis ini jual ke KEDUANYA (konsumen langsung & sesama pebisnis) — bingkai secukupnya biar cocok ke dua-duanya, atau pilih salah satu yang paling pas dengan produk/foto yang sedang dibuat tanpa bertentangan sama yang lain."
+        : hasB2b
+          ? "\nATURAN TIPE PELANGGAN (keras): bisnis ini jual B2B — pembacanya adalah pemilik/pembeli usaha yang restock atau cari suplai buat usahanya SENDIRI, bukan konsumen akhir. JANGAN pakai framing konsumen pribadi (gajian pribadi, self-reward, dinikmati sendiri). Bingkai seputar kebutuhan usaha: restock, stok, jumlah order, margin, keandalan buat operasional mereka."
+          : "\nATURAN TIPE PELANGGAN (keras): bisnis ini jual B2C — pembacanya konsumen akhir perorangan. Bingkai seputar pemakaian/kenikmatan pribadi, jangan pakai bahasa grosir/operasional bisnis (jangan sebut \"restock stok\" atau \"margin\").";
 
   if (isEn(lang)) {
     return `Business profile (MUST be woven into the content as its foundation — don't be generic):
@@ -40,13 +72,14 @@ function profileBlock(profile: BusinessProfile, lang?: Lang): string {
 - Location: ${profile.business.location || "-"}
 - Main products/services: ${profile.offering.mainProducts || "-"}
 - Target customer: ${profile.offering.targetCustomer || "-"}
+- Customer type: ${customerTypeLabel(profile, lang)}
 - Customer problem being solved: ${profile.offering.customerProblem || "-"}
 - Differentiator/USP: ${profile.positioning.differentiator || "-"}
 - Content goals: ${goals}
 - Brand voice/tone: ${profile.positioning.tone || "neutral"}
 - CTA: ${profile.positioning.cta || "-"}
 - Brand story: ${profile.story || "-"}
-- AVOID: ${profile.positioning.avoid || "-"}`;
+- AVOID: ${profile.positioning.avoid || "-"}${custTypeGuard}`;
   }
 
   return `Profil bisnis (WAJIB dirangkai jadi dasar konten — jangan generik):
@@ -55,13 +88,14 @@ function profileBlock(profile: BusinessProfile, lang?: Lang): string {
 - Lokasi: ${profile.business.location || "-"}
 - Produk/layanan utama: ${profile.offering.mainProducts || "-"}
 - Target pelanggan: ${profile.offering.targetCustomer || "-"}
+- Tipe pelanggan: ${customerTypeLabel(profile, lang)}
 - Masalah pelanggan yang diselesaikan: ${profile.offering.customerProblem || "-"}
 - Pembeda/USP: ${profile.positioning.differentiator || "-"}
 - Tujuan konten: ${goals}
 - Nada/gaya brand: ${profile.positioning.tone || "netral"}
 - CTA: ${profile.positioning.cta || "-"}
 - Cerita brand: ${profile.story || "-"}
-- HINDARI: ${profile.positioning.avoid || "-"}`;
+- HINDARI: ${profile.positioning.avoid || "-"}${custTypeGuard}`;
 }
 
 const FONT_LIST = FONT_OPTIONS.map((f) => `${f.id} (${f.style})`).join(", ");
@@ -226,45 +260,129 @@ function pickHeadlineAngleForProduk(lang?: Lang): string {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+export type ContentTema = "hook" | "edukasi" | "produk" | "promo";
+
 /**
- * Instruksi "WTF hook" — dipakai HANYA saat user mencentang tombol 🔥.
- * Diteruskan ke builder konten lewat parameter `extra` (produk/gabung/general).
+ * Instruksi tema konten — dipakai saat user pilih salah satu dari 4 kartu tema
+ * (Hook/Edukasi/Penjelasan Produk/Promo). Diteruskan ke builder konten lewat
+ * parameter `extra` (produk/gabung/general).
  * PENTING: pagar kejujuran sengaja dibuat tegas — model kalau disuruh "bikin
- * heboh" cenderung MENGARANG (kasus nyata: "Botol Pir" ditafsir jadi bentuk
- * lalu dikarang lawan katanya "silinder"). Hook boleh mengejutkan, TAPI wajib
- * benar sesuai data produk/profil. Clickbait bohong DILARANG.
+ * heboh"/"detail" cenderung MENGARANG (kasus nyata: "Botol Pir" ditafsir jadi
+ * bentuk lalu dikarang lawan katanya "silinder"). Setiap tema boleh berani/
+ * detail/persuasif, TAPI wajib benar sesuai data produk/profil. Karangan
+ * DILARANG di semua tema, bukan cuma hook.
  */
-export function hookInstruction(lang?: Lang): string {
-  if (isEn(lang)) {
-    return `HEADLINE STYLE OVERRIDE — STRONG SCROLL-STOPPER ("hook") MODE:
-The HEADLINE (onImageText) must STOP the thumb in the first second. Be bold: open a curiosity gap the reader NEEDS to close. A plain descriptive title is a FAIL here — if it reads like a normal caption, rewrite it harder.
-Pick ONE high-impact pattern and commit fully:
+export function themeInstruction(tema: ContentTema, lang?: Lang): string {
+  const en = isEn(lang);
+  const honestyRules = en
+    ? `HARD RULES (non-negotiable — never overridden by the style above):
+- MUST be TRUE and grounded in the product/profile data above. NEVER invent facts, numbers, comparisons, or attributes not given.
+- Treat any product NAME as a name, not a description — never reinterpret it into a shape, category, or claim.
+- No all-caps shouting, no stacked "!!!", no spam energy. Stay in the brand voice.`
+    : `ATURAN KERAS (tak bisa ditawar — tak pernah dikalahkan gaya di atas):
+- WAJIB BENAR & berdasar data produk/profil di atas. JANGAN mengarang fakta, angka, perbandingan, atau atribut yang tak diberikan.
+- Perlakukan NAMA produk sebagai nama, bukan deskripsi — jangan tafsirkan jadi bentuk/kategori/klaim.
+- Dilarang HURUF KAPITAL semua, dilarang "!!!" bertumpuk, dilarang energi spam. Tetap dalam nada brand.`;
+
+  if (tema === "hook") {
+    return en
+      ? `HEADLINE STYLE OVERRIDE — STRONG SCROLL-STOPPER ("hook") MODE:
+The HEADLINE (onImageText) must STOP the thumb in the first second. Be bold: open a curiosity gap the reader NEEDS to close. A plain descriptive title, a neutral fact, or a mild tip is a FAIL here — if it could pass as an educational caption, it is TOO WEAK, rewrite it harder.
+Pick ONE high-impact pattern and commit fully — do not water it down into a soft observation:
 - Pattern-interrupt claim: "Most people <do X wrong> — here's the fix"
 - Direct warning: "Stop <common mistake> before you <consequence>"
 - Curiosity gap: "The real reason <surprising outcome>…" (don't reveal it in the headline)
 - Contrarian truth: "<Thing everyone assumes> is actually <the opposite> — here's why"
 - Loss/mistake framing: "<Overlooked thing> is quietly costing you <specific loss>"
 - Callout to the reader: speak directly ("kamu"/"you"), make it feel personal and urgent.
-HARD RULES (non-negotiable — boldness never overrides these):
-- The hook MUST be TRUE and grounded in the product/profile data above. NEVER invent facts, numbers, comparisons, or attributes not given. Bold framing of a REAL point — never a fabricated one.
-- Treat any product NAME as a name, not a description — never reinterpret it into a shape, category, or claim.
-- No all-caps shouting, no stacked "!!!", no "OMG/VIRAL/GILA" spam energy — the surprise is in the IDEA, not loud punctuation. Stay in the brand voice.
-- Short and punchy (headline length). The content underneath must honestly deliver what the hook promises.`;
-  }
-  return `OVERRIDE GAYA JUDUL — MODE PENAHAN-SCROLL KUAT ("hook"):
-JUDUL (onImageText) HARUS menghentikan jempol di 1 detik pertama. Berani: buka celah rasa penasaran yang bikin pembaca WAJIB cari tahu. Judul deskriptif biasa = GAGAL — kalau kebacanya seperti caption biasa, tulis ulang lebih nendang.
-Pilih SATU pola berdampak tinggi dan totalitas:
+SELF-CHECK before finalizing: read your headline back — if a stranger could shrug and scroll past it without feeling an itch to know more, it failed. It must carry an implied consequence, mistake, or unresolved tension, not just a neutral observation.
+Short and punchy (headline length). The content underneath must honestly deliver what the hook promises.
+${honestyRules}`
+      : `OVERRIDE GAYA JUDUL — MODE PENAHAN-SCROLL KUAT ("hook"):
+JUDUL (onImageText) HARUS menghentikan jempol di 1 detik pertama. Berani: buka celah rasa penasaran yang bikin pembaca WAJIB cari tahu. Judul deskriptif biasa, fakta netral, atau tips ringan = GAGAL di sini — kalau kebacanya bisa lolos jadi caption edukasi, itu TERLALU LEMAH, tulis ulang lebih nendang.
+Pilih SATU pola berdampak tinggi dan totalitas — jangan diencerkan jadi observasi lembek:
 - Klaim pemutus pola: "Kebanyakan orang <salah lakukan X> — ini cara benarnya"
 - Peringatan langsung: "Berhenti <kesalahan umum> sebelum <akibatnya>"
 - Celah penasaran: "Alasan sebenarnya kenapa <hasil mengejutkan>…" (jangan bocorkan di judul)
 - Kebenaran kontra-dugaan: "<Yang orang kira benar> ternyata <kebalikannya> — ini alasannya"
 - Bingkai kerugian/kesalahan: "<Hal yang diremehkan> diam-diam bikin kamu rugi <kerugian spesifik>"
 - Sapa pembaca langsung: pakai "kamu", bikin terasa personal & mendesak.
-ATURAN KERAS (tak bisa ditawar — keberanian TAK PERNAH mengalahkan ini):
-- Hook WAJIB BENAR & berdasar data produk/profil di atas. JANGAN mengarang fakta, angka, perbandingan, atau atribut yang tak diberikan. Bingkai berani dari poin NYATA — bukan poin karangan.
-- Perlakukan NAMA produk sebagai nama, bukan deskripsi — jangan tafsirkan jadi bentuk/kategori/klaim.
-- Dilarang HURUF KAPITAL semua, dilarang "!!!" bertumpuk, dilarang energi spam "OMG/VIRAL/GILA" — kejutan ada di IDE, bukan tanda baca heboh. Tetap dalam nada brand.
-- Singkat & nendang (panjang judul). Isi konten di baliknya WAJIB menepati janji hook.`;
+CEK ULANG sebelum difinalkan: baca lagi judulmu — kalau orang asing bisa cuek & scroll lewat tanpa gatal pengen tau lebih lanjut, berarti gagal. Wajib bawa kesan konsekuensi, kesalahan, atau ketegangan yang belum terjawab — bukan sekadar observasi netral.
+Singkat & nendang (panjang judul). Isi konten di baliknya WAJIB menepati janji hook.
+${honestyRules}`;
+  }
+
+  if (tema === "edukasi") {
+    return en
+      ? `HEADLINE + CAPTION STYLE OVERRIDE — EDUCATIONAL MODE:
+HEADLINE (onImageText): frame it as a "did you know" / genuinely useful fact — curiosity-driven, not a sales pitch.
+CAPTION: teach the reader ONE concrete, useful insight or fact rooted in the product/profile data — explain WHY it matters to them in practical terms. This must read as genuinely informative, not promotion disguised as education. End with a light, natural takeaway (not a hard sell).
+${honestyRules}`
+      : `OVERRIDE GAYA JUDUL + CAPTION — MODE EDUKASI:
+JUDUL (onImageText): bingkai gaya "tau nggak sih..." / fakta yang beneran berguna — dorong rasa penasaran, bukan jualan.
+CAPTION: ajarkan pembaca SATU insight/fakta konkret yang berakar dari data produk/profil — jelaskan KENAPA itu penting buat mereka secara praktis. Ini harus terasa genuinely informatif, bukan promosi berkedok edukasi. Tutup dengan takeaway ringan & natural (bukan hard-sell).
+${honestyRules}`;
+  }
+
+  if (tema === "produk") {
+    return en
+      ? `HEADLINE + CAPTION STYLE OVERRIDE — PRODUCT DETAIL MODE:
+HEADLINE (onImageText): spotlight ONE concrete standout feature/spec of the product (material, size, use-case) — specific, not generic ("quality"/"best").
+CAPTION: break down the product's concrete details — material, size, how to use it, tangible benefit — structured so it's easy to scan. This is the informative "spec sheet" version of the caption, not a sales pitch.
+${honestyRules}`
+      : `OVERRIDE GAYA JUDUL + CAPTION — MODE PENJELASAN PRODUK:
+JUDUL (onImageText): soroti SATU keunggulan/spesifikasi konkret produk (bahan, ukuran, kegunaan) — spesifik, bukan generik ("berkualitas"/"terbaik").
+CAPTION: breakdown detail konkret produk — bahan, ukuran, cara pakai, manfaat nyata — disusun biar gampang dibaca sekilas. Ini versi "lembar spesifikasi" yang informatif dari caption, bukan bahasa jualan.
+${honestyRules}`;
+  }
+
+  // promo
+  return en
+    ? `HEADLINE + CAPTION STYLE OVERRIDE — PROMO / CALL-TO-BUY MODE:
+HEADLINE (onImageText): soft-sell with a clear invitation to act — inviting, not screaming.
+CAPTION: state the concrete benefit, then a clear call-to-action (how to order/contact). Reasonable urgency is fine ONLY if grounded in real info from the business profile (e.g. a real promo/limited stock note) — otherwise skip urgency entirely rather than invent it.
+${honestyRules}`
+    : `OVERRIDE GAYA JUDUL + CAPTION — MODE PROMO / AJAKAN BELI:
+JUDUL (onImageText): soft-selling dengan ajakan bertindak yang jelas — mengundang, bukan teriak.
+CAPTION: sebutkan manfaat konkret, lalu ajakan bertindak (CTA) yang jelas — cara pesan/kontak. Urgency wajar boleh dipakai HANYA kalau berdasar info nyata dari profil bisnis (misal promo/stok terbatas yang beneran ada) — kalau tidak ada, jangan pakai urgency sama sekali daripada mengarang.
+${honestyRules}`;
+}
+
+/**
+ * Arahan gaya VISUAL per tema — dipakai buat mempengaruhi adegan/komposisi
+ * gambar (bukan cuma judul/caption). Ditambahkan ke prompt gambar (baik jalur
+ * "produk" yang pakai foto asli, maupun jalur "general" yang generate dari
+ * nol). Tetap tunduk ke aturan kejujuran produk yang sudah ada di masing-
+ * masing builder gambar — ini cuma menambah arahan komposisi/suasana.
+ */
+export function themeImageNote(tema: ContentTema, lang?: Lang): string {
+  const en = isEn(lang);
+  if (tema === "hook") {
+    return en
+      ? `\n\nVISUAL STYLE — SCROLL-STOPPER (MANDATORY, not optional): this must look VISIBLY different from a normal calm product photo. Push HARD into at least TWO of these: (1) a low or extreme close-up angle that fills most of the frame, (2) strong directional/hard light with deep shadow contrast (not soft even lighting), (3) an unexpected viewpoint (from below, from very close, mid-action), (4) a moment of visible tension/motion (a hand reaching, liquid mid-pour, something about to happen). A calm, evenly-lit, everything-visible product-on-a-table shot is a FAIL for this theme. Never fabricate product features/elements not actually present — the drama comes from framing/lighting/angle, not from adding things that aren't there.`
+      : `\n\nGAYA VISUAL — PENAHAN-SCROLL (WAJIB, bukan opsional): ini harus terlihat JELAS beda dari foto produk tenang biasa. Dorong KUAT ke minimal DUA dari ini: (1) sudut close-up rendah/ekstrem yang memenuhi sebagian besar frame, (2) pencahayaan terarah/keras dengan kontras bayangan dalam (bukan pencahayaan lembut merata), (3) sudut pandang tak biasa (dari bawah, sangat dekat, mid-action), (4) momen ketegangan/gerakan yang kelihatan (tangan meraih, cairan lagi dituang, sesuatu yang mau terjadi). Foto produk tenang di atas meja dengan pencahayaan rata & semua kelihatan jelas = GAGAL buat tema ini. JANGAN mengarang fitur/elemen produk yang sebenarnya tidak ada — dramanya datang dari framing/pencahayaan/sudut, bukan dari nambah hal yang tidak nyata.`;
+  }
+  if (tema === "edukasi") {
+    return en
+      ? `\n\nVISUAL STYLE — EDUCATIONAL: give it an informative feel — props arranged neatly as if mid-demonstration, a flat-lay or overhead angle works well, clear even lighting. Should feel like "let me show you", not a plain product shot.`
+      : `\n\nGAYA VISUAL — EDUKASI: kasih kesan informatif — properti tersusun rapi seolah lagi didemoin, angle flat-lay/overhead cocok dipakai, pencahayaan jelas & merata. Harus terasa "biar aku tunjukin", bukan sekadar foto produk berdiri.`;
+  }
+  if (tema === "produk") {
+    return en
+      ? `\n\nVISUAL STYLE — PRODUCT DETAIL: close-up on the product's texture/material/detail, product as the clear hero of the frame, lighting that reveals quality and craftsmanship.`
+      : `\n\nGAYA VISUAL — PENJELASAN PRODUK: close-up ke tekstur/bahan/detail produk, produk jadi hero yang jelas di frame, pencahayaan yang nunjukkin kualitas & detail pengerjaan.`;
+  }
+  // promo
+  return en
+    ? `\n\nVISUAL STYLE — PROMO: show the product in a real, ready-to-use/ready-to-enjoy moment — inviting and appetizing/desirable context, not just a static product shot.`
+    : `\n\nGAYA VISUAL — PROMO: tampilkan produk dalam momen nyata siap dipakai/dinikmati — konteks yang mengundang & menggugah, bukan sekadar foto produk statis.`;
+}
+
+/**
+ * @deprecated dipertahankan sementara untuk kompatibilitas — gunakan themeInstruction("hook", lang).
+ */
+export function hookInstruction(lang?: Lang): string {
+  return themeInstruction("hook", lang);
 }
 
 const PERSPECTIVE_ANGLES_ID = [
@@ -591,7 +709,7 @@ const TOPIC_CATEGORIES_EN: TopicCategory[] = [
  * topik) — supaya feed tidak terasa "jualan terus dengan kata-kata diganti"
  * dan pembahasan benar-benar meluas.
  */
-function pickContentDirection(lang?: Lang): string {
+export function pickContentDirection(lang?: Lang): string {
   if (Math.random() < 0.4) {
     const arr = isEn(lang) ? PERSPECTIVE_ANGLES_EN : PERSPECTIVE_ANGLES_ID;
     const angle = arr[Math.floor(Math.random() * arr.length)];

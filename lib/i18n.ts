@@ -53,6 +53,7 @@ const DICT: Record<string, Entry> = {
   "nav.editKonten": { id: "Edit Konten", en: "Edit" },
   "nav.jadwal": { id: "Jadwal", en: "Schedule" },
   "nav.video": { id: "Video", en: "Video" },
+  "nav.videoCerita": { id: "Video Cerita", en: "Story Video" },
   "nav.admin": { id: "Admin", en: "Admin" },
   "nav.panduan": { id: "Panduan", en: "Guide" },
   "nav.keluar": { id: "Keluar", en: "Log out" },

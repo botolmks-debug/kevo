@@ -240,7 +240,7 @@ export function StandarContent({
           await document.fonts.ready;
           const pr = template.layouts[ratio].canvas.width / 340;
           b = await htmlToImage.toBlob(domRef.current, {
-            pixelRatio: pr, cacheBust: true,
+            pixelRatio: pr, cacheBust: true, backgroundColor: "#111",
             filter: (n) => !(n instanceof HTMLElement && n.dataset?.noexport),
           });
         } catch (err) {

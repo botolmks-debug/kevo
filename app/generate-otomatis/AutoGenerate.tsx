@@ -57,6 +57,13 @@ const JENIS_OPTIONS: { value: GeneratedContentJenis | "referensi" | "carousel"; 
   { value: "carousel", label: "Carousel (4 Slide)", en: "Carousel (4 Slides)", description: "Pilih 1 fotomu (jadi slide penutup). AI buat teks 4 slide + 3 gambar yang mengalir ke fotomu.", descEn: "Pick 1 of your photos (final slide). AI writes 4 slides + 3 images flowing into your photo." },
 ];
 
+const TEMA_OPTIONS: { value: ContentTema; icon: string; label: string; en: string; description: string; descEn: string }[] = [
+  { value: "hook", icon: "🔥", label: "Hook Konten", en: "Hook Content", description: "Judul & gambar dibuat penahan-scroll, bikin penasaran (tetap jujur sesuai produk).", descEn: "Headline & image crafted to stop the scroll and spark curiosity (still honest to the product)." },
+  { value: "edukasi", icon: "📚", label: "Edukasi", en: "Educational", description: "Judul & caption berisi insight/fakta yang berguna, gambar bernuansa informatif.", descEn: "Headline & caption share a useful insight/fact, image has an informative feel." },
+  { value: "produk", icon: "🔍", label: "Penjelasan Produk", en: "Product Detail", description: "Judul & caption jelaskan detail produk (bahan/ukuran/manfaat), gambar close-up ke detail.", descEn: "Headline & caption explain product detail (material/size/benefit), image close-up on detail." },
+  { value: "promo", icon: "🛒", label: "Promo / Ajakan Beli", en: "Promo / Call-to-Buy", description: "Judul & caption soft-selling dengan ajakan jelas, gambar suasana siap dipakai/dinikmati.", descEn: "Headline & caption soft-sell with a clear call-to-action, image shows ready-to-use context." },
+];
+
 const RATIO_OPTIONS: { value: AspectRatio; label: string; en: string }[] = [
   { value: "4:5", label: "Feed (4:5)", en: "Feed (4:5)" },
   { value: "1:1", label: "Kotak (1:1)", en: "Square (1:1)" },
@@ -87,9 +94,11 @@ async function fetchWithAuthRetry(input: string, init?: RequestInit): Promise<Re
   return attempt();
 }
 
+export type ContentTema = "hook" | "edukasi" | "produk" | "promo";
+
 export function AutoGenerate() {
   const [jenis, setJenis] = useState<GeneratedContentJenis | "referensi" | "carousel">("produk");
-  const [hook, setHook] = useState(false); // tombol 🔥 — judul gaya penahan-scroll
+  const [tema, setTema] = useState<ContentTema | null>(null); // pilihan tema konten (judul+deskripsi+gambar)
   const [uiLang, setUiLang] = useState<Lang>("id");
   useEffect(() => setUiLang(getLang()), []);
   const L = (id: string, en: string) => (uiLang === "en" ? en : id);
@@ -243,8 +252,8 @@ export function AutoGenerate() {
             imageIds: jenis === "produk" || jenis === "referensi" ? selectedImageIds : undefined,
             language: getLang(),
             referenceDataUri: jenis === "referensi" ? (refDataUri ?? undefined) : undefined,
-            // 🔥 hook hanya relevan utk produk/referensi/general (bukan interaksi)
-            hook: hook && (jenis === "produk" || jenis === "referensi" || jenis === "general") ? true : undefined,
+            // Tema hanya relevan utk produk/referensi/general (bukan interaksi)
+            tema: tema && (jenis === "produk" || jenis === "referensi" || jenis === "general") ? tema : undefined,
           }),
         });
       let res = await doPost();
@@ -380,7 +389,7 @@ export function AutoGenerate() {
           await document.fonts.ready;
           const pr = editTemplate.layouts[result.ratio].canvas.width / 340;
           b = await htmlToImage.toBlob(domRef.current, {
-            pixelRatio: pr, cacheBust: true,
+            pixelRatio: pr, cacheBust: true, backgroundColor: "#111",
             filter: (n) => !(n instanceof HTMLElement && n.dataset?.noexport),
           });
         } catch (err) {
@@ -465,31 +474,37 @@ export function AutoGenerate() {
       </div>
 
       {jenis === "produk" || jenis === "referensi" || jenis === "general" ? (
-        <button
-          type="button"
-          onClick={() => setHook((v) => !v)}
-          aria-pressed={hook}
-          className={`flex items-start gap-3 rounded-2xl border p-3.5 text-left transition ${
-            hook
-              ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-              : "border-line hover:border-primary/40 hover:bg-navy/[0.02]"
-          }`}
-        >
-          <span className="text-xl leading-none">🔥</span>
-          <span className="flex flex-col gap-0.5">
-            <span className={`text-sm font-semibold ${hook ? "text-primary" : "text-navy"}`}>
-              {hook
-                ? L("Judul nge-hook: AKTIF", "Hook headline: ON")
-                : L("Bikin judul lebih nge-hook", "Make headline more hooky")}
-            </span>
-            <span className="text-xs text-navy/60">
-              {L(
-                "Judul dibuat lebih memancing rasa penasaran (tetap jujur sesuai produk).",
-                "Headline crafted to spark curiosity (still honest to the product).",
-              )}
-            </span>
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium text-navy">
+            {L("Tema konten (opsional)", "Content theme (optional)")}
           </span>
-        </button>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {TEMA_OPTIONS.map((opt) => {
+              const active = tema === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setTema((v) => (v === opt.value ? null : opt.value))}
+                  aria-pressed={active}
+                  className={`flex items-start gap-3 rounded-2xl border p-3.5 text-left transition ${
+                    active
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                      : "border-line hover:border-primary/40 hover:bg-navy/[0.02]"
+                  }`}
+                >
+                  <span className="text-xl leading-none">{opt.icon}</span>
+                  <span className="flex flex-col gap-0.5">
+                    <span className={`text-sm font-semibold ${active ? "text-primary" : "text-navy"}`}>
+                      {uiLang === "en" ? opt.en : opt.label}
+                    </span>
+                    <span className="text-xs text-navy/60">{uiLang === "en" ? opt.descEn : opt.description}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       ) : null}
 
       {imagesLoaded && images.length === 0 && (jenis === "produk" || jenis === "referensi" || jenis === "carousel") ? (

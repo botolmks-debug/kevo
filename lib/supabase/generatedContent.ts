@@ -255,12 +255,15 @@ export async function listGeneratedContent(
   client: SupabaseClient,
   businessId: string = DEV_BUSINESS_ID,
 ): Promise<ListGeneratedContentResult> {
+  // Tanpa .limit(): konten lebih lama sempat "hilang" dari daftar (Edit
+  // Konten & Riwayat) padahal masih ada di DB — cuma tidak ikut ditarik
+  // karena limit(20) lama. Supabase punya batas default 1000 baris per
+  // query sebagai jaring pengaman; cukup jauh untuk skala saat ini.
   const { data, error } = await client
     .from("generated_content")
     .select("*")
     .eq("business_id", businessId)
-    .order("created_at", { ascending: false })
-    .limit(20);
+    .order("created_at", { ascending: false });
 
   if (error) {
     console.error(`listGeneratedContent failed: ${describeSupabaseError(error)}`);

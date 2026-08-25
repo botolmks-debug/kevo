@@ -10,6 +10,7 @@ import {
   buildBusinessProfile,
   toggleSocialSelection,
   type ContentGoal,
+  type CustomerType,
   type ToneOfVoice,
 } from "@/lib/onboarding/businessProfile";
 import { MAX_SELECTED_SOCIALS, SOCIAL_PLATFORMS } from "@/lib/social/platforms";
@@ -48,13 +49,18 @@ const TONES: { id: ToneOfVoice; label: string; en: string }[] = [
   { id: "formal", label: "Formal", en: "Formal" },
 ];
 
+const CUSTOMER_TYPES: { id: CustomerType; label: string; en: string; hint: string; hintEn: string }[] = [
+  { id: "b2c", label: "Konsumen langsung (B2C)", en: "Direct consumers (B2C)", hint: "Orang yang pakai sendiri produknya", hintEn: "People who use the product themselves" },
+  { id: "b2b", label: "Sesama pebisnis (B2B)", en: "Other businesses (B2B)", hint: "Toko, reseller, atau perusahaan lain yang beli buat dijual/dipakai usaha", hintEn: "Shops, resellers, or other companies buying for resale/business use" },
+];
+
 const SELECT_CLASS =
   "rounded-card border border-slate-200 bg-white px-4 py-2.5 text-sm text-navy focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
 
 function validateStep(
   step: number,
   business: { name: string; industry: string; location: string },
-  offering: { mainProducts: string; targetCustomer: string; customerProblem: string },
+  offering: { mainProducts: string; targetCustomer: string; customerTypes: CustomerType[]; customerProblem: string },
   positioning: { differentiator: string; contentGoals: ContentGoal[]; tone: ToneOfVoice | ""; cta: string },
   socialValues: Record<string, string>,
   selectedSocialIds: string[],
@@ -71,6 +77,7 @@ function validateStep(
     case 2:
       if (!offering.mainProducts.trim()) return L("Produk/jasa utama wajib diisi.", "Main product/service is required.");
       if (!offering.targetCustomer.trim()) return L("Target pelanggan wajib diisi.", "Target customers are required.");
+      if (!offering.customerTypes.length) return L("Pilih minimal 1 tipe pelanggan (B2C/B2B).", "Pick at least 1 customer type (B2C/B2B).");
       if (!offering.customerProblem.trim()) return L("Masalah pelanggan yang dipecahkan wajib diisi.", "The customer problem you solve is required.");
       return null;
     case 3:
@@ -117,6 +124,7 @@ export default function OnboardingPage() {
     flagshipProduct: "",
     priceRange: "",
     targetCustomer: "",
+    customerTypes: [] as CustomerType[],
     customerProblem: "",
   });
   const [positioning, setPositioning] = useState({
@@ -168,6 +176,13 @@ export default function OnboardingPage() {
     setPositioning((p) => ({
       ...p,
       contentGoals: p.contentGoals.includes(goal) ? p.contentGoals.filter((g) => g !== goal) : [...p.contentGoals, goal],
+    }));
+  }
+
+  function toggleCustomerType(ct: CustomerType) {
+    setOffering((o) => ({
+      ...o,
+      customerTypes: o.customerTypes.includes(ct) ? o.customerTypes.filter((x) => x !== ct) : [...o.customerTypes, ct],
     }));
   }
 
@@ -286,6 +301,21 @@ export default function OnboardingPage() {
             <Input label={L("Target pelanggan *", "Target customers *")} value={offering.targetCustomer}
               onChange={(e) => setOffering((o) => ({ ...o, targetCustomer: e.target.value }))}
               placeholder={L("mis. Keluarga muda usia 25-40 tahun", "e.g. Young families aged 25-40")} />
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium text-navy">{L("Target pelanggan kamu lebih ke * (boleh pilih lebih dari satu)", "Your target customers are mostly * (pick one or more)")}</span>
+              <div className="flex flex-col gap-2">
+                {CUSTOMER_TYPES.map((ct) => (
+                  <label key={ct.id} className="flex items-start gap-2 text-sm text-navy">
+                    <input type="checkbox" className="mt-0.5" checked={offering.customerTypes.includes(ct.id)}
+                      onChange={() => toggleCustomerType(ct.id)} />
+                    <span className="flex flex-col">
+                      <span>{lang === "en" ? ct.en : ct.label}</span>
+                      <span className="text-xs text-navy/50">{lang === "en" ? ct.hintEn : ct.hint}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
             <Textarea label={L("Masalah pelanggan yang bisnis ini pecahkan *", "The customer problem this business solves *")} value={offering.customerProblem}
               onChange={(e) => setOffering((o) => ({ ...o, customerProblem: e.target.value }))}
               placeholder={L("mis. Susah dapat jadwal periksa cepat tanpa antre lama", "e.g. Hard to get a quick appointment without long queues")} />

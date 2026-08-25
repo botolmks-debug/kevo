@@ -9,7 +9,8 @@ const FILL_NO_TEXT =
 const NO_DARK_BAND =
   "DILARANG KERAS membuat area gelap, bayangan rata, gradien polos, atau bidang kosong di bagian mana pun (atas, bawah, samping). " +
   "Seluruh frame dari atas ke bawah dan kiri ke kanan WAJIB terisi detail gambar nyata (objek, latar, tekstur). " +
-  "Teks overlay akan ditangani secara terpisah di luar gambar - JANGAN sisakan ruang untuk teks di mana pun.";
+  "Teks overlay akan ditangani secara terpisah di luar gambar - JANGAN sisakan ruang untuk teks di mana pun. " +
+  "Foto harus persegi tegas sampai ke setiap sudut — JANGAN pernah menambahkan sudut membulat, vignette, bingkai/border dekoratif, atau lekukan apapun di tepi/sudut manapun.";
 
 export function buildGeneralImagePrompt(scene: string, lang?: Lang): string {
   return `Foto editorial realistis berkualitas tinggi. Pencahayaan: INDOOR hangat dan lembut (warm tungsten/ambient), hindari cahaya harsh/terlalu terang - suasana cozy dan premium. Depth of field lembut, terasa nyata dan profesional - BUKAN ilustrasi atau kartun.

@@ -2,6 +2,11 @@ import { MAX_SELECTED_SOCIALS } from "@/lib/social/platforms";
 
 export type ContentGoal = "jualan" | "brand_awareness" | "edukasi" | "loyalitas_pelanggan";
 export type ToneOfVoice = "santai" | "profesional" | "hangat" | "lucu" | "formal";
+// b2c = jual ke konsumen langsung (pemakai akhir); b2b = jual ke sesama pebisnis
+// (reseller/toko/perusahaan lain). Bisa dicentang keduanya kalau target pelanggan
+// memang campuran. Dipakai AI supaya tidak salah bingkai konten (mis. framing
+// "gajian" tidak cocok utk pembeli B2B).
+export type CustomerType = "b2c" | "b2b";
 
 export type SocialEntry = { platformId: string; value: string };
 
@@ -23,6 +28,7 @@ export type BusinessProfile = {
     flagshipProduct: string;
     priceRange: string;
     targetCustomer: string;
+    customerTypes: CustomerType[];
     customerProblem: string;
   };
   positioning: {

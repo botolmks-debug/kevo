@@ -29,7 +29,8 @@ import {
   buildInteraksiContentPrompt,
   buildProdukContentPrompt,
   buildGabungContentPrompt,
-  hookInstruction,
+  themeInstruction,
+  themeImageNote,
 } from "@/lib/ai/autoContentPrompt";
 import { buildGeneralImagePrompt, buildInteraksiImagePrompt } from "@/lib/ai/autoImagePrompt";
 import { FONT_OPTIONS } from "@/lib/templates/fonts";
@@ -86,7 +87,10 @@ export async function GET() {
   return NextResponse.json({ items });
 }
 
-type RequestBody = { jenis: GeneratedContentJenis; ratio: AspectRatio; imageId?: string; imageIds?: string[]; language?: "id" | "en"; referenceDataUri?: string; hook?: boolean };
+const VALID_TEMA = ["hook", "edukasi", "produk", "promo"] as const;
+type ContentTema = (typeof VALID_TEMA)[number];
+
+type RequestBody = { jenis: GeneratedContentJenis; ratio: AspectRatio; imageId?: string; imageIds?: string[]; language?: "id" | "en"; referenceDataUri?: string; tema?: ContentTema };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -102,7 +106,7 @@ function isValidBody(body: unknown): body is RequestBody {
     if (!body.imageIds.every((x) => typeof x === "string")) return false;
   }
   if (body.referenceDataUri !== undefined && typeof body.referenceDataUri !== "string") return false;
-  if (body.hook !== undefined && typeof body.hook !== "boolean") return false;
+  if (body.tema !== undefined && !VALID_TEMA.includes(body.tema as ContentTema)) return false;
   return true;
 }
 
@@ -249,13 +253,13 @@ export async function POST(request: NextRequest) {
     body.language === "en" ? "" : buildMomenBlock(new Date(Date.now() + 7 * 60 * 60 * 1000));
 
   // ── Generate teks (headline + caption + fontId) ──────────────────────────
-  // Tombol 🔥 (hook): kalau ON, suntik instruksi WTF-hook lewat param `extra`.
-  // HANYA utk produk/gabung/general — Interaksi punya format sendiri (kuis/
-  // quote/tips) dan tidak ikut hook. Anti-repetisi & momen berlaku SEMUA
-  // jenis. Carousel punya alur generate terpisah.
-  const hookExtra = body.hook ? hookInstruction(body.language) : undefined;
+  // Tema (Hook/Edukasi/Penjelasan Produk/Promo): kalau dipilih, suntik
+  // instruksi gaya lewat param `extra`. HANYA utk produk/gabung/general —
+  // Interaksi punya format sendiri (kuis/quote/tips) dan tidak ikut tema.
+  // Anti-repetisi & momen berlaku SEMUA jenis. Carousel punya alur terpisah.
+  const temaExtra = body.tema ? themeInstruction(body.tema, body.language) : undefined;
   const sharedExtra = [antiRepetisiBlock, momenBlock].filter(Boolean).join("\n");
-  const extraAll = [hookExtra, sharedExtra].filter(Boolean).join("\n") || undefined;
+  const extraAll = [temaExtra, sharedExtra].filter(Boolean).join("\n") || undefined;
   const extraInteraksi = sharedExtra || undefined;
   const contentPrompt = (
     isGabung ? buildGabungContentPrompt(profile, sourceImages.map((s) => s.description ?? ""), body.language, extraAll)
@@ -318,6 +322,7 @@ export async function POST(request: NextRequest) {
     const headlineNote = content.onImageText?.trim()
       ? `\n\nCONTENT HEADLINE that will be overlaid on this image: "${content.onImageText.trim()}" — if it implies a usage moment, activity, or place, keep the scene consistent with it (never contradict it).`
       : "";
+    const temaImageNote = body.tema ? themeImageNote(body.tema, body.language) : "";
     const prompt = (
       sourceImage.type === "makanan" ? buildFoodPrompt(profile, produkDesc.trim() ? produkDesc : undefined, body.language)
       : sourceImage.type === "skincare" ? buildSkincarePrompt(profile, produkDesc.trim() ? produkDesc : undefined, body.language)
@@ -325,7 +330,7 @@ export async function POST(request: NextRequest) {
       : sourceImage.type === "suasana" ? buildRuanganPrompt(profile, sourceImage.size_hint ?? undefined, body.language)
       : sourceImage.type === "wajah" ? buildOrangPrompt(profile, body.language)
       : buildScenePrompt(profile, sourceImage.size_hint ?? undefined, body.language, produkDesc)
-    ) + headlineNote;
+    ) + headlineNote + temaImageNote;
     let result;
     if (body.referenceDataUri) {
       // Konten manual dengan referensi gaya: kirim foto produk + gambar referensi.
@@ -337,7 +342,7 @@ export async function POST(request: NextRequest) {
         referenceBase64: refMatch[2],
         referenceMime: refMatch[1],
         aspectRatio: body.ratio,
-        prompt: buildReferencePrompt(profile, produkDesc.trim() ? produkDesc : undefined, body.language),
+        prompt: buildReferencePrompt(profile, produkDesc.trim() ? produkDesc : undefined, body.language) + temaImageNote,
       });
     } else {
       result = await editImage({ imageBase64, mimeType, aspectRatio: body.ratio, prompt });
@@ -346,7 +351,10 @@ export async function POST(request: NextRequest) {
     imageDataUri = result.dataUri;
   } else {
     const scene = content.imageScene ?? "";
-    const prompt = body.jenis === "general" ? buildGeneralImagePrompt(scene, body.language) : buildInteraksiImagePrompt(scene, body.language);
+    const prompt =
+      body.jenis === "general"
+        ? buildGeneralImagePrompt(scene, body.language) + (body.tema ? themeImageNote(body.tema, body.language) : "")
+        : buildInteraksiImagePrompt(scene, body.language);
     const result = await generateImage({ prompt, aspectRatio: body.ratio });
     if (!result.ok) return fail(result.error, 502);
     imageDataUri = result.dataUri;

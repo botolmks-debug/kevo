@@ -10,8 +10,13 @@ const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 // padahal Gemini masih akan berhasil kalau ditunggu sedikit lagi.
 const REQUEST_TIMEOUT_MS = 45_000;
 // Konten auto-generate (headline+caption+scene sekaligus) butuh token lebih
-// banyak dari caption biasa (lib/ai/gemini.ts pakai 200).
-const MAX_OUTPUT_TOKENS = 1024;
+// banyak dari caption biasa (lib/ai/gemini.ts pakai 200). Dinaikkan dari 1024
+// -> 2048: kasus 5 slide + 4 scene (Video Cerita) kadang kepotong di 1024,
+// AI jadi "ngirit" jumlah slide (generate 4 padahal diminta 5) supaya muat.
+// Cap lebih tinggi TIDAK memaksa output lebih panjang untuk kasus lain (model
+// tetap berhenti sendiri kalau sudah selesai) — aman buat semua pemakai
+// generateJsonContent, bukan cuma Video Cerita.
+const MAX_OUTPUT_TOKENS = 2048;
 // Retry hanya untuk 503 "high demand": maks 3x percobaan ulang dengan jeda menaik.
 const RETRY_DELAYS_MS = [3_000, 6_000, 10_000];
 

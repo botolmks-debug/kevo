@@ -52,6 +52,21 @@ function todayStr(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// Tanggal dibuat, ditampilkan di bawah tiap thumbnail Edit Konten (WIB,
+// format ringkas "24 Agu 2026").
+function formatCreatedAt(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      timeZone: "Asia/Jakarta",
+    });
+  } catch {
+    return "-";
+  }
+}
+
 export default function KontenPage() {
   const [items, setItems] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -193,7 +208,7 @@ export default function KontenPage() {
           await document.fonts.ready;
           const pr = editTemplate.layouts[selected.ratio].canvas.width / 340;
           blob = await htmlToImage.toBlob(domRef.current, {
-            pixelRatio: pr, cacheBust: true,
+            pixelRatio: pr, cacheBust: true, backgroundColor: "#111",
             filter: (n) => !(n instanceof HTMLElement && n.dataset?.noexport),
           });
         } catch (err) {
@@ -443,6 +458,7 @@ export default function KontenPage() {
                   onClick={() => openEdit(item)}>
                   <img src={item.imageUrl} alt={item.onImageText}
                     className="aspect-square w-full rounded-xl border border-line object-cover" />
+                  <span className="text-[11px] text-navy/40">{formatCreatedAt(item.createdAt)}</span>
                   <span className="inline-flex w-fit rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                     {JENIS_LABEL[item.jenis]}
                   </span>

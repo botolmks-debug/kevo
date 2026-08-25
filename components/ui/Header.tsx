@@ -17,6 +17,7 @@ const navLinks: { href: string; key: string; match?: string }[] = [
   { href: "/gambar", key: "nav.gambar" },
   { href: "/konten", key: "nav.editKonten" },
   { href: "/jadwal", key: "nav.jadwal" },
+  { href: "/videocerita", key: "nav.videoCerita" },
 ];
 // Menu Dashboard DIHAPUS dari nav — klik logo Keposting sudah mengarah ke /dashboard.
 
