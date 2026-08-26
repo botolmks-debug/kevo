@@ -17,8 +17,15 @@ import type { Template, TemplateLayout } from "@/lib/templates/types";
 
 function buildLayout(height: number): TemplateLayout {
   const W = 1080;
-  const titleY = Math.round(height * 0.3);
-  const titleH = Math.round(height * 0.22);
+  // Posisi disesuaikan (revisi ke-2 dari contoh kotak penanda user) — zona
+  // judul & desc digeser LEBIH ke atas lagi supaya konsisten berada di area
+  // rak/latar kosong pada foto, sebelum area wajah/subjek utama biasanya
+  // muncul. Kotak ini cuma batas ukuran/posisi teks — TIDAK digambar
+  // (tanpa background/border), teksnya sendiri yang dibatasi di sini.
+  const titleY = Math.round(height * 0.08);
+  const titleH = Math.round(height * 0.15);
+  const descY = Math.round(height * 0.24);
+  const descH = Math.round(height * 0.07);
 
   return {
     canvas: { width: W, height },
@@ -43,7 +50,7 @@ function buildLayout(height: number): TemplateLayout {
         box: { x: 60, y: titleY, width: W - 120, height: titleH },
         fontFamily: "Poppins",
         maxFontSize: 80,
-        minFontSize: 36,
+        minFontSize: 28,
         maxLines: 3,
         align: "center",
         color: "#ffffff",
@@ -58,10 +65,10 @@ function buildLayout(height: number): TemplateLayout {
       {
         id: "desc-0",
         type: "text",
-        box: { x: 90, y: titleY + titleH + 24, width: W - 180, height: 150 },
+        box: { x: 90, y: descY, width: W - 180, height: descH },
         fontFamily: "Inter",
         maxFontSize: 34,
-        minFontSize: 20,
+        minFontSize: 18,
         maxLines: 3,
         align: "center",
         color: "#ffffff",
