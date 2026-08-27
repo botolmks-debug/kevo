@@ -114,6 +114,7 @@ SLIDE STRUCTURE (mandatory):
 
 ALSO WRITE ${sceneCount} SCENES (scenes[0..${sceneCount - 1}]) — one realistic photo scene per slide 1 through ${lastSlideNum - 1}:
 - Each scene must VISUALLY match that slide's text (scene 1 shows the problem/hook mood, later scenes show the journey/value).
+- CRITICAL — DO NOT show the actual product/software/service itself in ANY of these ${sceneCount} scenes: no app screens, no screenshots, no the product held/in-frame, no visible branding of the offering. These scenes are pure BUILD-UP — people, environment, emotion, everyday moments — with the product's presence only implied, never shown. The product's first appearance in the WHOLE carousel must be the payoff reveal in the fixed slide-${lastSlideNum} photo — if scenes 1-${sceneCount} already show it, that reveal is ruined.
 - The ${sceneCount} scenes must feel like ONE photo series: same world, same warm natural lighting, consistent style — and they should plausibly lead to the fixed slide-${lastSlideNum} photo.
 - Specific, not generic. NO text/logo in any scene.
 
@@ -143,6 +144,7 @@ STRUKTUR SLIDE (wajib):
 
 TULIS JUGA ${sceneCount} ADEGAN (scenes[0..${sceneCount - 1}]) — satu adegan foto realistis untuk slide 1 sampai ${lastSlideNum - 1}:
 - Tiap adegan harus SESUAI VISUAL dengan teks slide-nya (adegan 1 = suasana masalah/hook, adegan berikutnya = perjalanan/nilai).
+- PENTING — JANGAN tampilkan produk/software/layanan yang sebenarnya di ${sceneCount} adegan ini sama sekali: tanpa layar aplikasi, tanpa screenshot, tanpa produknya dipegang/terlihat di frame, tanpa branding produk yang terlihat. Adegan-adegan ini murni BUILD-UP — orang, suasana, emosi, momen keseharian — kehadiran produknya cukup TERSIRAT, jangan pernah ditampilkan. Kemunculan produk PERTAMA KALI di seluruh carousel harus jadi momen puncak di foto slide ${lastSlideNum} yang sudah ditentukan — kalau adegan 1-${sceneCount} sudah menampilkannya duluan, momen puncak itu jadi hilang efeknya.
 - Ke-${sceneCount} adegan harus terasa SATU seri foto: dunia yang sama, pencahayaan natural hangat yang sama, gaya konsisten — dan masuk akal berujung ke foto slide ${lastSlideNum} di atas.
 - Spesifik, bukan umum. TANPA teks/logo di semua adegan.
 
@@ -157,12 +159,26 @@ Balas HANYA JSON valid, tanpa fence markdown, persis:
 ${jsonSchema}`;
 }
 
-export function buildCarouselSceneImagePrompt(scene: string, lang?: Lang): string {
+export function buildCarouselSceneImagePrompt(scene: string, lang?: Lang, mainProduct?: string): string {
+  const guardId = mainProduct?.trim()
+    ? `\nJANGAN tampilkan "${mainProduct.trim()}" (produk/layanan utama bisnis ini) di foto ini — tanpa layar aplikasi, tanpa screenshot, tanpa produk itu dipegang/terlihat, tanpa branding-nya. Ini foto suasana/build-up saja, produknya baru muncul di slide penutup.`
+    : "";
+  const guardEn = mainProduct?.trim()
+    ? `\nDo NOT show "${mainProduct.trim()}" (this business's main product/service) in this photo — no app screen, no screenshot, no the product held/visible, no its branding. This is a pure mood/build-up photo; the product only appears in the closing slide.`
+    : "";
+  if (isEn(lang)) {
+    return `High-quality realistic editorial photo, warm natural lighting, soft depth of field — feels like a genuine camera photo, NOT an illustration/cartoon/3D render. Part of a carousel SERIES — style must be natural and consistent, fit alongside the business owner's own real product photo.
+Scene: ${scene}
+ONE cohesive full photo — NO split-screen, collage, diptych, side-by-side, or grid.
+Composition: content fills the ENTIRE frame edge-to-edge, no empty areas, no plain fields, no border.
+Do not add any writing, letters, numbers, watermark, logo, or branding anywhere in the image — all objects (packaging, signs, clothing, walls) must be clean, no text. Fake/gibberish text is STRICTLY FORBIDDEN.${guardEn}
+${localeSceneNote(lang)}`;
+  }
   return `Foto editorial realistis berkualitas tinggi, pencahayaan natural hangat, depth of field lembut — terasa seperti foto asli yang diambil kamera, BUKAN ilustrasi/kartun/render 3D. Gambar ini bagian dari SERI carousel — gayanya harus natural dan konsisten, cocok berdampingan dengan foto produk asli milik pemilik usaha.
 Adegan: ${scene}
 SATU foto utuh yang berkesinambungan — DILARANG split-screen, kolase, diptych, side-by-side, atau grid.
 Komposisi: isi gambar mengisi SELURUH bingkai (full-bleed) dari tepi ke tepi, tanpa area kosong, tanpa bidang polos, tanpa border.
-Jangan menambahkan tulisan, huruf, angka, watermark, logo, atau branding apa pun di dalam gambar — semua objek (kemasan, papan, baju, dinding) harus bersih tanpa teks. DILARANG KERAS teks palsu/gibberish.
+Jangan menambahkan tulisan, huruf, angka, watermark, logo, atau branding apa pun di dalam gambar — semua objek (kemasan, papan, baju, dinding) harus bersih tanpa teks. DILARANG KERAS teks palsu/gibberish.${guardId}
 ${localeSceneNote(lang)}`;
 }
 

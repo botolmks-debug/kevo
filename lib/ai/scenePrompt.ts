@@ -138,30 +138,36 @@ ${localeSceneNote(lang)}`;
  * layar desktop/smartphone. `display` = "desktop" | "smartphone".
  */
 export function buildSoftwarePrompt(profile: BusinessProfile, display?: string, lang?: Lang): string {
-  const device =
-    display === "desktop"
-      ? "a laptop or desktop monitor on a desk"
-      : "a smartphone held in the hand";
+  const isDesktop = display === "desktop";
+  const device = isDesktop ? "a laptop or desktop monitor on a desk" : "a smartphone held in the hand";
+  const cameraShot = isDesktop
+    ? `CAMERA ANGLE — over-the-shoulder shot: camera positioned BEHIND and slightly to the side of the person's shoulder, looking PAST them toward the laptop/monitor screen in front of them (the classic "looking over someone's shoulder at their screen" framing). We see the back/side of the person's head or shoulder in the foreground, and the screen clearly beyond it, angled toward us because that is genuinely where the person is looking. Do NOT shoot the person face-on from the front.`
+    : `CAMERA ANGLE — looking down at the phone in their hand(s): camera positioned in front of and slightly above the person, angled DOWN toward the smartphone they are holding at chest/waist height, the way you'd see it glancing at someone's phone next to them. The phone screen faces up toward the camera because that is genuinely how they are holding and looking at it. Hands and phone are in the lower part of the frame; the person's face may be softly visible above but is not the focus.`;
   return `This image is a SCREENSHOT of a software / app / website user interface — NOT a physical product. Create a photorealistic lifestyle advertising scene.
 
-GOAL: a real PERSON who fits the business's target customers is SHOWING this software to the viewer on ${device}, with the screen facing the camera.
+GOAL: a real PERSON who fits the business's target customers is genuinely using/looking at this software on ${device}, shot from an angle where their real screen is naturally visible to us.
+
+${cameraShot}
 
 SCREEN (most important):
-- The screenshot MUST sit INSIDE the device's actual physical screen area — it fills the screen bezel-to-bezel exactly, from edge to edge of the real display, matching the device's exact tilt, rotation, and perspective in the scene. NEVER float the screenshot as a flat rectangle disconnected from the device, and NEVER leave visible empty/blank screen space around it.
-- The device screen MUST face the CAMERA / viewer directly, so the screenshot is fully visible, UPRIGHT, and readable to us. NEVER mirror, flip, reverse, or rotate the screenshot. NEVER show the screen from the back or angled away from the viewer.
-- The person holds/tilts the device so its screen points TOWARD the camera (like showing it to us) — do NOT show them looking at a screen that faces away from us.
+- The screenshot may ONLY appear on the device's real, physical DISPLAY surface — the actual screen a user looks at. NEVER place it on a laptop's outer lid/back cover/logo panel, the back of a phone, a table, a wall, or any surface that is not a real screen. A laptop's closed lid or the backside of a phone has NO screen — never paint the screenshot there.
+- The screenshot fills the screen bezel-to-bezel exactly, from edge to edge of the real display, matching the device's exact tilt, rotation, and perspective from the CAMERA ANGLE above. NEVER float it as a flat rectangle disconnected from the device, and NEVER leave visible empty/blank screen space around it.
+- The screenshot must be fully visible, UPRIGHT, and readable to us. NEVER mirror, flip, reverse, or rotate it.
 - Display the given screenshot EXACTLY as-is on the screen — undistorted, sharp, correctly oriented (never backwards/mirrored), warped to match the screen's exact perspective (not a flat overlay).
-- Add realistic screen light: the screenshot's glow/reflection must match the scene's actual light source and direction (window light, room light, etc.) — the screen should look like it is genuinely emitting light onto nearby surfaces (hands, desk, face), not pasted on top of the photo.
+- Keep screen brightness NATURAL and MODEST — like a normal laptop/phone screen indoors, NOT glowing, NOT a bright light source, NOT overexposed. A subtle, dim reflection on the device bezel is enough; do not brighten the surrounding scene because of the screen.
 - Do NOT redraw, restyle, crop, mirror, or add/remove any text or element inside the screenshot UI. Keep the interface identical and readable.
 
+DEVICE PLACEMENT (avoid the top of the frame):
+- Keep the person and device in the LOWER TWO-THIRDS of the frame. Leave the TOP ~30% of the frame as background environment only (wall, shelf, window, blurred room) — NO device, screen, hands, or face up there. This space is reserved for a text headline our system overlays afterward; a bright screen or busy detail there will visually clash with that white text.
+
 PERSON & SCENE:
-- The person interacts naturally (looking at, pointing to, or holding the device), engaged and positive — like a happy user.
+- The person interacts naturally with the device — engaged and positive, like a happy user genuinely absorbed in what's on screen.
 - Person + device are the clear focus. Environment fits the target market (office, cafe, or home per context), warm professional lighting, shallow depth of field (soft background).
 - Remove any phone watermarks / date stamps / added overlay text if present.
 
 Business context: Industry ${profile.business.industry || "-"}, Location ${profile.business.location || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.
 
-Do NOT add any new text, logos, or branding to the scene. The scene MUST fill the ENTIRE frame edge-to-edge, top to bottom, with real scene content — absolutely NO plain, empty, dimmed, blurred-solid, or "calm" band anywhere, especially at the bottom. The photo must be a hard-edged rectangle reaching every corner — NEVER add a rounded corner, vignette, decorative frame/border shape, or any curved cutout at any edge or corner. NEVER reserve or clear space for text: our system overlays text separately later, and it handles readability itself. The bottom of the frame must be just as rich and detailed as the rest of the scene.
+Do NOT add any new text, logos, or branding to the scene. The scene MUST fill the ENTIRE frame edge-to-edge — hard-edged rectangle reaching every corner, NEVER a rounded corner, vignette, decorative frame/border, or curved cutout at any edge. The BOTTOM two-thirds must be rich, detailed, in-focus scene content (this is where our system does NOT reserve text space). The TOP ~30% is the one exception per DEVICE PLACEMENT above — keep it as plain background environment (not empty/blank-looking, just free of the device/screen/hands/face) so the text headline our system overlays there stays readable.
 
 ${localeSceneNote(lang)}`;
 }

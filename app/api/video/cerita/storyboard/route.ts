@@ -224,10 +224,14 @@ export async function POST(request: NextRequest) {
   const segments = narrationResult.data.segments;
 
   // ── 3) Gambar AI slide 1 s/d SLIDE_COUNT-1 — PARALEL (rasio feed) ────────
+  // mainProduct dikirim ke prompt gambar supaya AI tahu produk APA yang harus
+  // DIHINDARI di adegan-adegan awal (produknya baru boleh muncul di slide
+  // terakhir/foto asli user).
+  const mainProduct = profile.offering.flagshipProduct || profile.offering.mainProducts;
   const imageResults = await Promise.all(
     content.scenes.map((scene) =>
       generateImage({
-        prompt: buildCarouselSceneImagePrompt(scene, language),
+        prompt: buildCarouselSceneImagePrompt(scene, language, mainProduct),
         aspectRatio: "9:16",
       }),
     ),

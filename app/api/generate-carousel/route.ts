@@ -101,10 +101,13 @@ export async function POST(request: NextRequest) {
   const content = contentResult.data;
 
   // ── 2) Gambar AI slide 1-3 — PARALEL (rasio feed) ────────────────────────
+  // mainProduct dikirim ke prompt gambar supaya AI tahu produk APA yang harus
+  // DIHINDARI di adegan 1-3 (produknya baru boleh muncul di slide 4/penutup).
+  const mainProduct = profile.offering.flagshipProduct || profile.offering.mainProducts;
   const imageResults = await Promise.all(
     content.scenes.map((scene) =>
       generateImage({
-        prompt: buildCarouselSceneImagePrompt(scene, language),
+        prompt: buildCarouselSceneImagePrompt(scene, language, mainProduct),
         aspectRatio: "4:5", // carousel = potret 4:5 (1080x1350, ukuran feed IG terbaik)
       }),
     ),
