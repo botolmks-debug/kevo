@@ -18,12 +18,29 @@ const MOODS = [
   "Cahaya jendela sore yang cozy.",
   "Cahaya pagi lembut masuk dari samping.",
   "Pencahayaan warm tungsten.",
-  "Cahaya aksen dramatis lembut.",
+  "Cahaya aksen lembut yang natural, seperti sumber cahaya sungguhan di ruangan.",
   "Soft diffused light, bersih & minimalis.",
 ];
 
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
+}
+
+/**
+ * REALISM CEILING — dipasang di SEMUA prompt gambar produk di bawah.
+ * Tanpa ini, model gambar cenderung "over-deliver": pencahayaan terlalu
+ * dramatis, warna terlalu jenuh, komposisi terlalu sempurna/CGI — hasilnya
+ * "wow" tapi kehilangan rasa foto sungguhan (kejadian nyata: user
+ * membandingkan dengan foto produk profesional asli yang tetap terasa
+ * "bisa difoto orang beneran", bukan render). Instruksi lain di bawah (STEP
+ * 3/4/5 dst) TETAP fokus ke kualitas & pencahayaan bagus — ini cuma
+ * memasang BATAS ATAS supaya "bagus" tidak kebablasan jadi "berlebihan".
+ */
+function realismCeiling(lang?: Lang): string {
+  if (lang === "en") {
+    return `REALISM CEILING (do not overshoot): the result must look like a photo an actual skilled photographer could genuinely capture in one real shot with a real camera — polished and appetizing/appealing, yes, but still BELIEVABLE as a real photograph, not a CGI render, not a movie-poster hyper-dramatic look, not oversaturated/glowing/HDR-processed, not an "impossible" hero shot. If in doubt between "more dramatic" and "more believable", always choose believable.`;
+  }
+  return `BATAS REALISME (jangan berlebihan): hasilnya harus terasa seperti foto yang BENAR-BENAR bisa diambil fotografer sungguhan dalam satu jepretan dengan kamera asli — boleh bagus dan menggugah, tapi tetap harus TERASA SEPERTI FOTO ASLI, bukan render CGI, bukan gaya dramatis ala poster film, bukan oversaturated/glowing/olahan HDR berlebihan, bukan "hero shot" yang terasa mustahil. Kalau harus pilih antara "lebih dramatis" atau "lebih believable/masuk akal", selalu pilih yang believable.`;
 }
 
 // Sudut kamera KHUSUS food photography — dulu buildFoodPrompt cuma punya 2
@@ -44,7 +61,7 @@ export function buildScenePrompt(profile: BusinessProfile, sizeHint?: string, la
     sizeHint && sizeHint.trim()
       ? `\n\nPRODUCT SIZE (critical for scale): product is approximately "${sizeHint.trim()}". Render it at its REAL size relative to the scene. If LARGE (machine, fridge, furniture, vending machine): show it standing on the FLOOR as a big, dominant object in a real room; do NOT shrink it or place it like a small item on a table. If SMALL (packaging, bottle, food): a close-up on a table/surface is fine.`
       : "";
-  return `You are a world-class commercial product photographer. Create an award-winning advertising image.
+  return `You are an experienced commercial product photographer shooting with a real camera in a real location. Create a polished, appealing advertising photo — the kind a real photographer could genuinely capture, not a CGI render or an exaggerated "hero shot".
 
 STEP 1 - PRODUCT IDENTITY (preserve) vs LIGHTING (may be adjusted for naturalness):
 Preserve the product's IDENTITY exactly: its shape, proportions, materials, real colors, and ALL text/labels/prints/designs physically ON its surface (kept sharp and readable). This ALSO covers everything that makes up the product itself — its real CONTENTS and components: the food and its toppings/ingredients, the liquid and its colour, whatever is inside a container or visible through/inside the packaging. Keep all of that EXACTLY as photographed — same items, same colours, same textures, same arrangement. Do NOT redraw, restyle, reshape, add, or remove any part of the product or its contents.
@@ -94,6 +111,8 @@ FINAL CHECK: before finishing, ask yourself "does this look like ONE real photog
 
 Do NOT add any new text, logos, watermarks, or branding to the scene. Product is the HERO.${sizeNote}
 
+${realismCeiling(lang)}
+
 ${localeSceneNote(lang)}`;
 }
 
@@ -119,6 +138,8 @@ Business context (for mood only, do NOT add objects): ${sceneBusinessContext(pro
 
 Photorealistic (NOT illustration/cartoon). Do NOT add any text, logos, or watermarks. The scene MUST fill the ENTIRE frame edge-to-edge, top to bottom, with real scene content — absolutely NO plain, empty, dimmed, blurred-solid, or "calm" band anywhere, especially at the bottom. The photo must be a hard-edged rectangle reaching every corner — NEVER add a rounded corner, vignette, decorative frame/border shape, or any curved cutout at any edge or corner. NEVER reserve or clear space for text: our system overlays text separately later, and it handles readability itself. The bottom of the frame must be just as rich and detailed as the rest of the scene.
 
+${realismCeiling(lang)}
+
 ${localeSceneNote(lang)}`;
 }
 
@@ -142,6 +163,8 @@ PERSON IS THE HERO (center of attention):
 Business context: ${sceneBusinessContext(profile, lang)} Differentiator ${profile.positioning.differentiator || "-"}.
 
 Photorealistic, warm professional lighting. Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding. The scene MUST fill the ENTIRE frame edge-to-edge, top to bottom, with real scene content — absolutely NO plain, empty, dimmed, blurred-solid, or "calm" band anywhere, especially at the bottom. The photo must be a hard-edged rectangle reaching every corner — NEVER add a rounded corner, vignette, decorative frame/border shape, or any curved cutout at any edge or corner. NEVER reserve or clear space for text: our system overlays text separately later, and it handles readability itself. The bottom of the frame must be just as rich and detailed as the rest of the scene.
+
+${realismCeiling(lang)}
 
 ${localeSceneNote(lang)}`;
 }
@@ -183,6 +206,8 @@ Business context: ${sceneBusinessContext(profile, lang)}
 
 Do NOT add any new text, logos, or branding to the scene. The scene MUST fill the ENTIRE frame edge-to-edge — hard-edged rectangle reaching every corner, NEVER a rounded corner, vignette, decorative frame/border, or curved cutout at any edge. The BOTTOM two-thirds must be rich, detailed, in-focus scene content (this is where our system does NOT reserve text space). The TOP ~30% is the one exception per DEVICE PLACEMENT above — keep it as plain background environment (not empty/blank-looking, just free of the device/screen/hands/face) so the text headline our system overlays there stays readable.
 
+${realismCeiling(lang)}
+
 ${localeSceneNote(lang)}`;
 }
 
@@ -213,6 +238,8 @@ Business context: ${sceneBusinessContext(profile, lang)}
 Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding to the scene. The scene MUST fill the ENTIRE frame edge-to-edge, top to bottom, with real scene content — absolutely NO plain, empty, dimmed, blurred-solid, or "calm" band anywhere, especially at the bottom. The photo must be a hard-edged rectangle reaching every corner — NEVER add a rounded corner, vignette, decorative frame/border shape, or any curved cutout at any edge or corner. NEVER reserve or clear space for text: our system overlays text separately later, and it handles readability itself. The bottom of the frame must be just as rich and detailed as the rest of the scene.
 
 RESULT CHECK — both must be true: (1) the dish is pixel-recognizably the SAME dish as the input, and (2) the background, lighting, and composition are CLEARLY improved — returning the input unchanged or nearly unchanged is also a FAILED result.
+
+${realismCeiling(lang)}
 
 ${localeSceneNote(lang)}`;
 }
@@ -246,6 +273,8 @@ Business context: ${sceneBusinessContext(profile, lang)}${note}
 
 The scene MUST fill the ENTIRE frame edge-to-edge, top to bottom, with real scene content — absolutely NO plain, empty, dimmed, blurred-solid, or "calm" band anywhere, especially at the bottom. The photo must be a hard-edged rectangle reaching every corner — NEVER add a rounded corner, vignette, decorative frame/border shape, or any curved cutout at any edge or corner. NEVER reserve or clear space for text: our system overlays text separately later, and it handles readability itself. The bottom of the frame must be just as rich and detailed as the rest of the scene. The result must look like a real, high-quality photograph — clearly more polished than a phone snapshot.
 
+${realismCeiling(lang)}
+
 ${localeSceneNote(lang)}`;
 }
 
@@ -268,6 +297,8 @@ Business context: ${sceneBusinessContext(profile, lang)}${dishNote}
 Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding to the scene. The scene MUST fill the ENTIRE frame edge-to-edge, top to bottom, with real scene content — absolutely NO plain, empty, dimmed, blurred-solid, or "calm" band anywhere, especially at the bottom. The photo must be a hard-edged rectangle reaching every corner — NEVER add a rounded corner, vignette, decorative frame/border shape, or any curved cutout at any edge or corner. NEVER reserve or clear space for text: our system overlays text separately later, and it handles readability itself. The bottom of the frame must be just as rich and detailed as the rest of the scene.
 
 RESULT CHECK — both must be true: (1) the dish is pixel-recognizably the SAME dish as the input, and (2) the background, lighting, and composition are CLEARLY improved — returning the input unchanged or nearly unchanged is also a FAILED result.
+
+${realismCeiling(lang)}
 
 ${localeSceneNote(lang)}`;
 }
@@ -296,6 +327,8 @@ Business context: ${sceneBusinessContext(profile, lang)}
 
 Remove phone watermarks / date stamps / pre-existing overlay text. Do NOT add any new text, logos, or branding. The scene MUST fill the ENTIRE frame edge-to-edge, top to bottom, with real scene content — absolutely NO plain, empty, dimmed, blurred-solid, or "calm" band anywhere, especially at the bottom. The photo must be a hard-edged rectangle reaching every corner — NEVER add a rounded corner, vignette, decorative frame/border shape, or any curved cutout at any edge or corner. NEVER reserve or clear space for text: our system overlays text separately later, and it handles readability itself. The bottom of the frame must be just as rich and detailed as the rest of the scene.
 
+${realismCeiling(lang)}
+
 ${localeSceneNote(lang)}`;
 }
 /**
@@ -320,6 +353,8 @@ DO NOT (critical):
 - Do NOT turn it into a studio/stock look. It must remain the user's own photo, just better lit.
 
 Business context (for tasteful tone only, do NOT add props): ${profile.business.industry || "-"}, ${profile.offering.mainProducts || "-"}.
+
+${realismCeiling(lang)}
 
 ${localeSceneNote(lang)}`;
 }
