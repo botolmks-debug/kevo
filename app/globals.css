@@ -68,6 +68,12 @@
 @font-face { font-family: "Inter"; src: url("/fonts/Inter-Bold.ttf") format("truetype"); font-weight: 700; font-style: normal; }
 @font-face { font-family: "Oswald"; src: url("/fonts/Oswald-Regular.ttf") format("truetype"); font-weight: 400; font-style: normal; }
 @font-face { font-family: "Oswald"; src: url("/fonts/Oswald-Bold.ttf") format("truetype"); font-weight: 700; font-style: normal; }
+@font-face { font-family: "Raleway"; src: url("/fonts/Raleway-Bold.ttf") format("truetype"); font-weight: 400 700; }
+@font-face { font-family: "Barlow"; src: url("/fonts/Barlow-Bold.ttf") format("truetype"); font-weight: 400 700; }
+@font-face { font-family: "Nunito Sans"; src: url("/fonts/NunitoSans-Bold.ttf") format("truetype"); font-weight: 400 700; }
+/* "Helvetica" di picker font memakai Arimo (open-source, metric-compatible
+   dengan Helvetica/Arial) — Helvetica asli berlisensi, tidak boleh dibundel. */
+@font-face { font-family: "Arimo"; src: url("/fonts/Arimo-Bold.ttf") format("truetype"); font-weight: 400 700; }
 
 :root {
   --background: #fbf9f6;

@@ -60,6 +60,15 @@ export default function SupportWidget() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [showNotes, setShowNotes] = useState(false);
 
+  // ── State panel Saran & Masukan (tombol terpisah, di atas bubble chat) ──
+  const [fbOpen, setFbOpen] = useState(false);
+  const [fbName, setFbName] = useState("");
+  const [fbEmail, setFbEmail] = useState("");
+  const [fbMessage, setFbMessage] = useState("");
+  const [fbSending, setFbSending] = useState(false);
+  const [fbSent, setFbSent] = useState(false);
+  const [fbError, setFbError] = useState<string | null>(null);
+
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Widget hanya muncul kalau user login (endpoint ringan yang sama).
@@ -262,17 +271,122 @@ export default function SupportWidget() {
     await fetch(`/api/checkin?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => {});
   }
 
+  // ── Aksi panel Saran & Masukan ───────────────────────────────────────────
+  async function sendFeedback(e: FormEvent) {
+    e.preventDefault();
+    const message = fbMessage.trim();
+    if (!message || fbSending) return;
+    setFbSending(true);
+    setFbError(null);
+    try {
+      const res = await fetch("/api/support/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: fbName.trim() || undefined,
+          email: fbEmail.trim() || undefined,
+          message,
+          page: typeof window !== "undefined" ? window.location.pathname : undefined,
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(json?.error ?? "Gagal mengirim.");
+      setFbSent(true);
+      setFbName("");
+      setFbEmail("");
+      setFbMessage("");
+      setTimeout(() => {
+        setFbOpen(false);
+        setFbSent(false);
+      }, 2200);
+    } catch (err) {
+      setFbError(err instanceof Error ? err.message : "Gagal mengirim.");
+    } finally {
+      setFbSending(false);
+    }
+  }
+
   if (!visible) return null;
 
   const isCheckin = adminAllowed && tab === "checkin";
 
   return (
     <>
+      {/* Tombol Saran & Masukan — mengambang di ATAS bubble chat (bubble chat di posisi paling bawah/pojok) */}
+      {!open && !fbOpen && (
+        <button
+          onClick={() => setFbOpen(true)}
+          className="fixed bottom-5 right-5 z-50 h-10 px-4 rounded-full bg-white text-teal-700 border border-teal-200 shadow-lg hover:bg-teal-50 flex items-center gap-1.5 text-xs font-semibold"
+        >
+          <span aria-hidden>💡</span> Saran &amp; Masukan
+        </button>
+      )}
+
+      {/* Panel Saran & Masukan */}
+      {fbOpen && (
+        <div className="fixed bottom-5 right-5 z-50 w-[calc(100vw-2.5rem)] sm:w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-teal-600 text-white">
+            <h3 className="font-semibold text-sm">Saran &amp; Masukan</h3>
+            <button
+              onClick={() => {
+                setFbOpen(false);
+                setFbError(null);
+              }}
+              className="text-white hover:opacity-80 text-2xl leading-none px-1"
+              aria-label="Tutup"
+            >
+              ×
+            </button>
+          </div>
+          {fbSent ? (
+            <div className="p-4 text-sm text-teal-700">Terima kasih! Masukanmu sudah kami terima. 🙏</div>
+          ) : (
+            <form onSubmit={sendFeedback} className="p-4 space-y-2.5">
+              <input
+                type="text"
+                value={fbName}
+                onChange={(e) => setFbName(e.target.value)}
+                placeholder="Nama (opsional)"
+                disabled={fbSending}
+                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:border-teal-500 disabled:bg-slate-100"
+              />
+              <input
+                type="email"
+                value={fbEmail}
+                onChange={(e) => setFbEmail(e.target.value)}
+                placeholder="Email (opsional, biar bisa kami balas)"
+                disabled={fbSending}
+                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:border-teal-500 disabled:bg-slate-100"
+              />
+              <textarea
+                value={fbMessage}
+                onChange={(e) => setFbMessage(e.target.value)}
+                placeholder="Tulis saran atau masukanmu..."
+                disabled={fbSending}
+                rows={3}
+                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:border-teal-500 disabled:bg-slate-100 resize-none"
+              />
+              {fbError ? <p className="text-xs text-red-600">{fbError}</p> : null}
+              <button
+                type="submit"
+                disabled={fbSending || !fbMessage.trim()}
+                className="w-full rounded-xl bg-teal-600 text-white px-4 py-2 text-sm font-medium hover:bg-teal-700 disabled:opacity-50"
+              >
+                {fbSending ? "Mengirim..." : "Kirim"}
+              </button>
+            </form>
+          )}
+        </div>
+      )}
+
       {/* Floating button — SATU bubble untuk semuanya */}
       {!open && (
         <button
-          onClick={() => setOpen(true)}
-          className="fixed bottom-5 right-5 z-50 h-14 w-14 rounded-full bg-teal-600 text-white shadow-lg hover:bg-teal-700 flex items-center justify-center text-2xl"
+          onClick={() => {
+            setOpen(true);
+            setFbOpen(false);
+          }}
+          className="fixed bottom-24 right-5 z-50 h-14 w-14 rounded-full bg-teal-600 text-white shadow-lg hover:bg-teal-700 flex items-center justify-center text-2xl"
           aria-label="Buka chat"
         >
           💬
@@ -281,7 +395,7 @@ export default function SupportWidget() {
 
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-5 right-5 z-50 w-[calc(100vw-2.5rem)] sm:w-96 h-[70vh] sm:h-[500px] max-h-[600px] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
+        <div className="fixed bottom-24 right-5 z-50 w-[calc(100vw-2.5rem)] sm:w-96 h-[70vh] sm:h-[500px] max-h-[600px] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 bg-teal-600 text-white">
             <div>

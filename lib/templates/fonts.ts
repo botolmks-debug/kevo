@@ -22,8 +22,15 @@ export const FONT_OPTIONS: FontOption[] = [
   { id: "lobster",       label: "Lobster",         family: "Lobster",          fileName: "Lobster-Regular.ttf",       style: "script" },
   { id: "oswald",        label: "Oswald",          family: "Oswald",           fileName: "Oswald-Bold.ttf",           style: "display" },
 
+  { id: "raleway",       label: "Raleway",          family: "Raleway",          fileName: "Raleway-Bold.ttf",          style: "sans" },
+  { id: "barlow",        label: "Barlow",           family: "Barlow",           fileName: "Barlow-Bold.ttf",           style: "sans" },
+  { id: "nunito-sans",   label: "Nunito Sans",      family: "Nunito Sans",      fileName: "NunitoSans-Bold.ttf",       style: "sans" },
+  // Helvetica asli berbayar/berlisensi (tidak boleh dibundel-ulang) — dipakai
+  // Arimo (open-source, metric-compatible dengan Helvetica/Arial) sebagai
+  // pengganti drop-in yang tampilannya nyaris identik.
+  { id: "helvetica",     label: "Helvetica",        family: "Arimo",            fileName: "Arimo-Bold.ttf",            style: "sans" },
+
   // Uncomment setelah file .ttf-nya ada di public/fonts/:
-  // { id: "raleway",    label: "Raleway",          family: "Raleway",          fileName: "Raleway-Bold.ttf",          style: "sans" },
   // { id: "nunito",     label: "Nunito",           family: "Nunito",           fileName: "Nunito-Bold.ttf",           style: "sans" },
   // { id: "rubik",      label: "Rubik",            family: "Rubik",            fileName: "Rubik-Bold.ttf",            style: "sans" },
   // { id: "playfair",   label: "Playfair Display", family: "Playfair Display", fileName: "PlayfairDisplay-Bold.ttf",  style: "serif" },

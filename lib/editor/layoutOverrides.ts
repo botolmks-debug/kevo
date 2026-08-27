@@ -46,6 +46,9 @@ export type FreeItem = {
   fontWeight?: number;
   color?: string;
   align?: "left" | "center" | "right";
+  /** kind "text" — sama bentuk & perilaku dengan TextSlot.shadow/outline. */
+  shadow?: { blur: number; color: string; opacity: number } | null;
+  outline?: { width: number; color: string } | null;
   /** kind "image" — data URI (di-embed, aman untuk export). */
   src?: string;
 };

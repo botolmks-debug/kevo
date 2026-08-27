@@ -568,7 +568,7 @@ export default function VideoCeritaPage() {
             </div>
 
             <Button type="button" className="mt-4" disabled={ttsStatus === "loading"} onClick={handleTts}>
-              {ttsStatus === "loading" ? "Membuat suara..." : `4. Buat Suara — ElevenLabs (${segments.length || SLIDE_COUNT} token)`}
+              {ttsStatus === "loading" ? "Membuat suara..." : "4. Buat Suara — ElevenLabs (gratis, sudah termasuk 6 token di atas)"}
             </Button>
             {ttsError ? <p className="text-sm text-red-600 mt-2">{ttsError}</p> : null}
           </Card>

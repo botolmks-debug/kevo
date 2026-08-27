@@ -59,7 +59,12 @@ function textSlots(layout: TemplateLayout): TextSlot[] {
   return layout.slots.filter((s): s is TextSlot => s.type === "text");
 }
 
-function buildTextShadow(slot: TextSlot, scale: number): string | undefined {
+type ShadowOutlineShape = {
+  shadow?: { blur: number; color: string; opacity: number } | null;
+  outline?: { width: number; color: string } | null;
+};
+
+function buildTextShadow(slot: ShadowOutlineShape, scale: number): string | undefined {
   const parts: string[] = [];
   if (slot.outline && slot.outline.width > 0) {
     const w = slot.outline.width * scale, c = slot.outline.color;
@@ -615,10 +620,12 @@ export function DomEditor({
                     onKeyDown={(e)=>{ e.stopPropagation(); if ((e.key === "Enter" && !e.shiftKey) || e.key === "Escape") { e.preventDefault(); (e.target as HTMLDivElement).blur(); } }}
                     style={{ fontFamily:`"${it.fontFamily ?? "Inter"}"`, fontSize:(it.fontSize ?? 64)*scale, fontWeight:it.fontWeight ?? 800,
                       color:it.color ?? "#ffffff", lineHeight:1.1, whiteSpace:"pre-wrap", textAlign:it.align ?? "left", width:"100%",
+                      textShadow: buildTextShadow(it, scale),
                       outline:"none", cursor:"text", minWidth:20 }}>{it.text ?? ""}</div>
                 ) : (
                   <div style={{ fontFamily:`"${it.fontFamily ?? "Inter"}"`, fontSize:(it.fontSize ?? 64)*scale, fontWeight:it.fontWeight ?? 800,
-                    color:it.color ?? "#ffffff", lineHeight:1.1, whiteSpace:"pre-wrap", textAlign:it.align ?? "left", width:"100%", userSelect:"none" }}>{it.text ?? ""}</div>
+                    color:it.color ?? "#ffffff", lineHeight:1.1, whiteSpace:"pre-wrap", textAlign:it.align ?? "left", width:"100%",
+                    textShadow: buildTextShadow(it, scale), userSelect:"none" }}>{it.text ?? ""}</div>
                 )
               ) : (
                 <img src={it.src} alt="" draggable={false}
@@ -923,27 +930,65 @@ export function DomEditor({
 
         {/* kontrol teks tambahan */}
         {selItem && selItem.kind === "text" && (
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-            <input type="text" value={selItem.text ?? ""} onChange={(e)=>patchItem(selItem.id, { text: e.target.value })}
-              className="min-w-[140px] flex-1 rounded-lg border border-navy/15 px-2 py-1.5" placeholder="Teks…" />
-            <select value={selItem.fontFamily ?? "Inter"} onChange={(e)=>patchItem(selItem.id, { fontFamily: e.target.value })}
-              className="rounded-lg border border-navy/15 px-2 py-1.5">
-              {FONT_OPTIONS.map((f) => <option key={f.id} value={f.family}>{f.family}</option>)}
-            </select>
-            <input type="range" min={12} max={160} value={selItem.fontSize ?? 64} title="Ukuran font"
-              onChange={(e)=>patchItem(selItem.id, { fontSize: Number(e.target.value) })} />
-            <input type="color" value={selItem.color ?? "#ffffff"} onChange={(e)=>patchItem(selItem.id, { color: e.target.value })}
-              className="h-8 w-9 rounded border border-navy/15" />
-            <span className="flex items-center gap-1.5 text-xs">
-              <span className="font-medium text-navy/70">Rata:</span>
-              {(["left","center","right"] as const).map((a) => (
-                <button key={a} type="button" onClick={()=>patchItem(selItem.id, { align: a })}
-                  className={`rounded-lg border px-2.5 py-1 font-medium ${(selItem.align ?? "left")===a?"border-primary bg-primary/10 text-primary":"border-navy/15 text-navy/70"}`}>
-                  {a === "left" ? "Kiri" : a === "center" ? "Tengah" : "Kanan"}
-                </button>
-              ))}
-            </span>
-          </div>
+          <>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+              <input type="text" value={selItem.text ?? ""} onChange={(e)=>patchItem(selItem.id, { text: e.target.value })}
+                className="min-w-[140px] flex-1 rounded-lg border border-navy/15 px-2 py-1.5" placeholder="Teks…" />
+              <select value={selItem.fontFamily ?? "Inter"} onChange={(e)=>patchItem(selItem.id, { fontFamily: e.target.value })}
+                className="rounded-lg border border-navy/15 px-2 py-1.5">
+                {FONT_OPTIONS.map((f) => <option key={f.id} value={f.family}>{f.family}</option>)}
+              </select>
+              <input type="range" min={12} max={160} value={selItem.fontSize ?? 64} title="Ukuran font"
+                onChange={(e)=>patchItem(selItem.id, { fontSize: Number(e.target.value) })} />
+              <input type="color" value={selItem.color ?? "#ffffff"} onChange={(e)=>patchItem(selItem.id, { color: e.target.value })}
+                className="h-8 w-9 rounded border border-navy/15" />
+              <span className="flex items-center gap-1.5 text-xs">
+                <span className="font-medium text-navy/70">Rata:</span>
+                {(["left","center","right"] as const).map((a) => (
+                  <button key={a} type="button" onClick={()=>patchItem(selItem.id, { align: a })}
+                    className={`rounded-lg border px-2.5 py-1 font-medium ${(selItem.align ?? "left")===a?"border-primary bg-primary/10 text-primary":"border-navy/15 text-navy/70"}`}>
+                    {a === "left" ? "Kiri" : a === "center" ? "Tengah" : "Kanan"}
+                  </button>
+                ))}
+              </span>
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+              <label className="flex items-center gap-1.5 font-medium text-navy/70">
+                <input type="checkbox" checked={!!selItem.shadow}
+                  onChange={(e)=>patchItem(selItem.id, { shadow: e.target.checked ? { blur: 8, color: "#000000", opacity: 0.6 } : null })} />
+                Shadow
+              </label>
+              {selItem.shadow && (
+                <>
+                  <input type="range" min={0} max={40} value={selItem.shadow.blur} title="Blur"
+                    onChange={(e)=>patchItem(selItem.id, { shadow: { ...selItem.shadow!, blur: Number(e.target.value) } })} />
+                  <input type="color" value={selItem.shadow.color}
+                    onChange={(e)=>patchItem(selItem.id, { shadow: { ...selItem.shadow!, color: e.target.value } })}
+                    className="h-7 w-8 rounded border border-navy/15" />
+                  <input type="range" min={10} max={100} value={Math.round(selItem.shadow.opacity*100)} title="Opasitas"
+                    onChange={(e)=>patchItem(selItem.id, { shadow: { ...selItem.shadow!, opacity: Number(e.target.value)/100 } })} />
+                </>
+              )}
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+              <label className="flex items-center gap-1.5 font-medium text-navy/70">
+                <input type="checkbox" checked={!!(selItem.outline && selItem.outline.width > 0)}
+                  onChange={(e)=>patchItem(selItem.id, { outline: e.target.checked ? { width: 3, color: "#000000" } : null })} />
+                Outline
+              </label>
+              {selItem.outline && selItem.outline.width > 0 && (
+                <>
+                  <input type="range" min={1} max={10} value={selItem.outline.width} title="Tebal"
+                    onChange={(e)=>patchItem(selItem.id, { outline: { ...selItem.outline!, width: Number(e.target.value) } })} />
+                  <input type="color" value={selItem.outline.color}
+                    onChange={(e)=>patchItem(selItem.id, { outline: { ...selItem.outline!, color: e.target.value } })}
+                    className="h-7 w-8 rounded border border-navy/15" />
+                </>
+              )}
+            </div>
+          </>
         )}
       </div>
     </div>
