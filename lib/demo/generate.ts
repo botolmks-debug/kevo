@@ -46,6 +46,30 @@ export type DemoGenResult = {
 };
 
 /**
+ * KHUSUS DEMO /coba — kalimat tambahan SPESIFIK KATEGORI supaya judul
+ * "TENANG" di bawah tidak jatuh jadi terlalu generik/abstrak (kejadian nyata:
+ * foto gelato dapat judul "Warna cerah untuk harimu yang lebih percaya diri"
+ * — kedengaran kayak tagline skincare, bukan makanan). Profil demo kosong
+ * (synthProfile) jadi AI butuh pancingan rasa per kategori secara eksplisit.
+ */
+function demoCategoryTitleNote(businessType: string): string {
+  const t = businessType.toLowerCase();
+  if (t.includes("f&b") || t.includes("kuliner") || t.includes("makan")) {
+    return `\nKHUSUS KATEGORI MAKANAN/MINUMAN: judul WAJIB membangkitkan selera — sebut rasa, tekstur, aroma, kesegaran, atau momen menikmati (mis. manis-gurih, lumer, dingin-segar, renyah) berdasarkan yang TERLIHAT di foto. DILARANG kalimat abstrak yang bisa dipakai untuk produk apa pun (mis. soal "percaya diri", "gaya hidup", "penampilan") — itu bukan bahasa makanan.`;
+  }
+  if (t.includes("skincare") || t.includes("kecantikan")) {
+    return `\nKHUSUS KATEGORI SKINCARE/KECANTIKAN: judul boleh menyentuh rasa kulit/tampilan (glowing, lembap, halus, percaya diri) — TAPI tetap harus terasa spesifik ke produk yang terlihat di foto, bukan kalimat motivasi umum yang lepas dari produknya.`;
+  }
+  if (t.includes("fashion")) {
+    return `\nKHUSUS KATEGORI FASHION: judul boleh soal gaya/penampilan/rasa nyaman dipakai — TAPI tetap spesifik ke item yang terlihat di foto (warna, bahan, model), bukan kalimat motivasi generik.`;
+  }
+  if (t.includes("jasa")) {
+    return `\nKHUSUS KATEGORI JASA: judul soal kemudahan, kepercayaan, atau hasil nyata yang dirasakan pelanggan — spesifik ke layanan yang ditawarkan, bukan kalimat motivasi umum.`;
+  }
+  return "";
+}
+
+/**
  * KHUSUS DEMO /coba — gaya judul TENANG.
  * Pengunjung demo baru pertama kenal produk; judul hook/provokatif
  * ("X vs Y", pertanyaan menantang, klaim kontroversial) terasa aneh
@@ -105,11 +129,17 @@ export async function generateDemoContent(
     imageBase64,
     mimeType: input.mimeType,
     lang: LANG,
+    industry: input.businessType,
   });
   if (descRes.ok) productDesc = descRes.description;
 
   // 1+2) Teks & gambar paralel
-  const contentPrompt = buildProdukContentPrompt(profile, productDesc, LANG, DEMO_CALM_TITLE_NOTE);
+  const contentPrompt = buildProdukContentPrompt(
+    profile,
+    productDesc,
+    LANG,
+    DEMO_CALM_TITLE_NOTE + demoCategoryTitleNote(input.businessType),
+  );
   const [contentRes, imgRes] = await Promise.all([
     generateJsonContent(contentPrompt),
     editImage({

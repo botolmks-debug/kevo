@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
         if (!error && data) {
           imageMime = (data as Blob).type || "image/jpeg";
           imageBase64 = Buffer.from(await data.arrayBuffer()).toString("base64");
-          const seen = await describeProductImage({ imageBase64, mimeType: imageMime, lang: language });
+          const seen = await describeProductImage({ imageBase64, mimeType: imageMime, lang: language, industry: profile.business.industry });
           if (seen.ok && seen.description.trim()) imageDescription = seen.description.trim();
         }
       }

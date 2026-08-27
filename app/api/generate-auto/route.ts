@@ -211,6 +211,7 @@ export async function POST(request: NextRequest) {
           imageBase64: produkBase64,
           mimeType: produkMime,
           lang: body.language === "en" ? "en" : "id",
+          industry: profile.business.industry,
         });
         if (seen.ok && seen.description.trim()) produkDesc = seen.description.trim();
       }
