@@ -285,18 +285,20 @@ export function buildFoodPrompt(profile: BusinessProfile, description?: string, 
 
 KEEP (the dish identity) — HARDEST RULE, never break it: the actual food/drink itself must stay EXACTLY the same dish — same ingredients, same toppings and their placement, same portions, same bowl/plate/packaging, same real colors. Do NOT swap it for a different or "nicer" version of the dish, do NOT add/remove/rearrange ingredients or garnish, do NOT change the container. If you are ever unsure whether something belongs to the dish, KEEP it unchanged. Preserve any packaging/label text on the product. A result showing different food than the input is a FAILED result.
 
-TRANSFORM (make it look professionally shot):
+NO DECORATIVE PROPS RULE (zero exceptions, overrides anything below that could be misread as permission): do NOT add ANY item that was not already visibly on/around the dish in the original photo — no fresh herbs/sprigs, no flowers/petals, no nuts, no gold leaf/gold flakes, no wax seals/charms/medallions, no ribbons, no extra fruit slices, no scattered decorative crumbs, no props of any kind. "Making it look professional" means better BACKGROUND, LIGHTING, and CAMERA WORK on the EXACT existing dish — it never means adding styling props. If the original already shows a garnish (e.g. a mint leaf already on the plate), you may keep that exact one, but never add more or new ones.
+
+TRANSFORM (make it look professionally shot — background/light/camera ONLY, nothing physically added to the dish):
 - Background: REPLACE or clean away any distracting, messy, or cluttered surroundings (bottles, signage, random objects, busy kitchen/warung background) with a clean, tasteful food-photography setting — rustic wood, marble, or a soft neutral surface with a gently blurred, cohesive backdrop. The background should never compete with the food.
 - Lighting: studio-quality, warm and directional, that makes the food pop with appetizing highlights and soft shadows.
 - Composition: ${pick(FOOD_ANGLES)} Sharp focus on the food with shallow depth of field.
-- Freshness cues ONLY where natural: gentle steam for hot food, condensation for cold drinks, glossy sauce sheen, fresh garnish — subtle and realistic, never overdone.
-- Enhance texture, freshness, and colour richness so it looks freshly served and irresistible.
+- Freshness cues ONLY if they don't add any physical object: gentle steam for hot food, condensation on a cold glass, a natural glossy sheen already present on the food's own surface — subtle and realistic, never overdone. These are lighting/atmosphere effects, NOT added ingredients or props.
+- Enhance texture, freshness, and colour richness of the EXISTING food so it looks freshly served and irresistible — without changing what it physically contains.
 
 Business context: ${sceneBusinessContext(profile, lang)}${dishNote}
 
 Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding to the scene. The scene MUST fill the ENTIRE frame edge-to-edge, top to bottom, with real scene content — absolutely NO plain, empty, dimmed, blurred-solid, or "calm" band anywhere, especially at the bottom. The photo must be a hard-edged rectangle reaching every corner — NEVER add a rounded corner, vignette, decorative frame/border shape, or any curved cutout at any edge or corner. NEVER reserve or clear space for text: our system overlays text separately later, and it handles readability itself. The bottom of the frame must be just as rich and detailed as the rest of the scene.
 
-RESULT CHECK — both must be true: (1) the dish is pixel-recognizably the SAME dish as the input, and (2) the background, lighting, and composition are CLEARLY improved — returning the input unchanged or nearly unchanged is also a FAILED result.
+RESULT CHECK — ALL must be true: (1) the dish is pixel-recognizably the SAME dish as the input, with the SAME items on/in it — nothing added, nothing removed; (2) no new prop, garnish, flower, nut, gold leaf, seal, or decoration appears anywhere that wasn't in the original; (3) the background, lighting, and composition are CLEARLY improved. Returning the input unchanged or nearly unchanged is ALSO a FAILED result — the fix is better background/light/camera, never added objects.
 
 ${realismCeiling(lang)}
 
