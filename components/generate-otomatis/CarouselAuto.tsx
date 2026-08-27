@@ -90,6 +90,9 @@ function compositeOverlay(img: HTMLImageElement, hex: string, opacityPct: number
  * Fitur Carousel di dalam tab Generate Otomatis (bukan halaman sendiri):
  * user pilih SATU fotonya -> jadi slide 4 (penutup). Slide 1-3 gambarnya
  * digenerate AI mengikuti alur teks tiap slide, mengarah ke foto user.
+ * Foto user sendiri (slide 4) ikut diedit server-side supaya lighting/gaya
+ * seirama dengan slide 1-3 (produk dijaga 100%, lihat lastSlideImageDataUri) —
+ * fallback ke foto asli tanpa diedit kalau prosesnya gagal.
  */
 export function CarouselAuto({
   businessProfile,
@@ -165,7 +168,7 @@ export function CarouselAuto({
       const res = await fetch("/api/generate-carousel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageDescription: picked.description ?? "", theme, language: getLang() }),
+        body: JSON.stringify({ imageId: picked.id, imageDescription: picked.description ?? "", theme, language: getLang() }),
       });
       const d = await res.json().catch(() => null);
       if (!res.ok) throw new Error(d?.error ?? "Gagal generate carousel.");
@@ -178,8 +181,10 @@ export function CarouselAuto({
 
       setSlides(gotSlides);
       setCaption((d?.caption as string) ?? "");
-      // Slide 1-3 = gambar AI; slide 4 = foto pilihan user.
-      setRawSrcs([...aiImages, picked.publicUrl]);
+      // Slide 1-3 = gambar AI; slide 4 = foto pilihan user, diedit AI biar
+      // seirama gaya dengan slide 1-3 (fallback ke foto asli kalau edit gagal).
+      const slide4 = typeof d?.lastSlideImageDataUri === "string" ? d.lastSlideImageDataUri : picked.publicUrl;
+      setRawSrcs([...aiImages, slide4]);
       // Reset state editor untuk carousel baru.
       setOverridesPerSlide(Array.from({ length: SLIDE_COUNT }, () => ({ slots: {} })));
       setValuesPerSlide(Array.from({ length: SLIDE_COUNT }, () => ({})));

@@ -178,7 +178,10 @@ ${localeSceneNote(lang)}`;
 export function buildCarouselSlide4EditPrompt(
   lastSlide: { title: string; desc: string },
   lang?: Lang,
+  ratio: "9:16" | "4:5" = "9:16",
 ): string {
+  const ratioLabelEn = ratio === "4:5" ? "portrait 4:5" : "portrait 9:16 (tall/full-screen)";
+  const ratioLabelId = ratio === "4:5" ? "potret 4:5" : "potret 9:16 (tinggi penuh layar)";
   if (isEn(lang)) {
     return `You are a world-class commercial product photographer.
 
@@ -190,7 +193,7 @@ STEP 2 - LIGHTING & STYLE CONTINUITY (from IMAGE 2): re-render the product's lig
 STEP 3 - This is the FINAL "payoff" slide of the story: title "${lastSlide.title}", text "${lastSlide.desc}". Compose the scene so it naturally supports this closing moment.
 STEP 4 - Remove any overlaid text, watermark, phone brand stamp, date stamp, or logo that is NOT physically printed on the product itself.
 
-Output: ONE full-bleed photorealistic photo, portrait 9:16 (tall/full-screen), edge-to-edge, no added text/logo/watermark, no collage/split-screen.`;
+Output: ONE full-bleed photorealistic photo, ${ratioLabelEn}, edge-to-edge, no added text/logo/watermark, no collage/split-screen.`;
   }
 
   return `Kamu adalah fotografer produk komersial kelas dunia.
@@ -203,5 +206,5 @@ LANGKAH 2 - KESINAMBUNGAN LIGHTING & GAYA (dari IMAGE 2): render ulang lighting,
 LANGKAH 3 - Ini slide PENUTUP/puncak cerita: judul "${lastSlide.title}", teks "${lastSlide.desc}". Susun adegannya supaya natural mendukung momen penutup ini.
 LANGKAH 4 - Hapus teks overlay, watermark, stempel merek HP, stempel tanggal, atau logo apa pun yang BUKAN tercetak fisik di produk itu sendiri.
 
-Hasil: SATU foto utuh fotorealistis, potret 9:16 (tinggi penuh layar), penuh sampai tepi (full-bleed), TANPA tambahan teks/logo/watermark, TANPA kolase/split-screen.`;
+Hasil: SATU foto utuh fotorealistis, ${ratioLabelId}, penuh sampai tepi (full-bleed), TANPA tambahan teks/logo/watermark, TANPA kolase/split-screen.`;
 }
