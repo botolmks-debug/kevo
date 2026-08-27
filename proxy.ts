@@ -80,8 +80,15 @@ export async function proxy(request: NextRequest) {
           url.pathname = "/maintenance";
           return NextResponse.redirect(url);
         }
-        // Di halaman login/signup saat maintenance → arahkan ke maintenance
-        if (path === "/login" || path === "/signup") {
+        // Signup saat maintenance → arahkan ke maintenance (akun baru tidak ada
+        // gunanya kalau seluruh app di-nonaktifkan). /login SENGAJA TIDAK
+        // diblokir di sini — kalau /login ikut dipaksa ke /maintenance, admin
+        // sendiri jadi tidak bisa login untuk MEMATIKAN maintenance lagi
+        // (belum ada sesi -> isAdmin(user?.email) di atas selalu false).
+        // Non-admin yang nekat login tetap aman: begitu mereka pindah ke
+        // halaman lain (mis. /dashboard), blok "Kalau sudah login" di atas
+        // otomatis logout + redirect mereka ke /maintenance.
+        if (path === "/signup") {
           const url = request.nextUrl.clone();
           url.pathname = "/maintenance";
           return NextResponse.redirect(url);
