@@ -147,9 +147,11 @@ export function buildSoftwarePrompt(profile: BusinessProfile, display?: string, 
 GOAL: a real PERSON who fits the business's target customers is SHOWING this software to the viewer on ${device}, with the screen facing the camera.
 
 SCREEN (most important):
+- The screenshot MUST sit INSIDE the device's actual physical screen area — it fills the screen bezel-to-bezel exactly, from edge to edge of the real display, matching the device's exact tilt, rotation, and perspective in the scene. NEVER float the screenshot as a flat rectangle disconnected from the device, and NEVER leave visible empty/blank screen space around it.
 - The device screen MUST face the CAMERA / viewer directly, so the screenshot is fully visible, UPRIGHT, and readable to us. NEVER mirror, flip, reverse, or rotate the screenshot. NEVER show the screen from the back or angled away from the viewer.
 - The person holds/tilts the device so its screen points TOWARD the camera (like showing it to us) — do NOT show them looking at a screen that faces away from us.
-- Display the given screenshot EXACTLY as-is on the screen — undistorted, sharp, correctly oriented (never backwards/mirrored), with correct perspective and a subtle screen glow/reflection.
+- Display the given screenshot EXACTLY as-is on the screen — undistorted, sharp, correctly oriented (never backwards/mirrored), warped to match the screen's exact perspective (not a flat overlay).
+- Add realistic screen light: the screenshot's glow/reflection must match the scene's actual light source and direction (window light, room light, etc.) — the screen should look like it is genuinely emitting light onto nearby surfaces (hands, desk, face), not pasted on top of the photo.
 - Do NOT redraw, restyle, crop, mirror, or add/remove any text or element inside the screenshot UI. Keep the interface identical and readable.
 
 PERSON & SCENE:
