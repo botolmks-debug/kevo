@@ -1,5 +1,6 @@
 import type { BusinessProfile } from "@/lib/onboarding/businessProfile";
 import { localeSceneNote, type Lang } from "@/lib/ai/lang";
+import { sceneBusinessContext } from "@/lib/ai/profileContext";
 
 const ANGLES = [
   "Eye-level, produk di tengah frame.",
@@ -24,6 +25,19 @@ const MOODS = [
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
+
+// Sudut kamera KHUSUS food photography — dulu buildFoodPrompt cuma punya 2
+// pilihan tetap ("45 derajat, atau top-down"), jadi hasil foto makanan
+// terasa berulang dari sesi ke sesi. Sekarang di-random tiap generate,
+// pola sama dengan ANGLES di atas untuk kategori produk umum.
+const FOOD_ANGLES = [
+  "Top-down flat-lay, langsung dari atas.",
+  "45 derajat, sudut klasik food photography.",
+  "Sejajar meja (eye-level), fokus ke lapisan/tekstur samping.",
+  "Close-up makro pada tekstur (uap, lelehan, taburan, gigitan pertama).",
+  "Sedikit dari samping mengikuti arah tuang/sendok (menangkap gerakan/momen).",
+  "Dari sudut rendah dekat permukaan meja, produk tampak menjulang menggoda.",
+];
 
 export function buildScenePrompt(profile: BusinessProfile, sizeHint?: string, lang?: Lang, productDescription?: string): string {
   const sizeNote =
@@ -101,7 +115,7 @@ ONLY IMPROVE (do not change content):
 - Realism & clarity: clean, sharp, photorealistic result — as if professionally reshot. Natural, appealing colors and white balance.
 - Remove ONLY phone watermarks / date stamps / added overlay text if present (e.g. "REDMI Note 13", date/time). Do NOT remove real objects.
 
-Business context (for mood only, do NOT add objects): Industry ${profile.business.industry || "-"}, Location ${profile.business.location || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.${sizeNote}
+Business context (for mood only, do NOT add objects): ${sceneBusinessContext(profile, lang)}${sizeNote}
 
 Photorealistic (NOT illustration/cartoon). Do NOT add any text, logos, or watermarks. The scene MUST fill the ENTIRE frame edge-to-edge, top to bottom, with real scene content — absolutely NO plain, empty, dimmed, blurred-solid, or "calm" band anywhere, especially at the bottom. The photo must be a hard-edged rectangle reaching every corner — NEVER add a rounded corner, vignette, decorative frame/border shape, or any curved cutout at any edge or corner. NEVER reserve or clear space for text: our system overlays text separately later, and it handles readability itself. The bottom of the frame must be just as rich and detailed as the rest of the scene.
 
@@ -125,7 +139,7 @@ INTEGRATE NATURALLY:
 PERSON IS THE HERO (center of attention):
 - The person is clearly the focus: well-lit, sharp, in the foreground. The environment is a supportive background with shallow depth of field (soft bokeh). The eye should go to the person first.
 
-Business context: Industry ${profile.business.industry || "-"}, Location ${profile.business.location || "-"}, Differentiator ${profile.positioning.differentiator || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.
+Business context: ${sceneBusinessContext(profile, lang)} Differentiator ${profile.positioning.differentiator || "-"}.
 
 Photorealistic, warm professional lighting. Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding. The scene MUST fill the ENTIRE frame edge-to-edge, top to bottom, with real scene content — absolutely NO plain, empty, dimmed, blurred-solid, or "calm" band anywhere, especially at the bottom. The photo must be a hard-edged rectangle reaching every corner — NEVER add a rounded corner, vignette, decorative frame/border shape, or any curved cutout at any edge or corner. NEVER reserve or clear space for text: our system overlays text separately later, and it handles readability itself. The bottom of the frame must be just as rich and detailed as the rest of the scene.
 
@@ -165,7 +179,7 @@ PERSON & SCENE:
 - Person + device are the clear focus. Environment fits the target market (office, cafe, or home per context), warm professional lighting, shallow depth of field (soft background).
 - Remove any phone watermarks / date stamps / added overlay text if present.
 
-Business context: Industry ${profile.business.industry || "-"}, Location ${profile.business.location || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.
+Business context: ${sceneBusinessContext(profile, lang)}
 
 Do NOT add any new text, logos, or branding to the scene. The scene MUST fill the ENTIRE frame edge-to-edge — hard-edged rectangle reaching every corner, NEVER a rounded corner, vignette, decorative frame/border, or curved cutout at any edge. The BOTTOM two-thirds must be rich, detailed, in-focus scene content (this is where our system does NOT reserve text space). The TOP ~30% is the one exception per DEVICE PLACEMENT above — keep it as plain background environment (not empty/blank-looking, just free of the device/screen/hands/face) so the text headline our system overlays there stays readable.
 
@@ -194,7 +208,7 @@ PRODUCT PRESERVATION: keep the product EXACTLY as photographed — its shape, co
 
 STYLE: clean, minimal, premium, spa-like and hygienic. Soft diffused lighting, elegant neutral or soft pastel tones, dewy fresh feel on skin, shallow depth of field. Looks like a luxury cosmetic commercial. SURFACE: use a MATTE or softly-lit surface (fabric, soft-focus marble, wood, or blurred background) — do NOT use a glossy/mirror-like surface that would visibly reflect the product or its text upside-down; reflections of text/labels tend to render as distorted, garbled duplicates and must be avoided entirely.${usageNote}
 
-Business context: Industry ${profile.business.industry || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.
+Business context: ${sceneBusinessContext(profile, lang)}
 
 Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding to the scene. The scene MUST fill the ENTIRE frame edge-to-edge, top to bottom, with real scene content — absolutely NO plain, empty, dimmed, blurred-solid, or "calm" band anywhere, especially at the bottom. The photo must be a hard-edged rectangle reaching every corner — NEVER add a rounded corner, vignette, decorative frame/border shape, or any curved cutout at any edge or corner. NEVER reserve or clear space for text: our system overlays text separately later, and it handles readability itself. The bottom of the frame must be just as rich and detailed as the rest of the scene.
 
@@ -228,7 +242,7 @@ If the reference has a bold hero headline in that position, LEAVE THAT AREA EMPT
 FINAL SANITY CHECK (before outputting):
 Scan the image top to bottom. Is there ANY text visible that is NOT physically printed on the product's body? Titles, headlines, brand names as overlays, taglines, phone/date stamps, watermarks — anything? If yes: REMOVE it. Output only the product with its own printed label + the new scene, with ZERO additional text overlays.
 
-Business context: Industry ${profile.business.industry || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.${note}
+Business context: ${sceneBusinessContext(profile, lang)}${note}
 
 The scene MUST fill the ENTIRE frame edge-to-edge, top to bottom, with real scene content — absolutely NO plain, empty, dimmed, blurred-solid, or "calm" band anywhere, especially at the bottom. The photo must be a hard-edged rectangle reaching every corner — NEVER add a rounded corner, vignette, decorative frame/border shape, or any curved cutout at any edge or corner. NEVER reserve or clear space for text: our system overlays text separately later, and it handles readability itself. The bottom of the frame must be just as rich and detailed as the rest of the scene. The result must look like a real, high-quality photograph — clearly more polished than a phone snapshot.
 
@@ -245,11 +259,11 @@ KEEP (the dish identity) — HARDEST RULE, never break it: the actual food/drink
 TRANSFORM (make it look professionally shot):
 - Background: REPLACE or clean away any distracting, messy, or cluttered surroundings (bottles, signage, random objects, busy kitchen/warung background) with a clean, tasteful food-photography setting — rustic wood, marble, or a soft neutral surface with a gently blurred, cohesive backdrop. The background should never compete with the food.
 - Lighting: studio-quality, warm and directional, that makes the food pop with appetizing highlights and soft shadows.
-- Composition: close-up, appetizing angle (about 45 degrees, or top-down if it suits the dish), sharp focus on the food with shallow depth of field.
+- Composition: ${pick(FOOD_ANGLES)} Sharp focus on the food with shallow depth of field.
 - Freshness cues ONLY where natural: gentle steam for hot food, condensation for cold drinks, glossy sauce sheen, fresh garnish — subtle and realistic, never overdone.
 - Enhance texture, freshness, and colour richness so it looks freshly served and irresistible.
 
-Business context: Industry ${profile.business.industry || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.${dishNote}
+Business context: ${sceneBusinessContext(profile, lang)}${dishNote}
 
 Remove phone watermarks / date stamps / added overlay text if present. Do NOT add any new text, logos, or branding to the scene. The scene MUST fill the ENTIRE frame edge-to-edge, top to bottom, with real scene content — absolutely NO plain, empty, dimmed, blurred-solid, or "calm" band anywhere, especially at the bottom. The photo must be a hard-edged rectangle reaching every corner — NEVER add a rounded corner, vignette, decorative frame/border shape, or any curved cutout at any edge or corner. NEVER reserve or clear space for text: our system overlays text separately later, and it handles readability itself. The bottom of the frame must be just as rich and detailed as the rest of the scene.
 
@@ -278,7 +292,7 @@ TASK — combine them into ONE cohesive image:
 Products in the photos (in order):
 ${list}
 
-Business context: Industry ${profile.business.industry || "-"}, Target customers ${profile.offering.targetCustomer || "-"}.
+Business context: ${sceneBusinessContext(profile, lang)}
 
 Remove phone watermarks / date stamps / pre-existing overlay text. Do NOT add any new text, logos, or branding. The scene MUST fill the ENTIRE frame edge-to-edge, top to bottom, with real scene content — absolutely NO plain, empty, dimmed, blurred-solid, or "calm" band anywhere, especially at the bottom. The photo must be a hard-edged rectangle reaching every corner — NEVER add a rounded corner, vignette, decorative frame/border shape, or any curved cutout at any edge or corner. NEVER reserve or clear space for text: our system overlays text separately later, and it handles readability itself. The bottom of the frame must be just as rich and detailed as the rest of the scene.
 

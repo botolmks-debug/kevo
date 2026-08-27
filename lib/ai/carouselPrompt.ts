@@ -9,10 +9,17 @@
  */
 import type { BusinessProfile } from "@/lib/onboarding/businessProfile";
 import { localeSceneNote, outputLangDirective, type Lang } from "@/lib/ai/lang";
+import { buildProfileBlock } from "@/lib/ai/profileContext";
 
 function isEn(lang?: Lang): boolean {
   return lang === "en";
 }
+
+// profileBlock DIPINDAH ke lib/ai/profileContext.ts (buildProfileBlock) —
+// sumber tunggal dipakai semua builder, sekarang termasuk priceRange/story/
+// customerType yang dulu TIDAK ikut di file ini (cuma ada di autoContentPrompt.ts).
+const profileBlock = buildProfileBlock;
+
 
 // Variasi sudut HOOK (slide 1) — tanpa ini, hook SELALU balik ke kalimat
 // "Masalah pelanggan" persis dari profil bisnis (mis. selalu "stok habis")
@@ -46,32 +53,6 @@ function pickHookAngle(lang?: Lang): string {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function profileBlock(profile: BusinessProfile, lang?: Lang): string {
-  if (isEn(lang)) {
-    return `Business profile (MUST be the foundation of the content — don't be generic):
-- Name: ${profile.business.name || "-"}
-- Industry: ${profile.business.industry || "-"}
-- Location: ${profile.business.location || "-"}
-- Main products/services: ${profile.offering.mainProducts || "-"}
-- Target customer: ${profile.offering.targetCustomer || "-"}
-- Customer problem being solved: ${profile.offering.customerProblem || "-"}
-- Differentiator/USP: ${profile.positioning.differentiator || "-"}
-- Brand voice/tone: ${profile.positioning.tone || "neutral"}
-- CTA: ${profile.positioning.cta || "-"}
-- AVOID: ${profile.positioning.avoid || "-"}`;
-  }
-  return `Profil bisnis (WAJIB jadi dasar konten — jangan generik):
-- Nama: ${profile.business.name || "-"}
-- Industri: ${profile.business.industry || "-"}
-- Lokasi: ${profile.business.location || "-"}
-- Produk/layanan utama: ${profile.offering.mainProducts || "-"}
-- Target pelanggan: ${profile.offering.targetCustomer || "-"}
-- Masalah pelanggan yang diselesaikan: ${profile.offering.customerProblem || "-"}
-- Pembeda/USP: ${profile.positioning.differentiator || "-"}
-- Nada/gaya brand: ${profile.positioning.tone || "netral"}
-- CTA: ${profile.positioning.cta || "-"}
-- HINDARI: ${profile.positioning.avoid || "-"}`;
-}
 
 export function buildCarouselPrompt(
   profile: BusinessProfile,

@@ -1,6 +1,7 @@
 import { outputLangDirective, type Lang } from "@/lib/ai/lang";
 import type { BusinessProfile, ContentGoal } from "@/lib/onboarding/businessProfile";
 import { FONT_OPTIONS } from "@/lib/templates/fonts";
+import { buildProfileBlock } from "@/lib/ai/profileContext";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // LANGUAGE-AWARE PROMPT
@@ -14,89 +15,12 @@ function isEn(lang?: Lang): boolean {
   return lang === "en";
 }
 
-const CONTENT_GOAL_LABELS_ID: Record<ContentGoal, string> = {
-  jualan: "jualan/penjualan",
-  brand_awareness: "brand awareness",
-  edukasi: "edukasi",
-  loyalitas_pelanggan: "loyalitas pelanggan",
-};
+// profileBlock() & customerTypeLabel() DIPINDAH ke lib/ai/profileContext.ts —
+// SUMBER TUNGGAL dipakai semua builder (dulu di-copy-paste 3x beda-beda per
+// file, field baru gampang lupa ditambah ke salah satu). Alias di bawah biar
+// pemanggilan di file ini (profileBlock(...)) tidak perlu diubah semua.
+const profileBlock = buildProfileBlock;
 
-const CONTENT_GOAL_LABELS_EN: Record<ContentGoal, string> = {
-  jualan: "sales/conversion",
-  brand_awareness: "brand awareness",
-  edukasi: "education",
-  loyalitas_pelanggan: "customer loyalty",
-};
-
-function customerTypeLabel(profile: BusinessProfile, lang?: Lang): string {
-  const t = profile.offering.customerTypes ?? [];
-  const hasB2c = t.includes("b2c");
-  const hasB2b = t.includes("b2b");
-  if (isEn(lang)) {
-    if (hasB2c && hasB2b) return "Both direct consumers (B2C) and other businesses (B2B)";
-    if (hasB2b) return "Other businesses (B2B) — buying for resale or business operations, NOT personal use";
-    if (hasB2c) return "Direct consumers (B2C) — buying for personal/own use";
-    return "-";
-  }
-  if (hasB2c && hasB2b) return "Konsumen langsung (B2C) dan sesama pebisnis (B2B) sekaligus";
-  if (hasB2b) return "Sesama pebisnis (B2B) — beli buat dijual lagi/operasional usaha, BUKAN konsumsi pribadi";
-  if (hasB2c) return "Konsumen langsung (B2C) — beli buat dipakai/dikonsumsi sendiri";
-  return "-";
-}
-
-function profileBlock(profile: BusinessProfile, lang?: Lang): string {
-  const labels = isEn(lang) ? CONTENT_GOAL_LABELS_EN : CONTENT_GOAL_LABELS_ID;
-  const goals =
-    profile.positioning.contentGoals.map((goal) => labels[goal] ?? goal).join(", ") || "-";
-  const custTypes = profile.offering.customerTypes ?? [];
-  const hasB2c = custTypes.includes("b2c");
-  const hasB2b = custTypes.includes("b2b");
-  const custTypeGuard = !custTypes.length
-    ? ""
-    : isEn(lang)
-      ? hasB2b && hasB2c
-        ? "\nCUSTOMER-TYPE RULE: this business sells to BOTH individual consumers and other businesses — keep framing broad enough to fit either, or pick whichever fits the specific product/photo at hand without contradicting the other."
-        : hasB2b
-          ? "\nCUSTOMER-TYPE RULE (hard): this business sells B2B — the reader is a business owner/buyer restocking or sourcing for their OWN business, not an end consumer. NEVER use personal-consumer framing (personal payday/\"gajian\", self-treat, personal enjoyment). Frame around business needs: restocking, inventory, order quantity, margin, reliability for their operations."
-          : "\nCUSTOMER-TYPE RULE (hard): this business sells B2C — the reader is an individual end consumer. Frame around personal use/enjoyment, not wholesale/business-operations language (don't talk about \"restocking inventory\" or \"margin\")."
-      : hasB2b && hasB2c
-        ? "\nATURAN TIPE PELANGGAN: bisnis ini jual ke KEDUANYA (konsumen langsung & sesama pebisnis) — bingkai secukupnya biar cocok ke dua-duanya, atau pilih salah satu yang paling pas dengan produk/foto yang sedang dibuat tanpa bertentangan sama yang lain."
-        : hasB2b
-          ? "\nATURAN TIPE PELANGGAN (keras): bisnis ini jual B2B — pembacanya adalah pemilik/pembeli usaha yang restock atau cari suplai buat usahanya SENDIRI, bukan konsumen akhir. JANGAN pakai framing konsumen pribadi (gajian pribadi, self-reward, dinikmati sendiri). Bingkai seputar kebutuhan usaha: restock, stok, jumlah order, margin, keandalan buat operasional mereka."
-          : "\nATURAN TIPE PELANGGAN (keras): bisnis ini jual B2C — pembacanya konsumen akhir perorangan. Bingkai seputar pemakaian/kenikmatan pribadi, jangan pakai bahasa grosir/operasional bisnis (jangan sebut \"restock stok\" atau \"margin\").";
-
-  if (isEn(lang)) {
-    return `Business profile (MUST be woven into the content as its foundation — don't be generic):
-- Name: ${profile.business.name || "-"}
-- Industry: ${profile.business.industry || "-"}
-- Location: ${profile.business.location || "-"}
-- Main products/services: ${profile.offering.mainProducts || "-"}
-- Target customer: ${profile.offering.targetCustomer || "-"}
-- Customer type: ${customerTypeLabel(profile, lang)}
-- Customer problem being solved: ${profile.offering.customerProblem || "-"}
-- Differentiator/USP: ${profile.positioning.differentiator || "-"}
-- Content goals: ${goals}
-- Brand voice/tone: ${profile.positioning.tone || "neutral"}
-- CTA: ${profile.positioning.cta || "-"}
-- Brand story: ${profile.story || "-"}
-- AVOID: ${profile.positioning.avoid || "-"}${custTypeGuard}`;
-  }
-
-  return `Profil bisnis (WAJIB dirangkai jadi dasar konten — jangan generik):
-- Nama: ${profile.business.name || "-"}
-- Industri: ${profile.business.industry || "-"}
-- Lokasi: ${profile.business.location || "-"}
-- Produk/layanan utama: ${profile.offering.mainProducts || "-"}
-- Target pelanggan: ${profile.offering.targetCustomer || "-"}
-- Tipe pelanggan: ${customerTypeLabel(profile, lang)}
-- Masalah pelanggan yang diselesaikan: ${profile.offering.customerProblem || "-"}
-- Pembeda/USP: ${profile.positioning.differentiator || "-"}
-- Tujuan konten: ${goals}
-- Nada/gaya brand: ${profile.positioning.tone || "netral"}
-- CTA: ${profile.positioning.cta || "-"}
-- Cerita brand: ${profile.story || "-"}
-- HINDARI: ${profile.positioning.avoid || "-"}${custTypeGuard}`;
-}
 
 const FONT_LIST = FONT_OPTIONS.map((f) => `${f.id} (${f.style})`).join(", ");
 
@@ -935,6 +859,25 @@ function extraBlocks(extra?: string): string {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function buildProdukContentPrompt(profile: BusinessProfile, productDescription: string, lang?: Lang, extra?: string): string {
+  // Kalau deskripsi foto SPESIFIK ini (dari vision-AI atau manual) sudah
+  // jelas nyebut satu varian, itu yang dipakai apa adanya — tidak perlu
+  // aturan tambahan. Aturan ini SPESIFIK untuk kasus deskripsi foto generik
+  // (mis. vision-AI cuma bilang "gelato dalam cup") sementara profil bisnis
+  // punya BANYAK varian tercatat — jangan biarkan AI "sok tahu" nembak satu
+  // nama varian buat judul (foto belum tentu itu variannya); lebih aman
+  // singgung sebagai konsep keseluruhan di caption saja.
+  const variantCount = profile.offering.mainProducts
+    .split(/[,;\n]|(?:\bdan\b)|(?:\batau\b)|(?:\bor\b)|(?:\band\b)/i)
+    .map((s) => s.trim())
+    .filter(Boolean).length;
+  const variantRuleId =
+    variantCount > 1
+      ? `\nCATATAN VARIAN: profil bisnis mencatat BEBERAPA varian/rasa/jenis produk. Kalau deskripsi foto di atas sudah SPESIFIK menyebut satu varian tertentu, pakai itu apa adanya di judul & caption. Kalau deskripsi foto MASIH GENERIK (tidak jelas variannya), JANGAN menebak/mengarang satu nama varian spesifik untuk judul — foto belum tentu variannya itu. Boleh singgung variasi/pilihan sebagai KONSEP KESELURUHAN di caption saja (mis. "banyak pilihan rasa"), bukan diklaim spesifik.`
+      : "";
+  const variantRuleEn =
+    variantCount > 1
+      ? `\nVARIANT NOTE: the business profile lists SEVERAL variants/flavors/types. If the photo description above already specifies one clear variant, use it as-is in the title & caption. If the photo description is still GENERIC (variant unclear), do NOT guess/invent a specific variant name for the title — this photo may not be that variant. You may mention the variety as an OVERALL CONCEPT in the caption only (e.g. "many flavors to choose from"), not claimed as specific.`
+      : "";
   if (isEn(lang)) {
     return `${persona(lang)}
 ${outputLangDirective(lang)}
@@ -942,7 +885,7 @@ Create promotional content for ONE product, in English. The product = MAIN STAR.
 
 ${profileBlock(profile, lang)}
 
-Product: ${productDescription || "(no description)"}
+Product: ${productDescription || "(no description)"}${variantRuleEn}
 
 ${pickContentDirection(lang)}
 
@@ -962,7 +905,7 @@ Buat konten promosi SATU produk, dalam Bahasa Indonesia. Produk = BINTANG UTAMA.
 
 ${profileBlock(profile, lang)}
 
-Produk: ${productDescription || "(tidak ada deskripsi)"}
+Produk: ${productDescription || "(tidak ada deskripsi)"}${variantRuleId}
 
 ${pickContentDirection(lang)}
 

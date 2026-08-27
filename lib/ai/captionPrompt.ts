@@ -1,6 +1,7 @@
 import { outputLangDirective, type Lang } from "@/lib/ai/lang";
 import { qualityRules } from "@/lib/ai/autoContentPrompt";
-import type { BusinessProfile, ContentGoal } from "@/lib/onboarding/businessProfile";
+import { buildProfileBlock } from "@/lib/ai/profileContext";
+import type { BusinessProfile } from "@/lib/onboarding/businessProfile";
 
 export type CaptionContent = {
   templateName: string;
@@ -8,17 +9,7 @@ export type CaptionContent = {
   values: Record<string, string>;
 };
 
-const CONTENT_GOAL_LABELS: Record<ContentGoal, string> = {
-  jualan: "jualan/penjualan",
-  brand_awareness: "brand awareness",
-  edukasi: "edukasi",
-  loyalitas_pelanggan: "loyalitas pelanggan",
-};
-
 export function buildCaptionPrompt(profile: BusinessProfile, content: CaptionContent, lang?: Lang): string {
-  const goals =
-    profile.positioning.contentGoals.map((goal) => CONTENT_GOAL_LABELS[goal] ?? goal).join(", ") || "-";
-
   const contentLines =
     Object.entries(content.values)
       .filter(([, value]) => value.trim().length > 0)
@@ -29,16 +20,10 @@ export function buildCaptionPrompt(profile: BusinessProfile, content: CaptionCon
     `${outputLangDirective(lang)}`,
     `Kamu adalah pemilik bisnis yang lagi nulis caption Instagram sendiri untuk bisnisnya — bukan agensi iklan. Tulis SATU caption media sosial untuk bisnis berikut (ikuti OUTPUT LANGUAGE di atas).`,
     ``,
-    `Profil bisnis:`,
-    `- Nama: ${profile.business.name || "-"}`,
-    `- Industri: ${profile.business.industry || "-"}`,
-    `- Produk/layanan utama: ${profile.offering.mainProducts || "-"}`,
-    `- Target pelanggan: ${profile.offering.targetCustomer || "-"}`,
-    `- Pembeda/USP: ${profile.positioning.differentiator || "-"}`,
-    `- Tujuan konten: ${goals}`,
-    `- Nada/gaya brand: ${profile.positioning.tone || "netral"}`,
-    `- CTA yang biasa dipakai: ${profile.positioning.cta || "-"}`,
-    `- HAL YANG HARUS DIHINDARI (wajib dipatuhi, jangan singgung/klaim ini): ${profile.positioning.avoid || "-"}`,
+    // profileBlock terpusat (lib/ai/profileContext.ts) — sekarang ikut bawa
+    // priceRange/cerita brand/tipe pelanggan yang DULU tidak pernah nyampe
+    // ke fitur "Buat Konten" manual ini (cuma ada di Generate Otomatis).
+    buildProfileBlock(profile, lang),
     ``,
     `Konten yang sedang dibuat (template: ${content.templateName}):`,
     contentLines,
