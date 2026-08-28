@@ -31,10 +31,10 @@ export type FooterOverride = {
  */
 export type ElementFx = { opacity?: number; rotation?: number; z?: number };
 
-/** Elemen bebas yang ditambah user (teks/gambar stiker) — editor DOM v4. */
+/** Elemen bebas yang ditambah user (teks/gambar stiker/bentuk) — editor DOM v4. */
 export type FreeItem = {
   id: string;
-  kind: "text" | "image";
+  kind: "text" | "image" | "shape";
   x: number;
   y: number;
   w: number;
@@ -51,6 +51,14 @@ export type FreeItem = {
   outline?: { width: number; color: string } | null;
   /** kind "image" — data URI (di-embed, aman untuk export). */
   src?: string;
+  /** kind "shape" — bentuk dasar (kotak/bulat/segitiga) dengan fill & stroke. */
+  shapeType?: "rect" | "circle" | "triangle";
+  fill?: string;
+  stroke?: string;
+  /** 0 = tanpa garis tepi. Dalam satuan kanvas (di-skala saat ditampilkan). */
+  strokeWidth?: number;
+  /** hanya dipakai untuk shapeType "rect". */
+  cornerRadius?: number;
 };
 
 /** Lapisan warna/gradient di atas foto latar — editor DOM v4. */
