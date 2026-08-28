@@ -627,13 +627,42 @@ const TOPIC_CATEGORIES_EN: TopicCategory[] = [
 ];
 
 /**
+ * Kategori yang BUTUH data riwayat/personal usaha yang nyata (cerita pemilik,
+ * operasional harian, opini pemilik, angka riil, dst). Aman untuk app utama
+ * (profil user lengkap) tapi TIDAK aman untuk demo /coba (profil kosong,
+ * synthProfile) — di sana AI cuma punya nama industri, tidak ada apa pun
+ * untuk dijadikan dasar "cerita pemilik" dsb, jadi berisiko mengarang cerita
+ * palsu atau melenceng total dari foto yang diupload user.
+ */
+const PERSONAL_DATA_CATEGORIES_ID = new Set([
+  "CERITA PEMILIK",
+  "DI BALIK LAYAR",
+  "OPINI & SIKAP",
+  "MUSIMAN & MOMEN",
+  "ANGKA JUJUR DARI DATA SENDIRI",
+  "NILAI & KEPERCAYAAN",
+]);
+const PERSONAL_DATA_CATEGORIES_EN = new Set([
+  "OWNER'S STORY",
+  "BEHIND THE SCENES",
+  "OPINION & STANCE",
+  "SEASONAL & MOMENTS",
+  "HONEST NUMBERS FROM OWN DATA",
+  "VALUE & TRUST",
+]);
+
+/**
  * Arah konten per generate — pengganti pickPerspectiveNote lama:
  * 40% sudut MANFAAT (nuansa jualan halus, pool PERSPECTIVE_ANGLES),
  * 60% TOPIK dari 100 pembahasan (rotasi 2 tingkat: kategori dulu, baru
  * topik) — supaya feed tidak terasa "jualan terus dengan kata-kata diganti"
  * dan pembahasan benar-benar meluas.
+ *
+ * `forDemo` (opsional): kalau true, kategori yang butuh riwayat/data personal
+ * usaha (lihat PERSONAL_DATA_CATEGORIES_*) DIKECUALIKAN dari pemilihan —
+ * dipakai khusus jalur demo /coba yang profilnya kosong.
  */
-export function pickContentDirection(lang?: Lang): string {
+export function pickContentDirection(lang?: Lang, forDemo?: boolean): string {
   if (Math.random() < 0.4) {
     const arr = isEn(lang) ? PERSPECTIVE_ANGLES_EN : PERSPECTIVE_ANGLES_ID;
     const angle = arr[Math.floor(Math.random() * arr.length)];
@@ -642,7 +671,9 @@ export function pickContentDirection(lang?: Lang): string {
     }
     return `CATATAN PENTING soal sudut pandang: "Masalah pelanggan yang diselesaikan" di profil di atas cuma SATU CONTOH, BUKAN satu-satunya sudut yang boleh dibahas. Untuk konten kali ini, eksplorasi perspektif manfaat BERBEDA berikut — tetap konsisten & masuk akal dengan produk/industri/target pelanggan di atas, TAPI jangan cuma mengulang kalimat masalah yang sudah tertulis: ${angle}.`;
   }
-  const cats = isEn(lang) ? TOPIC_CATEGORIES_EN : TOPIC_CATEGORIES_ID;
+  const allCats = isEn(lang) ? TOPIC_CATEGORIES_EN : TOPIC_CATEGORIES_ID;
+  const excluded = isEn(lang) ? PERSONAL_DATA_CATEGORIES_EN : PERSONAL_DATA_CATEGORIES_ID;
+  const cats = forDemo ? allCats.filter((c) => !excluded.has(c.name)) : allCats;
   const cat = cats[Math.floor(Math.random() * cats.length)];
   const topic = cat.topics[Math.floor(Math.random() * cat.topics.length)];
   if (isEn(lang)) {
@@ -858,7 +889,7 @@ function extraBlocks(extra?: string): string {
 // BUILDERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-export function buildProdukContentPrompt(profile: BusinessProfile, productDescription: string, lang?: Lang, extra?: string): string {
+export function buildProdukContentPrompt(profile: BusinessProfile, productDescription: string, lang?: Lang, extra?: string, forDemo?: boolean): string {
   // Kalau deskripsi foto SPESIFIK ini (dari vision-AI atau manual) sudah
   // jelas nyebut satu varian, itu yang dipakai apa adanya — tidak perlu
   // aturan tambahan. Aturan ini SPESIFIK untuk kasus deskripsi foto generik
@@ -887,7 +918,7 @@ ${profileBlock(profile, lang)}
 
 Product: ${productDescription || "(no description)"}${variantRuleEn}
 
-${pickContentDirection(lang)}
+${pickContentDirection(lang, forDemo)}
 
 For the HEADLINE (onImageText) this time, use ${pickHeadlineAngleForProduk(lang)}. Craft a FRESH new phrase; don't repeat commonly used titles.
 For the caption WRITING STYLE this time, use: ${pickWritingStyle(lang)} (still within the brand voice defined above).
@@ -907,7 +938,7 @@ ${profileBlock(profile, lang)}
 
 Produk: ${productDescription || "(tidak ada deskripsi)"}${variantRuleId}
 
-${pickContentDirection(lang)}
+${pickContentDirection(lang, forDemo)}
 
 Untuk JUDUL (onImageText) kali ini, pakai ${pickHeadlineAngleForProduk(lang)}. Buat frasa BARU yang segar; jangan mengulang judul yang biasa dipakai.
 Untuk GAYA PENULISAN caption kali ini, pakai: ${pickWritingStyle(lang)} (tetap dalam nada brand yang sudah ditentukan di atas).

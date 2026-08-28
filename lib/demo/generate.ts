@@ -139,6 +139,7 @@ export async function generateDemoContent(
     productDesc,
     LANG,
     DEMO_CALM_TITLE_NOTE + demoCategoryTitleNote(input.businessType),
+    true, // forDemo — profil demo kosong, jangan kena topik yang butuh cerita/data personal usaha
   );
   const [contentRes, imgRes] = await Promise.all([
     generateJsonContent(contentPrompt),
