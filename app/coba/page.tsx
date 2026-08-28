@@ -423,6 +423,10 @@ export default function CobaPage() {
                 </div>
               </button>
 
+              <p className="mt-3 text-center text-xs leading-relaxed text-neutral-400">
+                Fitur coba ini masih sederhana — AI cuma baca dari 1 foto yang kamu upload, belum tahu apa-apa soal bisnismu. Buat hasil yang jauh lebih akurat & personal (paham produk, target pelanggan, sampai gaya bahasa brand-mu), <a href="/signup" className="font-semibold underline" style={{ color: TEAL_DARK }}>daftar akun gratis</a>.
+              </p>
+
               <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 justify-center">
                 {["Gratis", "Tanpa daftar dulu", "Hasil langsung tampil"].map((t) => (
                   <span key={t} className="flex items-center gap-1 text-xs text-neutral-500">
