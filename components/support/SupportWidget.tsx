@@ -62,6 +62,8 @@ export default function SupportWidget() {
 
   // ── State panel Saran & Masukan (tombol terpisah, di atas bubble chat) ──
   const [fbOpen, setFbOpen] = useState(false);
+  // Menu popup kecil (muncul saat bubble di-klik) — pilih Chat atau Saran & Masukan.
+  const [menuOpen, setMenuOpen] = useState(false);
   const [fbName, setFbName] = useState("");
   const [fbEmail, setFbEmail] = useState("");
   const [fbMessage, setFbMessage] = useState("");
@@ -312,14 +314,26 @@ export default function SupportWidget() {
 
   return (
     <>
-      {/* Tombol Saran & Masukan — mengambang di ATAS bubble chat (bubble chat di posisi paling bawah/pojok) */}
-      {!open && !fbOpen && (
-        <button
-          onClick={() => setFbOpen(true)}
-          className="fixed bottom-5 right-5 z-50 h-10 px-4 rounded-full bg-white text-teal-700 border border-teal-200 shadow-lg hover:bg-teal-50 flex items-center gap-1.5 text-xs font-semibold"
-        >
-          <span aria-hidden>💡</span> Saran &amp; Masukan
-        </button>
+      {/* Menu popup kecil — muncul di atas bubble saat bubble di-klik.
+          Sebelumnya "Saran & Masukan" & "Chat" adalah 2 tombol mengambang
+          terpisah yang SELALU tampil (rawan nutupin konten lain, mis. kartu
+          Riwayat). Sekarang cuma 1 bubble; klik dulu baru muncul pilihan. */}
+      {menuOpen && !open && !fbOpen && (
+        <div className="fixed bottom-24 right-5 z-50 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+          <button
+            onClick={() => { setOpen(true); setMenuOpen(false); }}
+            className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-teal-50"
+          >
+            <span aria-hidden>💬</span> Chat
+          </button>
+          <div className="h-px bg-slate-100" />
+          <button
+            onClick={() => { setFbOpen(true); setMenuOpen(false); }}
+            className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-teal-50"
+          >
+            <span aria-hidden>💡</span> Saran &amp; Masukan
+          </button>
+        </div>
       )}
 
       {/* Panel Saran & Masukan */}
@@ -379,17 +393,15 @@ export default function SupportWidget() {
         </div>
       )}
 
-      {/* Floating button — SATU bubble untuk semuanya */}
-      {!open && (
+      {/* Floating button — SATU bubble untuk semuanya. Klik = toggle menu
+          popup (Chat / Saran & Masukan), bukan langsung buka chat lagi. */}
+      {!open && !fbOpen && (
         <button
-          onClick={() => {
-            setOpen(true);
-            setFbOpen(false);
-          }}
+          onClick={() => setMenuOpen((v) => !v)}
           className="fixed bottom-24 right-5 z-50 h-14 w-14 rounded-full bg-teal-600 text-white shadow-lg hover:bg-teal-700 flex items-center justify-center text-2xl"
-          aria-label="Buka chat"
+          aria-label={menuOpen ? "Tutup menu" : "Buka menu bantuan"}
         >
-          💬
+          {menuOpen ? "✕" : "💬"}
         </button>
       )}
 
