@@ -106,17 +106,18 @@ export function DomEditor({
   socials = [], businessName, logoVariant = "light", canToggleLogo, onLogoVariantChange, exportRef,
 }: Props) {
   // Lebar kanvas RESPONSIF — sebelumnya DISPLAY_W konstan 340px, tidak pernah
-  // mengecil di HP. Halaman induk (app/konten/page.tsx) punya padding kiri-
-  // kanan 48px total (px-6) TANPA varian mobile, jadi butuh viewport >= 388px
-  // biar 340px muat pas — kebanyakan HP (360-375px) lebih sempit dari itu,
-  // bikin overflow horizontal di SETIAP buka halaman (bukan cuma pas resize).
-  // MARGIN sengaja dibuat sedikit lebih longgar (56px) dari padding asli
-  // (48px) sebagai jarak aman ekstra.
+  // mengecil di HP. Padding horizontal total di sekitar editor ternyata DUA
+  // LAPIS, bukan satu (ketemu setelah audit lanjutan): <main> di
+  // app/konten/page.tsx pakai px-6 (24px×2=48px), DAN komponen <Card> yang
+  // membungkus editor pakai p-6 SENDIRI (24px×2=48px lagi, di DALAM padding
+  // main) — totalnya 96px, bukan 48px seperti perkiraan pertama (itu sebabnya
+  // fix pertama masih overflow di HP). MARGIN sekarang 104px (96px + jarak
+  // aman ekstra 8px).
   const [displayW, setDisplayW] = useState(DISPLAY_W);
   useEffect(() => {
     function recalc() {
-      const margin = 56;
-      setDisplayW(Math.max(240, Math.min(DISPLAY_W, window.innerWidth - margin)));
+      const margin = 104;
+      setDisplayW(Math.max(220, Math.min(DISPLAY_W, window.innerWidth - margin)));
     }
     recalc();
     window.addEventListener("resize", recalc);
