@@ -185,6 +185,10 @@ export function DomEditor({
     key: string; startClientX: number; startClientY: number;
     startW: number; startH: number; startSize: number; startFont: number;
   } | null>(null);
+  // Rotate via handle di kanvas: simpan sudut awal elemen + sudut awal pointer
+  // (dari titik tengah elemen) saat drag mulai, supaya rotasi terasa "ngikutin
+  // jari" secara halus, bukan lompat ke sudut absolut pointer.
+  const rotateRef = useRef<{ key: string; cx: number; cy: number; startAngle: number; startPointerAngle: number } | null>(null);
   const logoTapRef = useRef<number>(0);
   // Deteksi dobel-tap manual untuk teks — event dblclick bawaan tidak sampai
   // ke elemen karena pointer capture dipegang stage saat drag.
@@ -407,6 +411,22 @@ export function DomEditor({
     stageRef.current!.setPointerCapture(e.pointerId);
   }
   function onPointerMove(e: React.PointerEvent) {
+    // ----- rotate aktif? -----
+    const rot = rotateRef.current;
+    if (rot) {
+      const rect = stageRef.current!.getBoundingClientRect();
+      const pointerAngle = Math.atan2(e.clientY - rect.top - rot.cy, e.clientX - rect.left - rot.cx) * (180 / Math.PI);
+      let angle = Math.round(rot.startAngle + (pointerAngle - rot.startPointerAngle));
+      // Normalisasi ke rentang -180..180 (konsisten dengan slider Rotasi di panel)
+      angle = ((((angle + 180) % 360) + 360) % 360) - 180;
+      // SNAP ke 0°/90°/180°/-90° kalau dekat (±4°) — memudahkan lurus-in tanpa
+      // perlu presisi pixel-perfect di HP.
+      for (const snap of [-180, -90, 0, 90, 180]) {
+        if (Math.abs(angle - snap) <= 4) { angle = snap === -180 ? 180 : snap; break; }
+      }
+      patchFx(rot.key, { rotation: angle });
+      return;
+    }
     // ----- resize aktif? -----
     const r = resizeRef.current;
     if (r) {
@@ -480,6 +500,11 @@ export function DomEditor({
     showGuide(guideHRef, snapH);
   }
   function onPointerUp(e: React.PointerEvent) {
+    if (rotateRef.current) {
+      rotateRef.current = null;
+      try { stageRef.current!.releasePointerCapture(e.pointerId); } catch { /* ok */ }
+      return;
+    }
     if (resizeRef.current) {
       resizeRef.current = null;
       try { stageRef.current!.releasePointerCapture(e.pointerId); } catch { /* ok */ }
@@ -495,6 +520,20 @@ export function DomEditor({
       if (el) el.style.cursor = "grab";
       commitPosition(d.kind, d.id, Math.round(d.lastX), Math.round(d.lastY)); // commit SEKALI
     }
+  }
+
+  // ----- rotate handle (di kanvas, dekat kotak seleksi) -----
+  function startRotate(e: React.PointerEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!selKey || !selBox) return;
+    pushHist(); // 1 langkah undo per gestur rotate
+    const rect = stageRef.current!.getBoundingClientRect();
+    const cx = selBox.x + selBox.w / 2;
+    const cy = selBox.y + selBox.h / 2;
+    const startPointerAngle = Math.atan2(e.clientY - rect.top - cy, e.clientX - rect.left - cx) * (180 / Math.PI);
+    rotateRef.current = { key: selKey, cx, cy, startAngle: selFx.rotation ?? 0, startPointerAngle };
+    stageRef.current!.setPointerCapture(e.pointerId);
   }
 
   // ----- resize handle -----
@@ -777,8 +816,35 @@ export function DomEditor({
               <div style={{ width:16, height:16, background:"#12B3A0", border:"2px solid #ffffff", borderRadius:4, pointerEvents:"none" }} />
             </div>
           )}
+          {/* handle ROTATE — pojok kanan-ATAS elemen terpilih (mirror handle
+              resize yang di kanan-bawah). Ikon lingkaran panah, area sentuh
+              sama besar (40x40) biar konsisten mudah di-grab di HP. Drag =
+              rotasi elemen ngikutin gerak jari, mengelilingi titik tengah
+              elemen. */}
+          {selBox && canResize && (
+            <div data-noexport="1" onPointerDown={startRotate}
+              style={{ position:"absolute", left:selBox.x+selBox.w-18, top:selBox.y-22, width:40, height:40, zIndex:100,
+                cursor:"grab", touchAction:"none", display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <div style={{ width:22, height:22, background:"#12B3A0", border:"2px solid #ffffff", borderRadius:9999,
+                display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:13, pointerEvents:"none" }}>↻</div>
+            </div>
+          )}
+          {/* mini-panel Transparansi — data-noexport, mengambang tepat di
+              bawah kotak seleksi. Berlaku untuk SEMUA jenis elemen (teks
+              judul/deskripsi, gambar tambahan, logo, sosmed/footer) karena
+              patchFx generik terhadap selKey apa pun. */}
+          {selBox && (
+            <div data-noexport="1"
+              style={{ position:"absolute", left:Math.max(0, Math.min(selBox.x, displayW-152)), top:selBox.y+selBox.h+8, width:152, zIndex:100 }}>
+              <SliderToggle label="Transparansi" valueLabel={`${Math.round((selFx.opacity ?? 1)*100)}%`}>
+                <input type="range" min={5} max={100} value={Math.round((selFx.opacity ?? 1)*100)}
+                  onChange={(e)=>patchFx(selKey, { opacity: Number(e.target.value)/100 })}
+                  className="h-6 w-full accent-primary" />
+              </SliderToggle>
+            </div>
+          )}
         </div>
-        <p className="mt-2 text-xs text-navy/50">Seret elemen langsung — nempel otomatis ke tengah/tepi. Dobel-klik teks = ketik langsung. Kotak hijau di pojok = ubah ukuran. Panah = geser halus (Shift = cepat). Dobel-klik logo: terang/gelap.</p>
+        <p className="mt-2 text-xs text-navy/50">Seret elemen langsung — nempel otomatis ke tengah/tepi. Dobel-klik teks = ketik langsung. Kotak hijau di pojok = ubah ukuran, ikon ↻ di pojok atas = putar. Panah = geser halus (Shift = cepat). Dobel-klik logo: terang/gelap.</p>
       </div>
 
       {/* overlay foto */}
