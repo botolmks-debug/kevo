@@ -34,7 +34,7 @@ export function buildCaptionPrompt(profile: BusinessProfile, content: CaptionCon
     `- Sertakan CTA yang relevan bila pas dengan konten.`,
     `- WAJIB variasikan kalimat pembuka setiap kali diminta — jangan selalu memakai pola pembuka yang sama seperti "Pernah nggak sih...".`,
     `- Patuhi nada brand dan hindari topik/klaim yang disebut di "hal yang harus dihindari" di atas.`,
-    `- Boleh sertakan beberapa hashtag relevan di akhir.`,
+    `- Sertakan maksimal 5 hashtag relevan di akhir (jangan lebih).`,
     `- EMOJI: sisipkan 2-4 emoji total yang sesuai mood teks (mis. momen hangat ☕🌿, semangat usaha 💪✨, produk baru 🎉, tips 📌💡) — letakkan alami di akhir kalimat, maksimal 1-2 per paragraf, jangan menumpuk beruntun. Hanya emoji sopan & umum; dilarang emoji kasar/vulgar/bermakna ganda (🖕😈🍆🍑💦 dan sejenisnya). Bagian hashtag tanpa emoji.`,
     qualityRules(lang),
     `- Keluarkan hanya teks caption, tanpa penjelasan tambahan atau tanda kutip pembungkus.`,

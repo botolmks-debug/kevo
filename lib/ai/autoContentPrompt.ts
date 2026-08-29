@@ -52,7 +52,7 @@ const CAPTION_RULES_ID =
   "- Boleh dari sudut pandang pembaca (\"aku/kita\"), menyuarakan keseharian mereka.\n" +
   "- FORMAT WAJIB: pecah caption jadi 2-4 PARAGRAF PENDEK (1-2 kalimat per paragraf), dipisah BARIS KOSONG (\\n\\n di dalam string JSON) — JANGAN PERNAH satu paragraf panjang menyambung. Hashtag jadi paragraf terakhir sendiri.\n" +
   "- EMOJI: sisipkan 2-4 emoji total yang SESUAI mood teks (contoh: momen hangat ☕🌿, semangat usaha 💪✨, produk baru 🎉, tips 📌💡) — letakkan alami di akhir kalimat, maksimal 1-2 per paragraf, JANGAN menumpuk beruntun. HANYA emoji sopan & umum; DILARANG emoji kasar/vulgar/bermakna ganda (🖕😈🍆🍑💦 dan sejenisnya). Bagian hashtag tanpa emoji.\n" +
-  "- Isi total 3-6 kalimat, satu CTA halus di paragraf terakhir sebelum hashtag, lalu WAJIB diakhiri 3-6 hashtag relevan (format #katakunci tanpa spasi di dalam tag). SEMUA hashtag WAJIB berbahasa Indonesia (samakan dengan bahasa caption). JANGAN PERNAH mengosongkan hashtag. Patuhi nada brand & hindari topik terlarang.";
+  "- Isi total 3-6 kalimat, satu CTA halus di paragraf terakhir sebelum hashtag, lalu WAJIB diakhiri 3-5 hashtag relevan (format #katakunci tanpa spasi di dalam tag). SEMUA hashtag WAJIB berbahasa Indonesia (samakan dengan bahasa caption). JANGAN PERNAH mengosongkan hashtag. Patuhi nada brand & hindari topik terlarang.";
 
 const CAPTION_RULES_EN =
   "caption = a LIVING, empathetic Instagram caption, in English:\n" +
@@ -62,7 +62,7 @@ const CAPTION_RULES_EN =
   "- Reader-first perspective is welcome (\"I/we\"), voicing their day-to-day.\n" +
   "- REQUIRED FORMAT: break the caption into 2-4 SHORT PARAGRAPHS (1-2 sentences each), separated by a BLANK LINE (\\n\\n inside the JSON string) — NEVER one long run-on paragraph. Hashtags go in their own final paragraph.\n" +
   "- EMOJI: weave in 2-4 emojis total that MATCH the mood (cozy moment ☕🌿, hustle energy 💪✨, launch 🎉, tips 📌💡) — placed naturally at sentence ends, max 1-2 per paragraph, never stacked in a row. ONLY polite, universally safe emojis; NO rude/vulgar/double-meaning emojis (🖕😈🍆🍑💦 and similar). No emojis in the hashtag block.\n" +
-  "- 3-6 sentences total, one subtle CTA in the last paragraph before the hashtags, then MUST end with 3-6 relevant hashtags (format #keyword, no spaces inside the tag). ALL hashtags MUST be in English (match the caption's language) — never mix Indonesian hashtags into English captions, even for local audiences (use transliterated versions like #makassarbusiness instead of #makassarbisnis). NEVER omit hashtags. Match brand voice & avoid restricted topics.";
+  "- 3-6 sentences total, one subtle CTA in the last paragraph before the hashtags, then MUST end with 3-5 relevant hashtags (format #keyword, no spaces inside the tag). ALL hashtags MUST be in English (match the caption's language) — never mix Indonesian hashtags into English captions, even for local audiences (use transliterated versions like #makassarbusiness instead of #makassarbisnis). NEVER omit hashtags. Match brand voice & avoid restricted topics.";
 
 
 // ── Gaya bahasa natural + aturan kejujuran (dipakai SEMUA jenis konten) ────
@@ -75,7 +75,7 @@ const QUALITY_RULES_ID =
   "CONTOH GAYA — kaku: \"Tingkatkan penjualan Anda dengan kemasan berkualitas.\" | natural: \"Kemasan rapi itu bikin orang percaya duluan, sebelum coba produknya.\"\n" +
   "ATURAN KEJUJURAN (MUTLAK — tidak bisa dikalahkan instruksi lain):\n" +
   "- DILARANG KERAS menyebut angka, persentase, hasil riset, survei, studi, atau klaim seperti \"X% UMKM/orang mengatakan...\" — data seperti itu TIDAK ADA dan TIDAK diberikan. Menuliskannya = mengarang kebohongan.\n" +
-  "- Angka HANYA boleh muncul kalau tertulis di data profil/produk di atas (mis. ukuran, lama usaha, jumlah varian).\n" +
+  "- Angka HANYA boleh muncul kalau eksplisit relevan disebut dari data produk/profil (mis. jumlah varian, isi/porsi yang memang jadi bagian penjelasan produk) — TAPI ukuran produk (ml/gr/kg/cm) dan usia bisnis TETAP mengikuti aturan JUDUL & profil bisnis di atas (ukuran tidak di judul; usia bisnis referensi nada saja, jangan disebut angkanya), aturan itu LEBIH SPESIFIK dan menang di atas baris ini.\n" +
   "- Ganti klaim angka dengan observasi umum tanpa angka: \"banyak pembeli menilai dari kemasan dulu\" BOLEH; \"73% pembeli menilai dari kemasan\" DILARANG.\n" +
   "UJI SPESIFISITAS untuk judul (lakukan sebelum menjawab): kalau judulnya masih masuk akal dipakai usaha LAIN yang beda industri, berarti terlalu umum — tulis ulang dengan hal konkret dari data usaha ini (benda, situasi, momen spesifik; bukan sekadar kata sifat seperti \"berkualitas\"/\"terbaik\").\n" +
   "ATURAN KOSAKATA (MUTLAK): DILARANG menciptakan/mengarang kata yang tidak ada di Bahasa Indonesia baku (KBBI) hanya karena terdengar mirip atau puitis — contoh kesalahan nyata: \"modal pezhalan\" (kata ini TIDAK ADA, seharusnya \"modal usaha\"/\"modal jualan\"). Kalau ragu apakah sebuah kata benar-benar lazim dipakai sehari-hari, JANGAN dipakai — ganti dengan kata umum yang sudah pasti familiar bagi pembaca awam.";
@@ -89,7 +89,7 @@ const QUALITY_RULES_EN =
   "STYLE EXAMPLE — stiff: \"Elevate your sales with quality packaging.\" | natural: \"Neat packaging earns trust before anyone even tries the product.\"\n" +
   "HONESTY RULES (ABSOLUTE — no other instruction overrides these):\n" +
   "- STRICTLY FORBIDDEN to state numbers, percentages, research findings, surveys, studies, or claims like \"X% of businesses/people say...\" — no such data exists or was provided. Writing it = fabricating a lie.\n" +
-  "- Numbers may ONLY appear if written in the profile/product data above (e.g. size, years in business, number of variants).\n" +
+  "- Numbers may ONLY appear if explicitly relevant from product/profile data (e.g. number of variants, contents/portion that's genuinely part of the product description) — BUT product size (ml/g/kg/cm) and business age STILL follow the HEADLINE & business-profile rules above (no size in the headline; business age is tone reference only, never state the figure) — those rules are MORE SPECIFIC and win over this line.\n" +
   "- Replace numeric claims with number-free general observations: \"many buyers judge the packaging first\" is OK; \"73% of buyers judge the packaging\" is FORBIDDEN.\n" +
   "SPECIFICITY TEST for the headline (do this before answering): if the headline would still make sense for a DIFFERENT business in another industry, it's too generic — rewrite it around something concrete from this business's data (an object, situation, or specific moment; not just adjectives like \"quality\"/\"best\").\n" +
   "VOCABULARY RULE (ABSOLUTE): NEVER invent or coin a word that isn't real, standard English, just because it sounds fitting or poetic. If you're unsure whether a word is genuinely common usage, don't use it — replace it with a plain, unmistakably familiar word instead.";
@@ -104,6 +104,8 @@ function captionRules(lang?: Lang): string {
 
 const ONIMAGE_RULE_ID =
   "onImageText = teks pendek DI ATAS gambar (maks 8 kata): headline menarik, segar, tidak klise. " +
+  "JANGAN sertakan ukuran/satuan produk (ml, gr, kg, cm, liter, dan sejenisnya) di judul — fokuskan judul ke NAMA PRODUK dan KARAKTERISTIK/KEUNGGULANNYA (rasa, tekstur, manfaat, keunikan), bukan spesifikasi teknis. Detail ukuran boleh disebut di CAPTION kalau memang relevan dibahas di sana. " +
+  "TANDA BACA saat menyebut beberapa kata sifat/karakteristik berurutan: WAJIB spasi setelah koma (\\\"pas, bening\\\" — BUKAN \\\"pas,bening\\\"), dan kata TERAKHIR dalam daftar disambung \\\"&\\\" atau \\\"dan\\\" (BUKAN koma lagi) — contoh benar: \\\"pas, bening & kokoh\\\" atau \\\"pas, bening dan kokoh\\\", contoh SALAH: \\\"pas,bening,kokoh\\\". " +
   "VARIASIKAN gaya & pilihan kata SETIAP kali — JANGAN mengulang frasa/judul yang sama atau mirip yang sudah umum dipakai. " +
   "HINDARI STRUKTUR KLISE INI (yang paling sering muncul di konten AI dan bikin judul terasa generic): " +
   "\"3 kesalahan...\", \"5 tips...\", \"5 cara...\", \"7 hal yang wajib...\", \"Kenapa X harus Y\", \"Cara agar...\", " +
@@ -118,6 +120,8 @@ const ONIMAGE_RULE_ID =
 
 const ONIMAGE_RULE_EN =
   "onImageText = short text ON the image (max 8 words): an engaging, fresh, non-cliché headline. " +
+  "Do NOT include product size/units (ml, g, kg, cm, liters, etc.) in the headline — focus the headline on the PRODUCT NAME and its CHARACTERISTICS/ADVANTAGES (taste, texture, benefit, uniqueness), not technical specs. Size details can be mentioned in the CAPTION if relevant there. " +
+  "PUNCTUATION when listing several adjectives/characteristics in a row: ALWAYS a space after each comma (\\\"just right, clear\\\" — NEVER \\\"just right,clear\\\"), and join the LAST item with \\\"&\\\" or \\\"and\\\" instead of another comma — correct: \\\"just right, clear & sturdy\\\" or \\\"just right, clear and sturdy\\\", wrong: \\\"just right,clear,sturdy\\\". " +
   "VARY the style & word choice EVERY time — DON'T repeat the same or similar phrases/titles that are commonly used. " +
   "AVOID overused corporate words like \"Elevate\", \"Unlock\", \"Transform\", \"Discover\", \"Introducing\" as sentence openers. " +
   "AVOID these CLICHÉ STRUCTURES (most common in AI-generated content, makes titles feel generic): " +
@@ -164,7 +168,7 @@ function pickHeadlineAngle(lang?: Lang): string {
 const PRODUK_VIRAL_ANGLES_ID = [
   "sudut HOOK VIRAL — kalimat pembuka yang mengejutkan/memancing rasa penasaran ekstrem, bikin orang berhenti scroll",
   "sudut MASALAH SEBAGAI HOOK — sebut masalah spesifik yang PASTI dialami target pasar (bikin mereka merasa 'ini gue banget') sebelum mengarah ke produk",
-  "sudut BERPOTENSI DISIMPAN (save-worthy) — framing seperti checklist singkat atau 'hal yang wajib tahu sebelum beli/pakai [kategori produk]' yang orang ingin simpan sebagai referensi",
+  "sudut BERPOTENSI DISIMPAN (save-worthy) — framing seperti checklist singkat atau 'hal yang wajib tahu sebelum beli/pakai [kategori produk]' yang orang ingin simpan sebagai referensi — TANPA memakai format angka klise yang sudah dilarang di atas (bukan \"5 hal wajib tahu...\", cukup framing kontennya saja)",
   "sudut PENGUNGKAPAN/KEJUTAN — 'ternyata...', 'bedanya cuma...', yang menantang asumsi umum orang soal produk/industrinya",
   "sudut RASA PENASARAN — janjikan sesuatu di judul yang jawaban lengkapnya baru terungkap di caption",
 ];
@@ -172,7 +176,7 @@ const PRODUK_VIRAL_ANGLES_ID = [
 const PRODUK_VIRAL_ANGLES_EN = [
   "VIRAL HOOK angle — an opening line that surprises or triggers extreme curiosity, making people stop scrolling",
   "PROBLEM-AS-HOOK angle — name a specific problem the target audience DEFINITELY has ('this is me' recognition) before pivoting to the product",
-  "SAVE-WORTHY angle — framing like a mini checklist or 'things you must know before buying/using [product category]' that people want to save for reference",
+  "SAVE-WORTHY angle — framing like a mini checklist or 'things you must know before buying/using [product category]' that people want to save for reference — WITHOUT using the numbered cliché format already banned above (not \"5 things you must know...\", just the content framing itself)",
   "REVEAL/SURPRISE angle — 'turns out...', 'the only difference is...' that challenges common assumptions about the product/industry",
   "CURIOSITY angle — promise something in the headline whose full answer only appears in the caption",
 ];
@@ -627,42 +631,13 @@ const TOPIC_CATEGORIES_EN: TopicCategory[] = [
 ];
 
 /**
- * Kategori yang BUTUH data riwayat/personal usaha yang nyata (cerita pemilik,
- * operasional harian, opini pemilik, angka riil, dst). Aman untuk app utama
- * (profil user lengkap) tapi TIDAK aman untuk demo /coba (profil kosong,
- * synthProfile) — di sana AI cuma punya nama industri, tidak ada apa pun
- * untuk dijadikan dasar "cerita pemilik" dsb, jadi berisiko mengarang cerita
- * palsu atau melenceng total dari foto yang diupload user.
- */
-const PERSONAL_DATA_CATEGORIES_ID = new Set([
-  "CERITA PEMILIK",
-  "DI BALIK LAYAR",
-  "OPINI & SIKAP",
-  "MUSIMAN & MOMEN",
-  "ANGKA JUJUR DARI DATA SENDIRI",
-  "NILAI & KEPERCAYAAN",
-]);
-const PERSONAL_DATA_CATEGORIES_EN = new Set([
-  "OWNER'S STORY",
-  "BEHIND THE SCENES",
-  "OPINION & STANCE",
-  "SEASONAL & MOMENTS",
-  "HONEST NUMBERS FROM OWN DATA",
-  "VALUE & TRUST",
-]);
-
-/**
  * Arah konten per generate — pengganti pickPerspectiveNote lama:
  * 40% sudut MANFAAT (nuansa jualan halus, pool PERSPECTIVE_ANGLES),
  * 60% TOPIK dari 100 pembahasan (rotasi 2 tingkat: kategori dulu, baru
  * topik) — supaya feed tidak terasa "jualan terus dengan kata-kata diganti"
  * dan pembahasan benar-benar meluas.
- *
- * `forDemo` (opsional): kalau true, kategori yang butuh riwayat/data personal
- * usaha (lihat PERSONAL_DATA_CATEGORIES_*) DIKECUALIKAN dari pemilihan —
- * dipakai khusus jalur demo /coba yang profilnya kosong.
  */
-export function pickContentDirection(lang?: Lang, forDemo?: boolean): string {
+export function pickContentDirection(lang?: Lang): string {
   if (Math.random() < 0.4) {
     const arr = isEn(lang) ? PERSPECTIVE_ANGLES_EN : PERSPECTIVE_ANGLES_ID;
     const angle = arr[Math.floor(Math.random() * arr.length)];
@@ -671,9 +646,7 @@ export function pickContentDirection(lang?: Lang, forDemo?: boolean): string {
     }
     return `CATATAN PENTING soal sudut pandang: "Masalah pelanggan yang diselesaikan" di profil di atas cuma SATU CONTOH, BUKAN satu-satunya sudut yang boleh dibahas. Untuk konten kali ini, eksplorasi perspektif manfaat BERBEDA berikut — tetap konsisten & masuk akal dengan produk/industri/target pelanggan di atas, TAPI jangan cuma mengulang kalimat masalah yang sudah tertulis: ${angle}.`;
   }
-  const allCats = isEn(lang) ? TOPIC_CATEGORIES_EN : TOPIC_CATEGORIES_ID;
-  const excluded = isEn(lang) ? PERSONAL_DATA_CATEGORIES_EN : PERSONAL_DATA_CATEGORIES_ID;
-  const cats = forDemo ? allCats.filter((c) => !excluded.has(c.name)) : allCats;
+  const cats = isEn(lang) ? TOPIC_CATEGORIES_EN : TOPIC_CATEGORIES_ID;
   const cat = cats[Math.floor(Math.random() * cats.length)];
   const topic = cat.topics[Math.floor(Math.random() * cat.topics.length)];
   if (isEn(lang)) {
@@ -730,7 +703,7 @@ const INTERAKSI_CAPTION_RULES_ID =
   "- Kalau formatnya kuis/poll: sertakan pilihan (mis. A/B atau opsi) dan JANGAN bocorkan jawaban.\n" +
   "- Nada ngobrol & hangat, boleh sedikit emoji. Variasikan pembuka SETIAP kali; HINDARI klise " +
   '("Pernah nggak sih", "Tenang saja", "Dijamin", "bosku", "gaskeun").\n' +
-  "- 2-4 kalimat, DIAKHIRI ajakan interaksi lalu WAJIB 3-6 hashtag relevan (format #katakunci). SEMUA hashtag WAJIB berbahasa Indonesia. JANGAN PERNAH mengosongkan hashtag. Patuhi nada brand & hindari topik terlarang.\n" +
+  "- 2-4 kalimat, DIAKHIRI ajakan interaksi lalu WAJIB 3-5 hashtag relevan (format #katakunci). SEMUA hashtag WAJIB berbahasa Indonesia. JANGAN PERNAH mengosongkan hashtag. Patuhi nada brand & hindari topik terlarang.\n" +
   'CONTOH GAYA (jangan disalin persis; SESUAIKAN dengan format terpilih): ' +
   '(kuis) "Coba tebak, menu andalan kami pakai bahan rahasia apa? 🤔 Tulis tebakanmu di komen ya! #..." | ' +
   '(tips) "Simpan dulu: 1 trik biar produkmu awet. Kamu biasanya gimana? Cerita dong 👇 #..."';
@@ -745,7 +718,7 @@ const INTERAKSI_CAPTION_RULES_EN =
   "- If it's a quiz/poll: include the choices (e.g. A/B or options) and DON'T reveal the answer.\n" +
   "- Warm, chatty tone; a bit of emoji is fine. Vary openings EVERY time; AVOID clichés " +
   '("Ever wondered", "You know that feeling", "Let\'s dive in", "Guess what", "Fun fact", "Real talk").\n' +
-  "- 2-4 sentences, ENDING with an interaction invite, then MUST have 3-6 relevant hashtags (format #keyword). ALL hashtags MUST be in English. NEVER omit hashtags. Match brand voice & avoid restricted topics.\n" +
+  "- 2-4 sentences, ENDING with an interaction invite, then MUST have 3-5 relevant hashtags (format #keyword). ALL hashtags MUST be in English. NEVER omit hashtags. Match brand voice & avoid restricted topics.\n" +
   'STYLE EXAMPLES (don\'t copy verbatim; MATCH the chosen format): ' +
   '(quiz) "Bet you can\'t guess the secret ingredient in our bestseller 🤔 Drop your guess below! #..." | ' +
   '(tips) "Save this: one trick to make your product last longer. What\'s your go-to? 👇 #..."';
@@ -889,7 +862,7 @@ function extraBlocks(extra?: string): string {
 // BUILDERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-export function buildProdukContentPrompt(profile: BusinessProfile, productDescription: string, lang?: Lang, extra?: string, forDemo?: boolean): string {
+export function buildProdukContentPrompt(profile: BusinessProfile, productDescription: string, lang?: Lang, extra?: string): string {
   // Kalau deskripsi foto SPESIFIK ini (dari vision-AI atau manual) sudah
   // jelas nyebut satu varian, itu yang dipakai apa adanya — tidak perlu
   // aturan tambahan. Aturan ini SPESIFIK untuk kasus deskripsi foto generik
@@ -918,7 +891,7 @@ ${profileBlock(profile, lang)}
 
 Product: ${productDescription || "(no description)"}${variantRuleEn}
 
-${pickContentDirection(lang, forDemo)}
+${pickContentDirection(lang)}
 
 For the HEADLINE (onImageText) this time, use ${pickHeadlineAngleForProduk(lang)}. Craft a FRESH new phrase; don't repeat commonly used titles.
 For the caption WRITING STYLE this time, use: ${pickWritingStyle(lang)} (still within the brand voice defined above).
@@ -938,7 +911,7 @@ ${profileBlock(profile, lang)}
 
 Produk: ${productDescription || "(tidak ada deskripsi)"}${variantRuleId}
 
-${pickContentDirection(lang, forDemo)}
+${pickContentDirection(lang)}
 
 Untuk JUDUL (onImageText) kali ini, pakai ${pickHeadlineAngleForProduk(lang)}. Buat frasa BARU yang segar; jangan mengulang judul yang biasa dipakai.
 Untuk GAYA PENULISAN caption kali ini, pakai: ${pickWritingStyle(lang)} (tetap dalam nada brand yang sudah ditentukan di atas).

@@ -85,27 +85,6 @@ function hexToRgba(hex: string, opacity: number): string {
   return `rgba(${r},${g},${b},${opacity})`;
 }
 
-function ShapeView({ shapeType, fill, stroke, strokeWidth, cornerRadius, scale }: {
-  shapeType: "rect" | "circle" | "triangle"; fill: string; stroke?: string; strokeWidth: number; cornerRadius: number; scale: number;
-}) {
-  const hasStroke = strokeWidth > 0 && !!stroke;
-  if (shapeType === "triangle") {
-    return (
-      <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ display: "block" }}>
-        <polygon points="50,3 97,97 3,97" fill={fill}
-          stroke={hasStroke ? stroke : "none"} strokeWidth={hasStroke ? strokeWidth : 0}
-          strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-      </svg>
-    );
-  }
-  const base: React.CSSProperties = {
-    width: "100%", height: "100%", backgroundColor: fill, boxSizing: "border-box",
-    ...(hasStroke ? { borderStyle: "solid", borderWidth: strokeWidth * scale, borderColor: stroke } : {}),
-  };
-  if (shapeType === "circle") return <div style={{ ...base, borderRadius: "50%" }} />;
-  return <div style={{ ...base, borderRadius: cornerRadius * scale }} />;
-}
-
 function DecoView({ d, scale, z }: { d: Decoration; scale: number; z?: number }) {
   const base: React.CSSProperties = {
     position: "absolute", left: d.box.x*scale, top: d.box.y*scale,
@@ -149,7 +128,6 @@ export function DomEditor({
   const guideVRef = useRef<HTMLDivElement>(null);
   const guideHRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [shapeMenuOpen, setShapeMenuOpen] = useState(false);
   // Elemen draggable — posisi diubah LANGSUNG saat drag (tanpa re-render).
   const elemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const dragRef = useRef<{
@@ -314,19 +292,6 @@ export function DomEditor({
     commit({ ...overrides, items: [...items, item] });
     setSelKey(`item-${id}`);
   }
-  function addShapeItem(shapeType: "rect" | "circle" | "triangle") {
-    if (items.length >= MAX_ITEMS) { window.alert(`Maksimal ${MAX_ITEMS} elemen tambahan.`); return; }
-    const id = `s${Date.now().toString(36)}`;
-    const w = 320, h = 320;
-    const item: FreeItem = {
-      id, kind: "shape", shapeType,
-      x: Math.round((layout.canvas.width - w) / 2), y: Math.round((layout.canvas.height - h) / 2),
-      w, h, fill: "#12B3A0", stroke: "#ffffff", strokeWidth: 0, cornerRadius: shapeType === "rect" ? 24 : 0,
-    };
-    commit({ ...overrides, items: [...items, item] });
-    setSelKey(`item-${id}`);
-    setShapeMenuOpen(false);
-  }
   function addImageItem(file: File) {
     if (items.length >= MAX_ITEMS) { window.alert(`Maksimal ${MAX_ITEMS} elemen tambahan.`); return; }
     if (file.size > 2 * 1024 * 1024) { window.alert("Gambar terlalu besar (maks 2MB). Kecilkan dulu ya."); return; }
@@ -410,18 +375,22 @@ export function DomEditor({
         const id = r.key.slice(5);
         const s = slots.find((x) => x.id === id);
         if (s) {
-          const width = Math.max(60, Math.round(r.startW + dW));
-          const height = Math.max(40, Math.round(r.startH + dH));
+          // Batas MAKSIMAL ditambahkan (sebelumnya cuma ada batas minimal) —
+          // tanpa ini, resize gampang bikin box lebih lebar dari kanvas sendiri
+          // (terutama di HP: gerakan jari kecil jadi delta besar karena scale kecil).
+          const width = Math.max(60, Math.min(layout.canvas.width - s.box.x, Math.round(r.startW + dW)));
+          const height = Math.max(40, Math.min(layout.canvas.height - s.box.y, Math.round(r.startH + dH)));
           patchSlotRaw(id, { box: { x: s.box.x, y: s.box.y, width, height } });
         }
       } else if (r.key.startsWith("item-")) {
         const id = r.key.slice(5);
         const it = items.find((x) => x.id === id);
         if (it) {
-          const w = Math.max(60, Math.round(r.startW + dW));
+          const maxW = Math.max(60, layout.canvas.width - it.x);
+          const w = Math.max(60, Math.min(maxW, Math.round(r.startW + dW)));
           const h = it.kind === "image"
             ? Math.max(40, Math.round((w * r.startH) / Math.max(1, r.startW))) // gambar: proporsional
-            : Math.max(40, Math.round(r.startH + dH));
+            : Math.max(40, Math.min(Math.max(40, layout.canvas.height - it.y), Math.round(r.startH + dH)));
           const patch: Partial<FreeItem> = { w, h };
           if (it.kind === "text") patch.fontSize = Math.max(12, Math.round(r.startFont * (w / Math.max(1, r.startW))));
           onOverridesChange({ ...overrides, items: items.map((x) => (x.id === id ? { ...x, ...patch } : x)) });
@@ -539,7 +508,7 @@ export function DomEditor({
   const selFx = selKey ? getFx(selKey) : {};
   const selLabel =
     selSlot ? (selSlot.label ?? selSlot.id)
-    : selItem ? (selItem.kind === "text" ? "Teks tambahan" : selItem.kind === "shape" ? "Bentuk" : "Gambar tambahan")
+    : selItem ? (selItem.kind === "text" ? "Teks tambahan" : "Gambar tambahan")
     : selKey === "logo" ? "Logo" : selKey === "footer" ? "Sosmed" : selKey === "delivery" ? "Pesan-antar"
     : selKey === "badges" ? "Sertifikasi" : "";
 
@@ -561,20 +530,6 @@ export function DomEditor({
           className="rounded-lg border border-primary px-2.5 py-1 text-xs font-semibold text-primary">+ Gambar</button>
         <input ref={fileRef} type="file" accept="image/*" className="hidden"
           onChange={(e)=>{ const f = e.target.files?.[0]; if (f) addImageItem(f); e.target.value = ""; }} />
-        <div className="relative">
-          <button type="button" onClick={()=>setShapeMenuOpen((v)=>!v)}
-            className="rounded-lg border border-primary px-2.5 py-1 text-xs font-semibold text-primary">+ Bentuk ▾</button>
-          {shapeMenuOpen && (
-            <div className="absolute left-0 top-full z-20 mt-1 flex gap-1 rounded-lg border border-navy/15 bg-white p-1.5 shadow-md">
-              <button type="button" title="Kotak" onClick={()=>addShapeItem("rect")}
-                className="rounded-md border border-navy/15 px-2 py-1.5 text-xs font-semibold text-navy hover:bg-navy/5">▭ Kotak</button>
-              <button type="button" title="Bulat" onClick={()=>addShapeItem("circle")}
-                className="rounded-md border border-navy/15 px-2 py-1.5 text-xs font-semibold text-navy hover:bg-navy/5">● Bulat</button>
-              <button type="button" title="Segitiga" onClick={()=>addShapeItem("triangle")}
-                className="rounded-md border border-navy/15 px-2 py-1.5 text-xs font-semibold text-navy hover:bg-navy/5">▲ Segitiga</button>
-            </div>
-          )}
-        </div>
       </div>
 
       <div className="mx-auto" style={{ width: DISPLAY_W }}>
@@ -661,10 +616,7 @@ export function DomEditor({
                 startDrag(e,"item",it.x,it.y,k,it.w,it.h,it.id);
               }}
               style={{ position:"absolute", left:it.x*scale, top:it.y*scale, width:it.w*scale, height:it.h*scale, cursor:"grab", ...fxStyle(`item-${it.id}`) }}>
-              {it.kind === "shape" ? (
-                <ShapeView shapeType={it.shapeType ?? "rect"} fill={it.fill ?? "#12B3A0"}
-                  stroke={it.stroke} strokeWidth={it.strokeWidth ?? 0} cornerRadius={it.cornerRadius ?? 0} scale={scale} />
-              ) : it.kind === "text" ? (
+              {it.kind === "text" ? (
                 editingKey === `item-${it.id}` ? (
                   <div ref={editRef} contentEditable suppressContentEditableWarning
                     onPointerDown={(e)=>e.stopPropagation()}
@@ -878,7 +830,7 @@ export function DomEditor({
           {items.map((it, i) => (
             <button key={it.id} type="button" onClick={()=>setSelKey(`item-${it.id}`)}
               className={`rounded-full px-3 py-1 text-xs font-semibold ${selKey===`item-${it.id}`?"bg-primary text-white":"bg-navy/10 text-navy"}`}>
-              {it.kind === "text" ? `Teks+${i+1}` : it.kind === "shape" ? `Bentuk+${i+1}` : `Gbr+${i+1}`}
+              {it.kind === "text" ? `Teks+${i+1}` : `Gbr+${i+1}`}
             </button>
           ))}
         </div>
@@ -1037,46 +989,6 @@ export function DomEditor({
                   <input type="color" value={selItem.outline.color}
                     onChange={(e)=>patchItem(selItem.id, { outline: { ...selItem.outline!, color: e.target.value } })}
                     className="h-7 w-8 rounded border border-navy/15" />
-                </>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* kontrol bentuk (shape) tambahan */}
-        {selItem && selItem.kind === "shape" && (
-          <>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-              <span className="font-medium text-navy/70">Bentuk:</span>
-              {([["rect","▭ Kotak"],["circle","● Bulat"],["triangle","▲ Segitiga"]] as const).map(([t, label]) => (
-                <button key={t} type="button" onClick={()=>patchItem(selItem.id, { shapeType: t })}
-                  className={`rounded-lg border px-2.5 py-1 font-medium ${(selItem.shapeType ?? "rect")===t?"border-primary bg-primary/10 text-primary":"border-navy/15 text-navy/70"}`}>
-                  {label}
-                </button>
-              ))}
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-              <span className="font-medium text-navy/70">Isi:</span>
-              <input type="color" value={selItem.fill ?? "#12B3A0"} onChange={(e)=>patchItem(selItem.id, { fill: e.target.value })}
-                className="h-7 w-8 rounded border border-navy/15" />
-              <label className="flex items-center gap-1.5 font-medium text-navy/70">
-                <input type="checkbox" checked={!!(selItem.strokeWidth && selItem.strokeWidth > 0)}
-                  onChange={(e)=>patchItem(selItem.id, { strokeWidth: e.target.checked ? 6 : 0, stroke: selItem.stroke ?? "#ffffff" })} />
-                Garis tepi
-              </label>
-              {(selItem.strokeWidth ?? 0) > 0 && (
-                <>
-                  <input type="range" min={1} max={40} value={selItem.strokeWidth} title="Tebal garis"
-                    onChange={(e)=>patchItem(selItem.id, { strokeWidth: Number(e.target.value) })} />
-                  <input type="color" value={selItem.stroke ?? "#ffffff"} onChange={(e)=>patchItem(selItem.id, { stroke: e.target.value })}
-                    className="h-7 w-8 rounded border border-navy/15" />
-                </>
-              )}
-              {(selItem.shapeType ?? "rect") === "rect" && (
-                <>
-                  <span className="ml-1 text-navy/50">Sudut:</span>
-                  <input type="range" min={0} max={160} value={selItem.cornerRadius ?? 0} title="Radius sudut"
-                    onChange={(e)=>patchItem(selItem.id, { cornerRadius: Number(e.target.value) })} />
                 </>
               )}
             </div>

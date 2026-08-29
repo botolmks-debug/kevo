@@ -59,7 +59,7 @@ export function buildAntiRepetisiBlock(captions: string[]): string {
     "ATURAN:",
     "- DILARANG memakai kalimat pembuka, pola hook, struktur paragraf, frasa khas, atau gaya CTA yang mirip dengan daftar di atas.",
     "- Kalau mayoritas daftar di atas dibuka dengan PERTANYAAN, caption baru JANGAN dibuka dengan pertanyaan.",
-    "- Kalau mayoritas memakai kata seru atau emoji pembuka yang sama, pilih pembuka yang berbeda total.",
+    "- Kalau mayoritas memakai emoji pembuka yang SAMA PERSIS (mis. selalu 🎉 di awal), ganti JENIS/POSISI emoji-nya biar tidak monoton — TAPI ini BUKAN alasan untuk berhenti pakai emoji sama sekali. Aturan dasar caption (emoji tetap wajib disisipkan sesuai instruksi EMOJI di atas) TETAP BERLAKU terlepas dari daftar riwayat ini — yang perlu bervariasi cuma jenis/posisi emoji-nya, bukan ada-tidaknya.",
     "- Cari sudut pandang, ritme kalimat, dan pilihan kata yang terasa SEGAR dibanding semua contoh di atas.",
   ].join("\n");
 }
