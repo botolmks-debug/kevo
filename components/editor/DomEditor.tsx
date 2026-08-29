@@ -105,7 +105,28 @@ export function DomEditor({
   layout, values, overrides, onOverridesChange, onTextChange, photo, logoUrl,
   socials = [], businessName, logoVariant = "light", canToggleLogo, onLogoVariantChange, exportRef,
 }: Props) {
-  const scale = DISPLAY_W / layout.canvas.width;
+  // Lebar kanvas RESPONSIF — sebelumnya DISPLAY_W konstan 340px, tidak pernah
+  // mengecil di HP. Halaman induk (app/konten/page.tsx) punya padding kiri-
+  // kanan 48px total (px-6) TANPA varian mobile, jadi butuh viewport >= 388px
+  // biar 340px muat pas — kebanyakan HP (360-375px) lebih sempit dari itu,
+  // bikin overflow horizontal di SETIAP buka halaman (bukan cuma pas resize).
+  // MARGIN sengaja dibuat sedikit lebih longgar (56px) dari padding asli
+  // (48px) sebagai jarak aman ekstra.
+  const [displayW, setDisplayW] = useState(DISPLAY_W);
+  useEffect(() => {
+    function recalc() {
+      const margin = 56;
+      setDisplayW(Math.max(240, Math.min(DISPLAY_W, window.innerWidth - margin)));
+    }
+    recalc();
+    window.addEventListener("resize", recalc);
+    window.addEventListener("orientationchange", recalc);
+    return () => {
+      window.removeEventListener("resize", recalc);
+      window.removeEventListener("orientationchange", recalc);
+    };
+  }, []);
+  const scale = displayW / layout.canvas.width;
   const displayH = layout.canvas.height * scale;
   const slots = textSlots(layout);
   // selKey: "slot-<id>" | "logo" | "footer" | "delivery" | "badges" | "item-<id>" | ""
@@ -518,7 +539,7 @@ export function DomEditor({
   return (
     <div>
       {/* toolbar: undo/redo + tambah elemen */}
-      <div className="mx-auto mb-2 flex flex-wrap items-center gap-2" style={{ width: DISPLAY_W }}>
+      <div className="mx-auto mb-2 flex flex-wrap items-center gap-2" style={{ width: displayW }}>
         <button type="button" onClick={undo} disabled={histState.past.length === 0} title="Undo (Ctrl+Z)"
           className="rounded-lg border border-navy/15 px-2.5 py-1 text-sm font-bold text-navy disabled:opacity-30">↶</button>
         <button type="button" onClick={redo} disabled={histState.future.length === 0} title="Redo (Ctrl+Shift+Z)"
@@ -532,11 +553,11 @@ export function DomEditor({
           onChange={(e)=>{ const f = e.target.files?.[0]; if (f) addImageItem(f); e.target.value = ""; }} />
       </div>
 
-      <div className="mx-auto" style={{ width: DISPLAY_W }}>
+      <div className="mx-auto" style={{ width: displayW }}>
         <div ref={(el) => { stageRef.current = el; (exportRef as React.MutableRefObject<HTMLDivElement | null>).current = el; }}
           onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
           onKeyDown={onKeyDown} tabIndex={0}
-          style={{ position:"relative", width:DISPLAY_W, height:displayH, borderRadius:0, overflow:"hidden", background:"#111", touchAction:"none", outline:"none" }}>
+          style={{ position:"relative", width:displayW, height:displayH, borderRadius:0, overflow:"hidden", background:"#111", touchAction:"none", outline:"none" }}>
 
           {backDecos.map((d, i) => <DecoView key={"b"+i} d={d} scale={scale} />)}
 
@@ -710,7 +731,7 @@ export function DomEditor({
           )}
 
           {/* garis bantu snap — data-noexport, dikontrol via ref (tanpa re-render) */}
-          <div ref={guideVRef} data-noexport="1" style={{ position:"absolute", left:DISPLAY_W/2-0.5, top:0, width:1, height:"100%", zIndex:98,
+          <div ref={guideVRef} data-noexport="1" style={{ position:"absolute", left:displayW/2-0.5, top:0, width:1, height:"100%", zIndex:98,
             borderLeft:"1.5px dashed #12B3A0", opacity:0, pointerEvents:"none", transition:"opacity 80ms" }} />
           <div ref={guideHRef} data-noexport="1" style={{ position:"absolute", top:displayH/2-0.5, left:0, height:1, width:"100%", zIndex:98,
             borderTop:"1.5px dashed #12B3A0", opacity:0, pointerEvents:"none", transition:"opacity 80ms" }} />
@@ -720,11 +741,18 @@ export function DomEditor({
             <div data-noexport="1" style={{ position:"absolute", left:selBox.x-3, top:selBox.y-3, width:selBox.w+6, height:selBox.h+6, zIndex:99,
               border:"1.5px dashed #12B3A0", borderRadius:4, pointerEvents:"none" }} />
           )}
-          {/* handle resize — pojok kanan-bawah elemen terpilih (slot/item/logo) */}
+          {/* handle resize — pojok kanan-bawah elemen terpilih (slot/item/logo).
+              Titik terlihat tetap 16x16 (biar rapi), tapi AREA SENTUH dibikin
+              40x40 (invisible) di sekelilingnya — 16px jauh di bawah standar
+              target sentuh minimum (44px iOS / 48px Android), jadi di HP susah
+              digrab presisi & gampang salah tarik (ikut andil di bug resize
+              kebablasan sebelumnya). */}
           {selBox && canResize && (
             <div data-noexport="1" onPointerDown={startResize}
-              style={{ position:"absolute", left:selBox.x+selBox.w-6, top:selBox.y+selBox.h-6, width:16, height:16, zIndex:100,
-                background:"#12B3A0", border:"2px solid #ffffff", borderRadius:4, cursor:"nwse-resize", touchAction:"none" }} />
+              style={{ position:"absolute", left:selBox.x+selBox.w-18, top:selBox.y+selBox.h-18, width:40, height:40, zIndex:100,
+                cursor:"nwse-resize", touchAction:"none", display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <div style={{ width:16, height:16, background:"#12B3A0", border:"2px solid #ffffff", borderRadius:4, pointerEvents:"none" }} />
+            </div>
           )}
         </div>
         <p className="mt-2 text-xs text-navy/50">Seret elemen langsung — nempel otomatis ke tengah/tepi. Dobel-klik teks = ketik langsung. Kotak hijau di pojok = ubah ukuran. Panah = geser halus (Shift = cepat). Dobel-klik logo: terang/gelap.</p>

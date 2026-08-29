@@ -207,7 +207,12 @@ export default function KontenPage() {
         // Kalau gagal (browser lama/HP tertentu) → jatuh otomatis ke jalur Satori.
         try {
           await document.fonts.ready;
-          const pr = editTemplate.layouts[selected.ratio].canvas.width / 340;
+          // pixelRatio HARUS dihitung dari lebar RENDER SESUNGGUHNYA elemen
+          // (bisa < 340px di HP sempit sejak DomEditor jadi responsif), BUKAN
+          // konstanta 340 yang di-hardcode terpisah — kalau tetap 340, hasil
+          // export di HP jadi salah resolusi (ke-upscale kurang/lebih).
+          const renderedW = domRef.current.getBoundingClientRect().width || 340;
+          const pr = editTemplate.layouts[selected.ratio].canvas.width / renderedW;
           blob = await htmlToImage.toBlob(domRef.current, {
             pixelRatio: pr, cacheBust: true, backgroundColor: "#111",
             filter: (n) => !(n instanceof HTMLElement && n.dataset?.noexport),
