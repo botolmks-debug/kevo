@@ -101,25 +101,91 @@ function DecoView({ d, scale, z }: { d: Decoration; scale: number; z?: number })
   </div>;
 }
 
-/** Render satu elemen bentuk dasar (kotak/bulat/segitiga) — mengisi 100% box induknya. */
+// Titik-titik poligon "ledakan" (burst/starburst) untuk badge promo — dihitung
+// sekali di level modul (bukan tiap render).
+const BURST_POINTS = (() => {
+  const spikes = 12;
+  const outerR = 48, innerR = 36;
+  const pts: string[] = [];
+  for (let i = 0; i < spikes * 2; i++) {
+    const r = i % 2 === 0 ? outerR : innerR;
+    const angle = (Math.PI * i) / spikes - Math.PI / 2;
+    pts.push(`${(50 + r * Math.cos(angle)).toFixed(1)},${(50 + r * Math.sin(angle)).toFixed(1)}`);
+  }
+  return pts.join(" ");
+})();
+
+/** Katalog elemen yang bisa ditambah lewat dropdown "+ Elemen", dikelompokkan per kategori. */
+const SHAPE_CATALOG: { group: string; items: { type: FreeItem["shapeType"] & string; label: string; icon: string }[] }[] = [
+  { group: "Bentuk Dasar", items: [
+    { type: "rect", label: "Kotak", icon: "▭" },
+    { type: "circle", label: "Bulat", icon: "●" },
+    { type: "triangle", label: "Segitiga", icon: "▲" },
+  ]},
+  { group: "Panah", items: [
+    { type: "arrow-right", label: "Panah Lurus", icon: "➔" },
+    { type: "arrow-block", label: "Panah Blok", icon: "▶" },
+    { type: "arrow-curve", label: "Panah Lengkung", icon: "↷" },
+  ]},
+  { group: "Efek Promo", items: [
+    { type: "star", label: "Bintang", icon: "★" },
+    { type: "burst", label: "Ledakan Promo", icon: "✷" },
+    { type: "ribbon", label: "Pita Banner", icon: "🎗" },
+    { type: "speech", label: "Balon Bicara", icon: "💬" },
+  ]},
+];
+
+/** Render satu elemen bentuk/panah/efek promo — mengisi 100% box induknya. */
 function ShapeView({ it, scale }: { it: FreeItem; scale: number }) {
   const fill = it.fill ?? "#2563eb";
   const strokeW = (it.strokeWidth ?? 0) * scale;
   const stroke = it.stroke ?? "#000000";
+  const strokeProps = strokeW > 0 ? { stroke, strokeWidth: strokeW, vectorEffect: "non-scaling-stroke" as const } : {};
+
   if (it.shapeType === "circle") {
     return <div style={{ width: "100%", height: "100%", borderRadius: 9999, backgroundColor: fill,
       boxSizing: "border-box", ...(strokeW > 0 ? { border: `${strokeW}px solid ${stroke}` } : {}) }} />;
   }
-  if (it.shapeType === "triangle") {
-    return (
-      <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ display: "block" }}>
-        <polygon points="50,2 98,98 2,98" fill={fill}
-          {...(strokeW > 0 ? { stroke, strokeWidth: strokeW, vectorEffect: "non-scaling-stroke" as const } : {})} />
-      </svg>
-    );
+  if (it.shapeType === "rect" || !it.shapeType) {
+    return <div style={{ width: "100%", height: "100%", borderRadius: (it.cornerRadius ?? 0) * scale, backgroundColor: fill,
+      boxSizing: "border-box", ...(strokeW > 0 ? { border: `${strokeW}px solid ${stroke}` } : {}) }} />;
   }
-  return <div style={{ width: "100%", height: "100%", borderRadius: (it.cornerRadius ?? 0) * scale, backgroundColor: fill,
-    boxSizing: "border-box", ...(strokeW > 0 ? { border: `${strokeW}px solid ${stroke}` } : {}) }} />;
+  // Sisanya (segitiga, panah, efek promo) dirender via SVG — viewBox 0..100,
+  // preserveAspectRatio="none" supaya ikut mengisi box yang di-resize bebas.
+  return (
+    <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ display: "block", overflow: "visible" }}>
+      {it.shapeType === "triangle" && (
+        <polygon points="50,2 98,98 2,98" fill={fill} {...strokeProps} />
+      )}
+      {it.shapeType === "arrow-right" && (
+        <polygon points="0,40 65,40 65,20 100,50 65,80 65,60 0,60" fill={fill} {...strokeProps} />
+      )}
+      {it.shapeType === "arrow-block" && (
+        <polygon points="0,30 55,30 55,5 100,50 55,95 55,70 0,70" fill={fill} {...strokeProps} />
+      )}
+      {it.shapeType === "arrow-curve" && (
+        <>
+          <path d="M12,88 C12,28 50,12 90,12" fill="none" stroke={fill} strokeWidth={8} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+          <polygon points="76,2 100,12 80,28" fill={fill} {...strokeProps} />
+        </>
+      )}
+      {it.shapeType === "star" && (
+        <polygon points="50,5 61,35 95,35 68,57 79,91 50,70 21,91 32,57 5,35 39,35" fill={fill} {...strokeProps} />
+      )}
+      {it.shapeType === "burst" && (
+        <polygon points={BURST_POINTS} fill={fill} {...strokeProps} />
+      )}
+      {it.shapeType === "ribbon" && (
+        <polygon points="0,25 12,50 0,75 100,75 88,50 100,25" fill={fill} {...strokeProps} />
+      )}
+      {it.shapeType === "speech" && (
+        <>
+          <rect x="2" y="2" width="96" height="68" rx="14" fill={fill} {...strokeProps} />
+          <polygon points="18,68 18,95 40,68" fill={fill} />
+        </>
+      )}
+    </svg>
+  );
 }
 
 /**
@@ -177,6 +243,7 @@ export function DomEditor({
   const [selKey, setSelKey] = useState<string>(slots[0] ? `slot-${slots[0].id}` : "");
   // Dobel-klik teks → ketik langsung di kanvas (contentEditable, commit saat blur/Enter)
   const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [shapeMenuOpen, setShapeMenuOpen] = useState(false);
   const editRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (editingKey && editRef.current) {
@@ -384,7 +451,7 @@ export function DomEditor({
     };
     reader.readAsDataURL(file);
   }
-  function addShapeItem(shapeType: "rect" | "circle" | "triangle") {
+  function addShapeItem(shapeType: NonNullable<FreeItem["shapeType"]>) {
     if (items.length >= MAX_ITEMS) { window.alert(`Maksimal ${MAX_ITEMS} elemen tambahan.`); return; }
     const id = `s${Date.now().toString(36)}`;
     const w = 220, h = 220;
@@ -396,6 +463,7 @@ export function DomEditor({
     };
     commit({ ...overrides, items: [...items, item] });
     setSelKey(`item-${id}`);
+    setShapeMenuOpen(false);
   }
 
   function commitPosition(kind: DragKind, id: string | undefined, x: number, y: number) {
@@ -648,12 +716,33 @@ export function DomEditor({
         <input ref={fileRef} type="file" accept="image/*" className="hidden"
           onChange={(e)=>{ const f = e.target.files?.[0]; if (f) addImageItem(f); e.target.value = ""; }} />
         <span className="mx-1 h-5 w-px bg-navy/10" />
-        <button type="button" onClick={()=>addShapeItem("rect")} title="Tambah kotak"
-          className="rounded-lg border border-primary px-2.5 py-1 text-sm font-semibold text-primary">▭</button>
-        <button type="button" onClick={()=>addShapeItem("circle")} title="Tambah bulat"
-          className="rounded-lg border border-primary px-2.5 py-1 text-sm font-semibold text-primary">●</button>
-        <button type="button" onClick={()=>addShapeItem("triangle")} title="Tambah segitiga"
-          className="rounded-lg border border-primary px-2.5 py-1 text-sm font-semibold text-primary">▲</button>
+        <div className="relative">
+          <button type="button" onClick={()=>setShapeMenuOpen((v)=>!v)}
+            className={`rounded-lg border px-2.5 py-1 text-xs font-semibold ${shapeMenuOpen ? "border-primary bg-primary/10 text-primary" : "border-primary text-primary"}`}>
+            + Elemen <span className="text-[10px]">{shapeMenuOpen ? "▲" : "▼"}</span>
+          </button>
+          {shapeMenuOpen && (
+            <>
+              {/* backdrop tak terlihat — klik di luar menutup dropdown */}
+              <div className="fixed inset-0 z-40" onClick={()=>setShapeMenuOpen(false)} />
+              <div className="absolute left-0 top-full z-50 mt-1 w-56 rounded-xl border border-navy/10 bg-white p-2 shadow-lg">
+                {SHAPE_CATALOG.map((g) => (
+                  <div key={g.group} className="mb-2 last:mb-0">
+                    <p className="mb-1 px-1 text-[10px] font-bold uppercase tracking-wide text-navy/40">{g.group}</p>
+                    <div className="grid grid-cols-2 gap-1">
+                      {g.items.map((it) => (
+                        <button key={it.type} type="button" onClick={()=>addShapeItem(it.type)}
+                          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-xs font-medium text-navy hover:bg-primary/10">
+                          <span className="text-sm">{it.icon}</span>{it.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="mx-auto" style={{ width: displayW }}>

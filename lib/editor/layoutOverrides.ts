@@ -51,8 +51,8 @@ export type FreeItem = {
   outline?: { width: number; color: string } | null;
   /** kind "image" — data URI (di-embed, aman untuk export). */
   src?: string;
-  /** kind "shape" — bentuk dasar (kotak/bulat/segitiga) dengan fill & stroke. */
-  shapeType?: "rect" | "circle" | "triangle";
+  /** kind "shape" — bentuk dasar, panah, & efek promo dengan fill & stroke. */
+  shapeType?: "rect" | "circle" | "triangle" | "arrow-right" | "arrow-block" | "arrow-curve" | "star" | "burst" | "ribbon" | "speech";
   fill?: string;
   stroke?: string;
   /** 0 = tanpa garis tepi. Dalam satuan kanvas (di-skala saat ditampilkan). */
