@@ -101,6 +101,27 @@ function DecoView({ d, scale, z }: { d: Decoration; scale: number; z?: number })
   </div>;
 }
 
+/** Render satu elemen bentuk dasar (kotak/bulat/segitiga) — mengisi 100% box induknya. */
+function ShapeView({ it, scale }: { it: FreeItem; scale: number }) {
+  const fill = it.fill ?? "#2563eb";
+  const strokeW = (it.strokeWidth ?? 0) * scale;
+  const stroke = it.stroke ?? "#000000";
+  if (it.shapeType === "circle") {
+    return <div style={{ width: "100%", height: "100%", borderRadius: 9999, backgroundColor: fill,
+      boxSizing: "border-box", ...(strokeW > 0 ? { border: `${strokeW}px solid ${stroke}` } : {}) }} />;
+  }
+  if (it.shapeType === "triangle") {
+    return (
+      <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ display: "block" }}>
+        <polygon points="50,2 98,98 2,98" fill={fill}
+          {...(strokeW > 0 ? { stroke, strokeWidth: strokeW, vectorEffect: "non-scaling-stroke" as const } : {})} />
+      </svg>
+    );
+  }
+  return <div style={{ width: "100%", height: "100%", borderRadius: (it.cornerRadius ?? 0) * scale, backgroundColor: fill,
+    boxSizing: "border-box", ...(strokeW > 0 ? { border: `${strokeW}px solid ${stroke}` } : {}) }} />;
+}
+
 /**
  * Kontrol slider yang di-collapse jadi TOMBOL — hemat tempat di panel mobile
  * (dulu semua slider selalu terbuka & makan banyak ruang vertikal). Tombolnya
@@ -363,6 +384,19 @@ export function DomEditor({
     };
     reader.readAsDataURL(file);
   }
+  function addShapeItem(shapeType: "rect" | "circle" | "triangle") {
+    if (items.length >= MAX_ITEMS) { window.alert(`Maksimal ${MAX_ITEMS} elemen tambahan.`); return; }
+    const id = `s${Date.now().toString(36)}`;
+    const w = 220, h = 220;
+    const item: FreeItem = {
+      id, kind: "shape", shapeType,
+      x: Math.round((layout.canvas.width - w) / 2), y: Math.round((layout.canvas.height - h) / 2),
+      w, h, fill: "#2563eb", strokeWidth: 0, stroke: "#000000",
+      ...(shapeType === "rect" ? { cornerRadius: 0 } : {}),
+    };
+    commit({ ...overrides, items: [...items, item] });
+    setSelKey(`item-${id}`);
+  }
 
   function commitPosition(kind: DragKind, id: string | undefined, x: number, y: number) {
     if (kind === "slot" && id) {
@@ -591,7 +625,7 @@ export function DomEditor({
   const selFx = selKey ? getFx(selKey) : {};
   const selLabel =
     selSlot ? (selSlot.label ?? selSlot.id)
-    : selItem ? (selItem.kind === "text" ? "Teks tambahan" : "Gambar tambahan")
+    : selItem ? (selItem.kind === "text" ? "Teks tambahan" : selItem.kind === "image" ? "Gambar tambahan" : "Bentuk tambahan")
     : selKey === "logo" ? "Logo" : selKey === "footer" ? "Sosmed" : selKey === "delivery" ? "Pesan-antar"
     : selKey === "badges" ? "Sertifikasi" : "";
 
@@ -613,6 +647,13 @@ export function DomEditor({
           className="rounded-lg border border-primary px-2.5 py-1 text-xs font-semibold text-primary">+ Gambar</button>
         <input ref={fileRef} type="file" accept="image/*" className="hidden"
           onChange={(e)=>{ const f = e.target.files?.[0]; if (f) addImageItem(f); e.target.value = ""; }} />
+        <span className="mx-1 h-5 w-px bg-navy/10" />
+        <button type="button" onClick={()=>addShapeItem("rect")} title="Tambah kotak"
+          className="rounded-lg border border-primary px-2.5 py-1 text-sm font-semibold text-primary">▭</button>
+        <button type="button" onClick={()=>addShapeItem("circle")} title="Tambah bulat"
+          className="rounded-lg border border-primary px-2.5 py-1 text-sm font-semibold text-primary">●</button>
+        <button type="button" onClick={()=>addShapeItem("triangle")} title="Tambah segitiga"
+          className="rounded-lg border border-primary px-2.5 py-1 text-sm font-semibold text-primary">▲</button>
       </div>
 
       <div className="mx-auto" style={{ width: displayW }}>
@@ -714,9 +755,11 @@ export function DomEditor({
                     color:it.color ?? "#ffffff", lineHeight:1.1, whiteSpace:"pre-wrap", textAlign:it.align ?? "left", width:"100%",
                     textShadow: buildTextShadow(it, scale), userSelect:"none" }}>{it.text ?? ""}</div>
                 )
-              ) : (
+              ) : it.kind === "image" ? (
                 <img src={it.src} alt="" draggable={false}
                   style={{ width:"100%", height:"100%", objectFit:"contain", ...IMG_STYLE }} />
+              ) : (
+                <ShapeView it={it} scale={scale} />
               )}
             </div>
           ))}
@@ -947,7 +990,7 @@ export function DomEditor({
           {items.map((it, i) => (
             <button key={it.id} type="button" onClick={()=>setSelKey(`item-${it.id}`)}
               className={`rounded-full px-3.5 py-2 sm:px-3 sm:py-1 text-xs font-semibold ${selKey===`item-${it.id}`?"bg-primary text-white":"bg-navy/10 text-navy"}`}>
-              {it.kind === "text" ? `Teks+${i+1}` : `Gbr+${i+1}`}
+              {it.kind === "text" ? `Teks+${i+1}` : it.kind === "image" ? `Gbr+${i+1}` : `Bentuk+${i+1}`}
             </button>
           ))}
         </div>
@@ -1145,6 +1188,43 @@ export function DomEditor({
               )}
             </div>
           </>
+        )}
+
+        {/* kontrol bentuk dasar (kotak/bulat/segitiga) — mobile: 1 kontrol per baris */}
+        {selItem && selItem.kind === "shape" && (
+          <div className="mt-3 flex flex-col gap-2.5 sm:mt-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 text-xs">
+            <label className="flex items-center gap-2 font-medium text-navy/70">
+              Warna
+              <input type="color" value={selItem.fill ?? "#2563eb"}
+                onChange={(e)=>patchItem(selItem.id, { fill: e.target.value })}
+                className="h-10 w-12 shrink-0 rounded border border-navy/15 sm:h-8 sm:w-9" />
+            </label>
+            {selItem.shapeType === "rect" && (
+              <SliderToggle label="Sudut" valueLabel={`${selItem.cornerRadius ?? 0}`}>
+                <input type="range" min={0} max={Math.round(Math.min(selItem.w, selItem.h) / 2)} value={selItem.cornerRadius ?? 0} title="Sudut"
+                  onChange={(e)=>patchItem(selItem.id, { cornerRadius: Number(e.target.value) })}
+                  className="h-6 w-full accent-primary sm:h-auto sm:w-28" />
+              </SliderToggle>
+            )}
+            <label className="flex items-center gap-2 font-medium text-navy/70">
+              <input type="checkbox" checked={!!(selItem.strokeWidth && selItem.strokeWidth > 0)}
+                onChange={(e)=>patchItem(selItem.id, { strokeWidth: e.target.checked ? 4 : 0 })}
+                className="h-5 w-5 sm:h-4 sm:w-4" />
+              Garis tepi
+            </label>
+            {!!(selItem.strokeWidth && selItem.strokeWidth > 0) && (
+              <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+                <SliderToggle label="Tebal" valueLabel={`${selItem.strokeWidth}`}>
+                  <input type="range" min={1} max={20} value={selItem.strokeWidth} title="Tebal"
+                    onChange={(e)=>patchItem(selItem.id, { strokeWidth: Number(e.target.value) })}
+                    className="h-6 w-full accent-primary sm:h-auto sm:w-24" />
+                </SliderToggle>
+                <input type="color" value={selItem.stroke ?? "#000000"}
+                  onChange={(e)=>patchItem(selItem.id, { stroke: e.target.value })}
+                  className="h-10 w-12 shrink-0 rounded border border-navy/15 sm:h-7 sm:w-8" />
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
