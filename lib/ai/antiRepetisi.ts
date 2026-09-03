@@ -63,3 +63,36 @@ export function buildAntiRepetisiBlock(captions: string[]): string {
     "- Cari sudut pandang, ritme kalimat, dan pilihan kata yang terasa SEGAR dibanding semua contoh di atas.",
   ].join("\n");
 }
+
+/**
+ * Judul (onImageText) dari N post "Konten Berita" terakhir milik bisnis ini
+ * — dipakai buat kunci pencarian berita SUPAYA TIDAK ambil topik yang sama
+ * berulang (kejadian nyata: 3x generate berturut-turut semua soal "Google
+ * Pics"). Beda dari getRecentCaptions di atas: cuma jenis="berita" (topik
+ * post lain seperti Produk/General tidak relevan buat deteksi topik berita
+ * yang berulang), dan pakai onImageText (judul) bukan caption penuh — judul
+ * sudah wajib menyebut subjek konkret (lihat lib/ai/newsPrompt.ts), jadi
+ * lebih ringkas & akurat buat identifikasi topik dibanding caption panjang.
+ */
+export async function getRecentNewsTitles(
+  supabase: SupabaseClient,
+  businessId: string,
+  limit: number = 8,
+): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from("generated_content")
+      .select("on_image_text")
+      .eq("business_id", businessId)
+      .eq("jenis", "berita")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error || !data) return [];
+    return data
+      .map((row) => (row as { on_image_text?: string | null }).on_image_text)
+      .filter((t): t is string => typeof t === "string" && t.trim().length > 0);
+  } catch {
+    return [];
+  }
+}

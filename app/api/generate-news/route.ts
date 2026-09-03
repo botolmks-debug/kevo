@@ -6,6 +6,7 @@ import { checkSupabaseEnvPresence } from "@/lib/env";
 import { loadBusinessProfile } from "@/lib/supabase/businessProfile";
 import { logError } from "@/lib/monitoring/errorLog";
 import { searchIndustryNews } from "@/lib/ai/newsSearch";
+import { getRecentNewsTitles } from "@/lib/ai/antiRepetisi";
 import { buildNewsContentPrompt } from "@/lib/ai/newsPrompt";
 import { buildNewsScenePrompt } from "@/lib/ai/scenePrompt";
 import { generateImage } from "@/lib/ai/geminiImage";
@@ -88,7 +89,11 @@ export async function POST(request: NextRequest) {
   }
 
   // ── 1) Cari berita relevan industri user (Gemini Google Search grounding) ─
-  const news = await searchIndustryNews(profile.business.industry, profile.offering.mainProducts, language);
+  // avoidTopics = judul post "Berita" sebelumnya milik bisnis ini — supaya
+  // AI tidak ambil topik yang sama berulang (kejadian nyata: 3x generate
+  // berturut-turut semua soal "Google Pics").
+  const avoidTopics = await getRecentNewsTitles(supabase, user.id);
+  const news = await searchIndustryNews(profile.business.industry, profile.offering.mainProducts, language, avoidTopics);
   if (!news.ok) return fail(news.error, 502);
 
   // ── 2) Judul + caption + deskripsi adegan (JSON) ─────────────────────────
