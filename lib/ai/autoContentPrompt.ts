@@ -38,7 +38,7 @@ const PERSONA_EN =
   "complain about, worry about, and dream of every day. Build genuine empathy so the reader feels 'this is me' / " +
   "'they really get it'. Write from INSIDE their experience, not from outside as a salesperson.";
 
-function persona(lang?: Lang): string {
+export function persona(lang?: Lang): string {
   return isEn(lang) ? PERSONA_EN : PERSONA_ID;
 }
 
@@ -78,14 +78,7 @@ const QUALITY_RULES_ID =
   "- Angka HANYA boleh muncul kalau eksplisit relevan disebut dari data produk/profil (mis. jumlah varian, isi/porsi yang memang jadi bagian penjelasan produk) — TAPI ukuran produk (ml/gr/kg/cm) dan usia bisnis TETAP mengikuti aturan JUDUL & profil bisnis di atas (ukuran tidak di judul; usia bisnis referensi nada saja, jangan disebut angkanya), aturan itu LEBIH SPESIFIK dan menang di atas baris ini.\n" +
   "- Ganti klaim angka dengan observasi umum tanpa angka: \"banyak pembeli menilai dari kemasan dulu\" BOLEH; \"73% pembeli menilai dari kemasan\" DILARANG.\n" +
   "UJI SPESIFISITAS untuk judul (lakukan sebelum menjawab): kalau judulnya masih masuk akal dipakai usaha LAIN yang beda industri, berarti terlalu umum — tulis ulang dengan hal konkret dari data usaha ini (benda, situasi, momen spesifik; bukan sekadar kata sifat seperti \"berkualitas\"/\"terbaik\").\n" +
-  "ATURAN KOSAKATA (MUTLAK): DILARANG menciptakan/mengarang kata yang tidak ada di Bahasa Indonesia baku (KBBI) hanya karena terdengar mirip atau puitis — contoh kesalahan nyata: \"modal pezhalan\" (kata ini TIDAK ADA, seharusnya \"modal usaha\"/\"modal jualan\"). Kalau ragu apakah sebuah kata benar-benar lazim dipakai sehari-hari, JANGAN dipakai — ganti dengan kata umum yang sudah pasti familiar bagi pembaca awam.\n" +
-  "KOHERENSI LOGIKA ANTAR KALIMAT (WAJIB — ini pelanggaran paling sering terjadi, periksa betul-betul):\n" +
-  "- Setiap kalimat WAJIB jadi kelanjutan logis dari kalimat sebelumnya (sebab-akibat, penjelasan lanjutan, atau kontras yang jelas) — BUKAN kalimat baru yang cuma menempelkan fitur/kata kunci produk (bening, PET, food grade, tahan lama, dst.) dari data supaya kedengaran meyakinkan.\n" +
-  "- SEBELUM menulis kalimat yang menyebut fitur/manfaat produk, cek dalam hati: \"ini betul-betul kelanjutan alami dari kalimat sebelumnya, atau cuma ditempel karena kata kuncinya ada di data?\" Kalau cuma ditempel: JANGAN sambungkan paksa jadi satu kalimat — pisahkan jadi kalimat/poin sendiri dengan transisi yang jujur, atau buang kalau memang tidak relevan di situ.\n" +
-  "- DILARANG memaksakan hubungan sebab-akibat antara dua hal yang topiknya beda. Contoh kesalahan nyata: \"bahan PET memastikan isian terlihat menonjol TANPA MENGABAIKAN aspek kebersihan saat dipegang\" — bening itu soal TAMPILAN, higienis itu soal KEBERSIHAN, dua hal berbeda yang dipaksa nyambung pakai \"tanpa mengabaikan\" padahal tidak ada kaitannya.\n" +
-  "- DILARANG kalimat pembuka yang isinya bertentangan dengan kalimat sesudahnya tanpa jembatan penjelas. Contoh kesalahan nyata: kalimat 1 bilang orang \"lebih memilih meracik sendiri daripada stok kemasan siap pakai\", lalu kalimat 2 langsung memuji stok kemasan sebagai solusi — keberatan di kalimat 1 dibiarkan menggantung, belum dijawab sebelum promosi dimulai.\n" +
-  "- KALIMAT TERAKHIR sebelum kalimat baru: baca ulang, tanya \"kalau saya pembaca awam, apa saya paham kenapa kalimat ini muncul setelah kalimat sebelumnya?\" Kalau jawabannya tidak/dipaksakan, tulis ulang transisinya sampai jelas, atau hapus.\n" +
-  "- JANGAN melebih-lebihkan (hyperbolic) demi kedengaran meyakinkan — kalau suatu fitur cuma \"lumayan membantu\", jangan ditulis seolah itu satu-satunya solusi atau selalu jadi masalah besar semua orang.";
+  "ATURAN KOSAKATA (MUTLAK): DILARANG menciptakan/mengarang kata yang tidak ada di Bahasa Indonesia baku (KBBI) hanya karena terdengar mirip atau puitis — contoh kesalahan nyata: \"modal pezhalan\" (kata ini TIDAK ADA, seharusnya \"modal usaha\"/\"modal jualan\"). Kalau ragu apakah sebuah kata benar-benar lazim dipakai sehari-hari, JANGAN dipakai — ganti dengan kata umum yang sudah pasti familiar bagi pembaca awam.";
 
 const QUALITY_RULES_EN =
   "LANGUAGE STYLE (REQUIRED, applies to headline & caption):\n" +
@@ -99,20 +92,13 @@ const QUALITY_RULES_EN =
   "- Numbers may ONLY appear if explicitly relevant from product/profile data (e.g. number of variants, contents/portion that's genuinely part of the product description) — BUT product size (ml/g/kg/cm) and business age STILL follow the HEADLINE & business-profile rules above (no size in the headline; business age is tone reference only, never state the figure) — those rules are MORE SPECIFIC and win over this line.\n" +
   "- Replace numeric claims with number-free general observations: \"many buyers judge the packaging first\" is OK; \"73% of buyers judge the packaging\" is FORBIDDEN.\n" +
   "SPECIFICITY TEST for the headline (do this before answering): if the headline would still make sense for a DIFFERENT business in another industry, it's too generic — rewrite it around something concrete from this business's data (an object, situation, or specific moment; not just adjectives like \"quality\"/\"best\").\n" +
-  "VOCABULARY RULE (ABSOLUTE): NEVER invent or coin a word that isn't real, standard English, just because it sounds fitting or poetic. If you're unsure whether a word is genuinely common usage, don't use it — replace it with a plain, unmistakably familiar word instead.\n" +
-  "SENTENCE-TO-SENTENCE LOGIC (REQUIRED — this is the most common violation, check carefully):\n" +
-  "- Every sentence MUST be a logical continuation of the one before it (cause-effect, further explanation, or a clear contrast) — NOT a new sentence that just tacks on a product feature/keyword (clear, PET, food grade, durable, etc.) from the data because it sounds convincing.\n" +
-  "- BEFORE writing a sentence that mentions a feature/benefit, check: \"is this a genuine continuation of the previous sentence, or am I just inserting it because the keyword exists in the data?\" If it's just inserted: don't force it into the same sentence — give it its own sentence/point with an honest transition, or cut it if it doesn't belong there.\n" +
-  "- DO NOT force a cause-effect link between two things on different topics. Real mistake example: \"the clear PET material makes the contents stand out WITHOUT COMPROMISING hygiene when customers hold it\" — clarity is about APPEARANCE, hygiene is about CLEANLINESS, two unrelated topics forced together with \"without compromising\" as if they connect.\n" +
-  "- DO NOT open with a sentence whose point contradicts the sentence right after it with no bridge explaining the shift. Real mistake example: sentence 1 says people \"prefer mixing their own portions rather than stocking ready-made packaging\", then sentence 2 immediately praises ready-made stock as the answer — the objection in sentence 1 is left unanswered before the pitch begins.\n" +
-  "- Before finalizing, re-read each new sentence and ask: \"as an ordinary reader, would I understand why this sentence follows the one before it?\" If not, or it feels forced, rewrite the transition or delete the sentence.\n" +
-  "- DO NOT exaggerate for persuasiveness — if a feature is only mildly helpful, don't write it as if it's the one and only solution or a universal pain point.";
+  "VOCABULARY RULE (ABSOLUTE): NEVER invent or coin a word that isn't real, standard English, just because it sounds fitting or poetic. If you're unsure whether a word is genuinely common usage, don't use it — replace it with a plain, unmistakably familiar word instead.";
 
 export function qualityRules(lang?: Lang): string {
   return isEn(lang) ? QUALITY_RULES_EN : QUALITY_RULES_ID;
 }
 
-function captionRules(lang?: Lang): string {
+export function captionRules(lang?: Lang): string {
   return (isEn(lang) ? CAPTION_RULES_EN : CAPTION_RULES_ID) + "\n" + qualityRules(lang);
 }
 
@@ -155,7 +141,7 @@ const ONIMAGE_RULE_EN =
   "(e) EYE-CATCHING COMPARISON (\"Average shop vs shop that sells out\", \"Are you this one, or that one?\"), " +
   "(f) SINGLE/TWO-WORD POWERFUL hook (\"Exhausted.\", \"Enough is enough.\", \"Tired of struggling.\").";
 
-function onImageRule(lang?: Lang): string {
+export function onImageRule(lang?: Lang): string {
   return isEn(lang) ? ONIMAGE_RULE_EN : ONIMAGE_RULE_ID;
 }
 
@@ -854,7 +840,7 @@ function pickInteraksiFormat(lang?: Lang): InteraksiFormat {
 }
 
 // ── Font & JSON tail ───────────────────────────────────────────────────────
-function fontRule(lang?: Lang): string {
+export function fontRule(lang?: Lang): string {
   if (isEn(lang)) {
     return `fontId = pick ONE font ID from this list that BEST matches the mood and style of this content (consider industry, brand voice, and target customer): ${FONT_LIST}. ` +
       "E.g. elegant business → serif/display; playful/youth → script/rounded sans; bold/strong → condensed/display. Don't always pick the same one.";
@@ -863,7 +849,7 @@ function fontRule(lang?: Lang): string {
     "Contoh: bisnis elegan → serif/display; playful/anak muda → script/sans bulat; bold/tegas → condensed/display. Jangan selalu pilih yang sama.";
 }
 
-function jsonTail(lang?: Lang): string {
+export function jsonTail(lang?: Lang): string {
   return isEn(lang)
     ? "Reply ONLY with valid JSON, no explanation and no markdown wrapper."
     : "Balas HANYA dengan JSON valid, tanpa penjelasan dan tanpa pembungkus markdown.";

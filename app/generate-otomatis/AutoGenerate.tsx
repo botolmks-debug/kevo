@@ -49,12 +49,13 @@ type GeneratedItem = {
 
 type Status = "idle" | "loading" | "error" | "success";
 
-const JENIS_OPTIONS: { value: GeneratedContentJenis | "referensi" | "carousel"; label: string; en: string; description: string; descEn: string }[] = [
+const JENIS_OPTIONS: { value: GeneratedContentJenis | "referensi" | "carousel"; label: string; en: string; description: string; descEn: string; icon?: string; badge?: string; badgeEn?: string }[] = [
   { value: "produk", label: "Dari Foto", en: "From Photo", description: "Pakai foto (produk, ruangan, atau orang) yang sudah diupload. AI mempercantik sesuai kategori.", descEn: "Use an uploaded photo (product, space, or person). AI enhances it to match the category." },
   { value: "referensi", label: "Referensi", en: "Reference", description: "Tiru gaya dari 1 contoh konten. Pilih 1 foto produk + unggah 1 gambar referensi.", descEn: "Copy the style from 1 example. Pick 1 product photo + upload 1 reference." },
   { value: "general", label: "General", en: "General", description: "AI generate gambar & isi konten dari nol.", descEn: "AI generates the image & content from scratch." },
   { value: "interaksi", label: "Interaksi", en: "Interaction", description: "AI tentukan sendiri isi konten (kuis/quote/tips).", descEn: "AI decides the content itself (quiz/quote/tips)." },
   { value: "carousel", label: "Carousel (4 Slide)", en: "Carousel (4 Slides)", description: "Pilih 1 fotomu (jadi slide penutup). AI buat teks 4 slide + 3 gambar yang mengalir ke fotomu.", descEn: "Pick 1 of your photos (final slide). AI writes 4 slides + 3 images flowing into your photo." },
+  { value: "berita", icon: "📰", badge: "Baru", badgeEn: "New", label: "Konten Berita", en: "News Content", description: "TANPA perlu foto — AI cari berita terbaru seputar industrimu, lalu tulis reaksi/opini original + gambar siluet. Beda tema dari post promosi biasa.", descEn: "NO photo needed — AI finds recent news in your industry, then writes an original reaction/opinion + a silhouette image. A different theme from your usual promo posts." },
 ];
 
 const TEMA_OPTIONS: { value: ContentTema; icon: string; label: string; en: string; description: string; descEn: string }[] = [
@@ -75,6 +76,7 @@ const JENIS_LABEL: Record<GeneratedContentJenis, { id: string; en: string }> = {
   general: { id: "General", en: "General" },
   interaksi: { id: "Interaksi", en: "Interaction" },
   video_cerita: { id: "Video Cerita", en: "Story Video" },
+  berita: { id: "Berita", en: "News" },
 };
 
 // Dua gangguan sesaat bisa bikin request gagal walau semuanya sebenarnya baik:
@@ -243,20 +245,31 @@ export function AutoGenerate() {
     setSaveStatus("idle");
     setSaveError(null);
     try {
+      // "Berita" TANPA foto/tema — endpoint & body-nya beda total dari jenis lain
+      // (AI cari beritanya sendiri, bukan mengolah foto yang user pilih).
       const doPost = () =>
-        fetch("/api/generate-auto", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            jenis: jenis === "referensi" ? "produk" : jenis,
-            ratio: ratioArg && RATIO_OPTIONS.some((o) => o.value === ratioArg) ? ratioArg : ratio,
-            imageIds: jenis === "produk" || jenis === "referensi" ? selectedImageIds : undefined,
-            language: getLang(),
-            referenceDataUri: jenis === "referensi" ? (refDataUri ?? undefined) : undefined,
-            // Tema hanya relevan utk produk/referensi/general (bukan interaksi)
-            tema: tema && (jenis === "produk" || jenis === "referensi" || jenis === "general") ? tema : undefined,
-          }),
-        });
+        jenis === "berita"
+          ? fetch("/api/generate-news", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                ratio: ratioArg && RATIO_OPTIONS.some((o) => o.value === ratioArg) ? ratioArg : ratio,
+                language: getLang(),
+              }),
+            })
+          : fetch("/api/generate-auto", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                jenis: jenis === "referensi" ? "produk" : jenis,
+                ratio: ratioArg && RATIO_OPTIONS.some((o) => o.value === ratioArg) ? ratioArg : ratio,
+                imageIds: jenis === "produk" || jenis === "referensi" ? selectedImageIds : undefined,
+                language: getLang(),
+                referenceDataUri: jenis === "referensi" ? (refDataUri ?? undefined) : undefined,
+                // Tema hanya relevan utk produk/referensi/general (bukan interaksi)
+                tema: tema && (jenis === "produk" || jenis === "referensi" || jenis === "general") ? tema : undefined,
+              }),
+            });
       let res = await doPost();
       // 401 "Belum login" ditolak di gerbang auth SEBELUM generate jalan — belum
       // ada token yang kepotong, jadi aman diulang SEKALI setelah sesi ter-refresh.
@@ -455,18 +468,31 @@ export function AutoGenerate() {
         <div className="grid gap-3 sm:grid-cols-3">
           {JENIS_OPTIONS.map((opt) => {
             const active = jenis === opt.value;
+            const isBerita = opt.value === "berita";
             return (
               <button
                 key={opt.value}
                 type="button"
                 onClick={() => setJenis(opt.value)}
-                className={`flex flex-col items-start gap-1 rounded-2xl border p-4 text-left transition ${
+                className={`relative flex flex-col items-start gap-1 rounded-2xl border p-4 text-left transition ${
                   active
-                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                    : "border-line hover:border-primary/40 hover:bg-navy/[0.02]"
+                    ? isBerita
+                      ? "border-transparent bg-gradient-to-br from-primary/15 via-primary/5 to-amber-100/40 ring-2 ring-primary/30"
+                      : "border-primary bg-primary/5 ring-2 ring-primary/20"
+                    : isBerita
+                      ? "border-primary/30 bg-gradient-to-br from-primary/[0.04] to-amber-50/40 hover:border-primary/50 hover:from-primary/10"
+                      : "border-line hover:border-primary/40 hover:bg-navy/[0.02]"
                 }`}
               >
-                <span className={`font-semibold ${active ? "text-primary" : "text-navy"}`}>{uiLang === "en" ? opt.en : opt.label}</span>
+                {opt.badge ? (
+                  <span className="absolute -top-2 right-3 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-950 shadow-sm">
+                    {uiLang === "en" ? opt.badgeEn ?? opt.badge : opt.badge}
+                  </span>
+                ) : null}
+                <span className={`flex items-center gap-1.5 font-semibold ${active ? "text-primary" : "text-navy"}`}>
+                  {opt.icon ? <span className="text-base leading-none">{opt.icon}</span> : null}
+                  {uiLang === "en" ? opt.en : opt.label}
+                </span>
                 <span className="text-xs text-navy/60">{uiLang === "en" ? opt.descEn : opt.description}</span>
               </button>
             );
@@ -504,6 +530,23 @@ export function AutoGenerate() {
                 </button>
               );
             })}
+          </div>
+        </div>
+      ) : null}
+
+      {jenis === "berita" ? (
+        <div className="flex items-start gap-3 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-amber-50/50 p-4">
+          <span className="text-2xl leading-none">🗞️</span>
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-semibold text-navy">
+              {L("Tidak perlu pilih foto — AI kerjakan semuanya", "No photo needed — AI handles everything")}
+            </span>
+            <span className="text-xs text-navy/60">
+              {L(
+                "AI cari 1 berita terbaru yang relevan dengan industrimu, tulis reaksi/opini original (bukan copy-paste), dan buat gambar siluet yang sesuai suasananya — bukan foto orang sungguhan dari beritanya.",
+                "AI finds one recent news story relevant to your industry, writes an original reaction/opinion (not a copy-paste), and creates a matching silhouette image — not a real photo of anyone from the story.",
+              )}
+            </span>
           </div>
         </div>
       ) : null}
@@ -631,7 +674,9 @@ export function AutoGenerate() {
 
       <div className="flex flex-col gap-1.5">
         <Button type="button" variant="cta" onClick={() => handleGenerate()} disabled={isGenerating} className="w-fit">
-          {isGenerating ? L("Sedang membuat...", "Generating...") : L("Generate Otomatis", "Auto Generate")}
+          {isGenerating
+            ? (jenis === "berita" ? L("Mencari berita & membuat konten...", "Searching news & generating...") : L("Sedang membuat...", "Generating..."))
+            : (jenis === "berita" ? L("🗞️ Cari Berita & Generate", "🗞️ Find News & Generate") : L("Generate Otomatis", "Auto Generate"))}
         </Button>
         <span className="text-xs text-navy/50">{L("Setiap klik Generate memakai 1 token.", "Each Generate uses 1 token.")}</span>
       </div>

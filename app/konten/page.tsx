@@ -43,7 +43,7 @@ type ContentItem = {
 };
 
 const JENIS_LABEL: Record<GeneratedContentJenis, string> = {
-  produk: "Produk", general: "General", interaksi: "Interaksi", video_cerita: "Video Cerita",
+  produk: "Produk", general: "General", interaksi: "Interaksi", video_cerita: "Video Cerita", berita: "Berita",
 };
 
 /** Tanggal hari ini (waktu lokal) sebagai YYYY-MM-DD. */
@@ -332,7 +332,7 @@ export default function KontenPage() {
   return (
     <>
       <Header />
-      <main className="mx-auto flex max-w-4xl flex-col gap-6 px-6 py-10">
+      <main className="mx-auto flex max-w-4xl flex-col gap-6 px-6 pb-28 pt-10 sm:pb-10">
         <div>
           <h1 className="text-2xl font-bold text-navy">Edit Konten</h1>
           <p className="mt-1 text-navy/60">Klik konten untuk buka editor — atur ulang dan Simpan Gambar.</p>

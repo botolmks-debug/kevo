@@ -5,7 +5,7 @@ import { BUCKET } from "./images";
 import { DEV_BUSINESS_ID } from "./devBusiness";
 import { describeSupabaseError } from "./logError";
 
-export type GeneratedContentJenis = "produk" | "general" | "interaksi" | "video_cerita";
+export type GeneratedContentJenis = "produk" | "general" | "interaksi" | "video_cerita" | "berita";
 export type GeneratedContentStatus = "draft" | "selesai";
 
 export type GeneratedContentRow = {

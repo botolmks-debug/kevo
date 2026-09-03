@@ -360,3 +360,29 @@ ${realismCeiling(lang)}
 
 ${localeSceneNote(lang)}`;
 }
+
+/**
+ * Fitur "Konten Berita" — visual untuk post reaksi/opini terhadap berita
+ * industri (bukan foto produk). WAJIB siluet/generik: menggambarkan SUASANA
+ * cerita berita, TANPA mencoba meniru wajah/identitas orang sungguhan di
+ * berita aslinya (lihat lib/ai/newsSearch.ts untuk alasan hak gambar/hak
+ * cipta). `scene` = deskripsi 1-2 kalimat dari imageScene hasil
+ * buildNewsContentPrompt.
+ */
+export function buildSilhouetteNewsPrompt(scene: string, lang?: Lang): string {
+  const guard =
+    lang === "en"
+      ? `CRITICAL — NO REAL PERSON'S LIKENESS: if a person appears, they MUST be a silhouette or strongly backlit — face, identity, and specific features must NOT be clearly visible or recognizable. This is a GENERIC representation of a mood/situation, never an attempt to depict any specific real, named individual. No text, logos, or watermarks anywhere.`
+      : `PENTING — TANPA WAJAH/IDENTITAS ORANG SUNGGUHAN: kalau ada orang di adegan, WAJIB berbentuk siluet atau sangat backlit — wajah, identitas, dan ciri spesifik TIDAK BOLEH terlihat jelas/bisa dikenali. Ini representasi GENERIK dari suasana/situasi, bukan upaya menggambarkan orang sungguhan tertentu. Tanpa teks, logo, atau watermark di mana pun.`;
+  return `Create a moody, cinematic EDITORIAL photograph illustrating this scene/theme: ${scene}
+
+${guard}
+
+STYLE: dramatic natural lighting (window light, golden hour, or backlit silhouette against a bright background), shallow depth of field, documentary/editorial photography feel — think the mood of a business/news magazine cover, not a corporate stock photo.
+
+Composition: fills the ENTIRE frame edge-to-edge, no borders, no vignette, no rounded corners.
+
+${realismCeiling(lang)}
+
+${localeSceneNote(lang)}`;
+}
