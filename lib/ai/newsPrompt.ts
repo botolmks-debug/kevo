@@ -32,7 +32,12 @@ BERITA YANG DIJADIKAN BAHAN (WAJIB ditulis ulang pakai kata-katamu sendiri, JANG
 ${newsSummary}${sourceLineId}
 
 ATURAN KONTEN:
-- Judul (onImageText) = HOOK dari berita itu sendiri (fakta/angka/kejutan paling menarik), BUKAN nama produk/bisnismu. WAJIB tetap menyebut/menyiratkan SUBJEK KONKRET beritanya (nama produk/perusahaan/topik spesifik dari ringkasan di atas) — JANGAN sampai judulnya jadi kalimat abstrak yang bisa dipakai untuk berita apa pun (contoh SALAH: "Standar baru sedang dipaksakan ke kita semua" — tidak jelas ini soal apa; contoh BENAR: "OpenAI Rilis Model Baru, AI Sekarang Bisa Berpikir Runtut").
+- Judul (onImageText) FORMAT 2-BAGIAN — INI MENGGANTIKAN aturan "maks 8 kata" di ONIMAGE_RULE di bawah, khusus untuk format Berita boleh lebih panjang, ikuti ini:
+  1) HEADLINE HOOK (1-2 baris, sekitar 8-14 kata) — fakta/angka/kejutan paling menarik dari berita, WAJIB tetap sebut subjek konkretnya (nama produk/perusahaan/topik spesifik).
+  2) Turun 1 baris baru, tambahkan TEASER PENDEK (3-6 kata) yang mengarahkan pembaca ke caption — pilih salah satu gaya ini atau variasi serupa: "Cerita lengkapnya di caption 👇", "Baca selengkapnya di bawah ⬇️", "Detailnya ada di caption ✍️".
+  Total keseluruhan (headline + teaser) MAKSIMAL 3 baris pendek (bukan kalimat panjang menggumpal) — kalau kepanjangan, pendekkan headline-nya, jangan hilangkan teaser-nya.
+  Contoh format lengkap: "OpenAI Rilis Model Baru, AI Sekarang Bisa Berpikir Runtut\nBaca selengkapnya di caption 👇" (tanda \\n = ganti baris).
+  JANGAN sampai judulnya jadi kalimat abstrak yang bisa dipakai untuk berita apa pun (contoh SALAH: "Standar baru sedang dipaksakan ke kita semua" — tidak jelas ini soal apa; contoh BENAR headline-nya: "OpenAI Rilis Model Baru, AI Sekarang Bisa Berpikir Runtut").
 - Caption = ringkas ceritanya (kata-kata sendiri) + tambahkan 1-2 kalimat opini/insight/koneksi ke industrimu — biar terasa "kamu yang ngomong", bukan cuma copy berita.
 - CAPTION WAJIB TETAP SPESIFIK ke berita ini — sebut jelas nama perusahaan/produk/orang/angka konkret dari ringkasan di atas di awal caption. DILARANG langsung melebar jadi opini umum soal industri/teknologi tanpa pernah menyebut fakta spesifik apa yang terjadi (contoh SALAH: "AI berkembang pesat, model baru bermunculan tiap hari" — tidak jelas kejadian spesifik apa; contoh BENAR: "OpenAI baru saja merilis model X yang bisa Y").
 - JANGAN membuat produk/bisnismu jadi topik utama — bisnismu cuma SUDUT PANDANG buat komentari berita ini, bukan yang dipromosikan.
@@ -53,7 +58,12 @@ NEWS STORY TO USE AS MATERIAL (MUST be rewritten in your own words, do NOT quote
 ${newsSummary}${sourceLineEn}
 
 CONTENT RULES:
-- Headline (onImageText) = the HOOK from the news story itself (the most interesting fact/number/twist), NOT your product/business name. MUST still name/imply the CONCRETE SUBJECT of the story (specific product/company/topic from the summary above) — do NOT let the headline become an abstract sentence that could apply to any story (wrong example: "A new standard is being forced on us all" — unclear what this is even about; right example: "OpenAI Releases New Model, AI Can Now Reason Step-by-Step").
+- Headline (onImageText) 2-PART FORMAT — THIS OVERRIDES the "max 8 words" rule in ONIMAGE_RULE below, this format may be longer, follow this instead:
+  1) HOOK HEADLINE (1-2 lines, roughly 8-14 words) — the most interesting fact/number/twist from the news, MUST still name the concrete subject (specific product/company/topic).
+  2) New line, add a SHORT TEASER (3-6 words) directing the reader to the caption — pick one of these styles or a similar variation: "Full story in the caption 👇", "Read more below ⬇️", "Details in the caption ✍️".
+  Total (headline + teaser) MAX 3 short lines (not one long clumped sentence) — if it's too long, shorten the headline, don't drop the teaser.
+  Full format example: "OpenAI Releases New Model, AI Can Now Reason Step-by-Step\nFull story in the caption 👇" (\\n = line break).
+  Do NOT let the headline become an abstract sentence that could apply to any story (wrong example: "A new standard is being forced on us all" — unclear what this is even about; right example for the headline part: "OpenAI Releases New Model, AI Can Now Reason Step-by-Step").
 - Caption = summarize the story (your own words) + add 1-2 sentences of opinion/insight/connection to your industry — so it feels like "you" talking, not just a copied news blurb.
 - THE CAPTION MUST STAY SPECIFIC to this story — clearly name the specific company/product/person/concrete number from the summary above, right at the start of the caption. Do NOT drift into general opinion about the industry/technology without ever stating the specific thing that happened (wrong example: "AI is advancing fast, new models keep popping up" — unclear what specifically happened; right example: "OpenAI just released model X which can do Y").
 - Do NOT make your product/business the main topic — your business is only the LENS for commenting on this news, not what's being promoted.
