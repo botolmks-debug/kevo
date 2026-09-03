@@ -164,7 +164,7 @@ async function searchWithOpenAI(industry: string, mainProducts: string, lang?: L
  * RINGKASAN FAKTA dalam kata-kata AI sendiri (bukan kutipan/copy-paste
  * artikel), dan TIDAK PERNAH menyertakan foto asli dari beritanya — visual
  * konten dibuat terpisah lewat AI image generation bergaya siluet/generik
- * (lihat buildSilhouetteNewsPrompt di scenePrompt.ts), bukan re-upload foto
+ * (lihat buildNewsScenePrompt di scenePrompt.ts), bukan re-upload foto
  * orang sungguhan dari berita. Nama sumber (mis. "Kompas", "Detik") boleh
  * disebut sebagai kredit ringan di caption, tapi bukan kewajiban hukum.
  */

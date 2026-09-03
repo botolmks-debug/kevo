@@ -38,7 +38,7 @@ ATURAN KONTEN:
 - JANGAN mengarang detail/angka yang tidak ada di ringkasan berita di atas.
 
 Format JSON: {"onImageText": "...", "caption": "...", "imageScene": "...", "fontId": "..."}
-- imageScene = deskripsi SATU adegan visual (dalam Bahasa Inggris, untuk AI image generation) yang menggambarkan SUASANA/TEMA berita ini secara umum — WAJIB pakai siluet orang generik (backlit/siluet, wajah TIDAK terlihat jelas) kalau ada orang di adegan, JANGAN mencoba menggambarkan tokoh spesifik di berita. 1-2 kalimat saja.
+- imageScene = deskripsi SATU adegan visual (dalam Bahasa Inggris, untuk AI image generation) yang menggambarkan SUASANA/KONDISI berita ini secara natural — boleh ada orang generik/anonim (wajah boleh terlihat, tidak wajib siluet) ATAU cukup lingkungan/objek relevan TANPA orang, mana yang lebih pas untuk ceritanya. JANGAN mencoba menggambarkan tokoh spesifik di berita. 1-2 kalimat saja.
 ${onImageRule(lang)}
 ${captionRules(lang)}
 ${fontRule(lang)}
@@ -58,7 +58,7 @@ CONTENT RULES:
 - Do NOT invent details/numbers not present in the summary above.
 
 JSON format: {"onImageText": "...", "caption": "...", "imageScene": "...", "fontId": "..."}
-- imageScene = ONE visual scene description (for AI image generation) capturing the general MOOD/THEME of this news story — MUST use a generic silhouette (backlit/silhouette, face NOT clearly visible) if a person appears, do NOT attempt to depict the specific person from the story. 1-2 sentences only.
+- imageScene = ONE visual scene description (for AI image generation) capturing the general MOOD/CONDITION of this news story, shot naturally — a generic/anonymous person (face may be visible, silhouette NOT required) OR just the relevant environment/objects with no person, whichever fits the story better. Do NOT attempt to depict the specific person from the story. 1-2 sentences only.
 ${onImageRule(lang)}
 ${captionRules(lang)}
 ${fontRule(lang)}

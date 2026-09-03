@@ -363,22 +363,24 @@ ${localeSceneNote(lang)}`;
 
 /**
  * Fitur "Konten Berita" — visual untuk post reaksi/opini terhadap berita
- * industri (bukan foto produk). WAJIB siluet/generik: menggambarkan SUASANA
- * cerita berita, TANPA mencoba meniru wajah/identitas orang sungguhan di
- * berita aslinya (lihat lib/ai/newsSearch.ts untuk alasan hak gambar/hak
- * cipta). `scene` = deskripsi 1-2 kalimat dari imageScene hasil
+ * industri (bukan foto produk). Menggambarkan SUASANA/KONDISI cerita berita
+ * secara natural (bukan wajib siluet lagi — dulu siluet, tapi kerasa kaku/
+ * tidak natural sebagai gaya foto). Aturan keamanan TETAP: kalau ada orang,
+ * WAJIB orang generik anonim — TANPA mencoba meniru wajah/identitas orang
+ * sungguhan di berita aslinya (lihat lib/ai/newsSearch.ts untuk alasan hak
+ * gambar/hak cipta). `scene` = deskripsi 1-2 kalimat dari imageScene hasil
  * buildNewsContentPrompt.
  */
-export function buildSilhouetteNewsPrompt(scene: string, lang?: Lang): string {
+export function buildNewsScenePrompt(scene: string, lang?: Lang): string {
   const guard =
     lang === "en"
-      ? `CRITICAL — NO REAL PERSON'S LIKENESS: if a person appears, they MUST be a silhouette or strongly backlit — face, identity, and specific features must NOT be clearly visible or recognizable. This is a GENERIC representation of a mood/situation, never an attempt to depict any specific real, named individual. No text, logos, or watermarks anywhere.`
-      : `PENTING — TANPA WAJAH/IDENTITAS ORANG SUNGGUHAN: kalau ada orang di adegan, WAJIB berbentuk siluet atau sangat backlit — wajah, identitas, dan ciri spesifik TIDAK BOLEH terlihat jelas/bisa dikenali. Ini representasi GENERIK dari suasana/situasi, bukan upaya menggambarkan orang sungguhan tertentu. Tanpa teks, logo, atau watermark di mana pun.`;
-  return `Create a moody, cinematic EDITORIAL photograph illustrating this scene/theme: ${scene}
+      ? `CRITICAL — NO REAL PERSON'S LIKENESS: if a person appears, they must be a GENERIC, anonymous-looking person shot naturally (normal editorial photography, face CAN be visible — silhouette is NOT required) — but they must NOT resemble or attempt to depict any specific real, named individual from the news story. If the story doesn't need a person to convey its idea, a person-free shot of the relevant environment/objects/setting is equally good — pick whichever feels more natural for this scene. No text, logos, or watermarks anywhere.`
+      : `PENTING — TANPA MENIRU ORANG SUNGGUHAN: kalau ada orang di adegan, WAJIB orang generik/anonim yang difoto secara natural (foto editorial biasa, wajah BOLEH terlihat — tidak wajib siluet lagi) — tapi TIDAK BOLEH mirip atau berusaha menggambarkan orang sungguhan tertentu dari berita aslinya. Kalau ceritanya tidak butuh orang buat menyampaikan idenya, foto lingkungan/objek/suasana TANPA orang sama bagusnya — pilih mana yang paling natural buat adegan ini. Tanpa teks, logo, atau watermark di mana pun.`;
+  return `Create a natural, editorial-style photograph illustrating this scene/theme: ${scene}
 
 ${guard}
 
-STYLE: dramatic natural lighting (window light, golden hour, or backlit silhouette against a bright background), shallow depth of field, documentary/editorial photography feel — think the mood of a business/news magazine cover, not a corporate stock photo.
+STYLE: natural lighting fitting the mood of the story, shallow depth of field, documentary/editorial photography feel — think the mood of a business/news magazine cover, not a corporate stock photo. Pick whatever composition (with or without a person) best represents the situation described.
 
 Composition: fills the ENTIRE frame edge-to-edge, no borders, no vignette, no rounded corners.
 

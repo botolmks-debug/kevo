@@ -7,7 +7,7 @@ import { loadBusinessProfile } from "@/lib/supabase/businessProfile";
 import { logError } from "@/lib/monitoring/errorLog";
 import { searchIndustryNews } from "@/lib/ai/newsSearch";
 import { buildNewsContentPrompt } from "@/lib/ai/newsPrompt";
-import { buildSilhouetteNewsPrompt } from "@/lib/ai/scenePrompt";
+import { buildNewsScenePrompt } from "@/lib/ai/scenePrompt";
 import { generateImage } from "@/lib/ai/geminiImage";
 import { generateJsonContent } from "@/lib/ai/geminiJson";
 import { insertGeneratedContent } from "@/lib/supabase/generatedContent";
@@ -101,9 +101,9 @@ export async function POST(request: NextRequest) {
   }
   const fontOption = content.fontId ? FONT_OPTIONS.find((f) => f.id === content.fontId) : null;
 
-  // ── 3) Gambar siluet/generik (BUKAN foto orang asli dari berita) ─────────
+  // ── 3) Gambar suasana berita (BUKAN foto orang asli dari berita) ─────────
   const imgResult = await generateImage({
-    prompt: buildSilhouetteNewsPrompt(content.imageScene || news.summary, language),
+    prompt: buildNewsScenePrompt(content.imageScene || news.summary, language),
     aspectRatio: ratio,
   });
   if (!imgResult.ok) return fail(imgResult.error, 502);
