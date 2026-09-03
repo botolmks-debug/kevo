@@ -267,7 +267,7 @@ export function AutoGenerate() {
                 language: getLang(),
                 referenceDataUri: jenis === "referensi" ? (refDataUri ?? undefined) : undefined,
                 // Tema hanya relevan utk produk/referensi/general (bukan interaksi)
-                tema: tema && (jenis === "produk" || jenis === "referensi" || jenis === "general") ? tema : undefined,
+                tema: tema && (jenis === "produk" || jenis === "referensi") ? tema : undefined,
               }),
             });
       let res = await doPost();
@@ -500,7 +500,7 @@ export function AutoGenerate() {
         </div>
       </div>
 
-      {jenis === "produk" || jenis === "referensi" || jenis === "general" ? (
+      {jenis === "produk" || jenis === "referensi" ? (
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium text-navy">
             {L("Tema konten (opsional)", "Content theme (optional)")}

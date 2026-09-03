@@ -32,7 +32,7 @@ BERITA YANG DIJADIKAN BAHAN (WAJIB ditulis ulang pakai kata-katamu sendiri, JANG
 ${newsSummary}${sourceLineId}
 
 ATURAN KONTEN:
-- Judul (onImageText) = HOOK dari berita itu sendiri (fakta/angka/kejutan paling menarik), BUKAN nama produk/bisnismu.
+- Judul (onImageText) = HOOK dari berita itu sendiri (fakta/angka/kejutan paling menarik), BUKAN nama produk/bisnismu. WAJIB tetap menyebut/menyiratkan SUBJEK KONKRET beritanya (nama produk/perusahaan/topik spesifik dari ringkasan di atas) — JANGAN sampai judulnya jadi kalimat abstrak yang bisa dipakai untuk berita apa pun (contoh SALAH: "Standar baru sedang dipaksakan ke kita semua" — tidak jelas ini soal apa; contoh BENAR: "OpenAI Rilis Model Baru, AI Sekarang Bisa Berpikir Runtut").
 - Caption = ringkas ceritanya (kata-kata sendiri) + tambahkan 1-2 kalimat opini/insight/koneksi ke industrimu — biar terasa "kamu yang ngomong", bukan cuma copy berita.
 - JANGAN membuat produk/bisnismu jadi topik utama — bisnismu cuma SUDUT PANDANG buat komentari berita ini, bukan yang dipromosikan.
 - JANGAN mengarang detail/angka yang tidak ada di ringkasan berita di atas.
@@ -52,7 +52,7 @@ NEWS STORY TO USE AS MATERIAL (MUST be rewritten in your own words, do NOT quote
 ${newsSummary}${sourceLineEn}
 
 CONTENT RULES:
-- Headline (onImageText) = the HOOK from the news story itself (the most interesting fact/number/twist), NOT your product/business name.
+- Headline (onImageText) = the HOOK from the news story itself (the most interesting fact/number/twist), NOT your product/business name. MUST still name/imply the CONCRETE SUBJECT of the story (specific product/company/topic from the summary above) — do NOT let the headline become an abstract sentence that could apply to any story (wrong example: "A new standard is being forced on us all" — unclear what this is even about; right example: "OpenAI Releases New Model, AI Can Now Reason Step-by-Step").
 - Caption = summarize the story (your own words) + add 1-2 sentences of opinion/insight/connection to your industry — so it feels like "you" talking, not just a copied news blurb.
 - Do NOT make your product/business the main topic — your business is only the LENS for commenting on this news, not what's being promoted.
 - Do NOT invent details/numbers not present in the summary above.
