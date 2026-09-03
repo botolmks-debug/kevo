@@ -18,10 +18,10 @@ export function buildNewsContentPrompt(
   lang?: Lang,
 ): string {
   const sourceLineId = sourceName
-    ? `\nSumber berita: ${sourceName} (boleh disebut ringan di caption sebagai kredit, mis. "(via ${sourceName})" — bukan kewajiban, tapi bagus buat kredibilitas).`
+    ? `\nSumber berita: ${sourceName}.\nWAJIB cantumkan kredit sumber ini di AKHIR caption, format persis: "(via ${sourceName})" — supaya pembaca tahu ini bukan opini kosong, ada beritanya yang bisa dicek.`
     : "";
   const sourceLineEn = sourceName
-    ? `\nNews source: ${sourceName} (may be mentioned lightly in the caption as a credit, e.g. "(via ${sourceName})" — not required, but good for credibility).`
+    ? `\nNews source: ${sourceName}.\nYou MUST include this source credit at the END of the caption, exact format: "(via ${sourceName})" — so readers know this isn't a vague opinion, there's a real story behind it they can check.`
     : "";
 
   const coreId = `Kamu adalah pemilik bisnis yang lagi bikin konten REAKSI/OPINI terhadap sebuah berita yang relevan dengan industrimu — BUKAN post jualan produk langsung. Gaya kontennya seperti akun-akun komentar berita: judul headline yang nge-hook, lalu caption berisi ringkasan cerita + opini/insight singkat dari sudut pandang bisnismu.
@@ -34,6 +34,7 @@ ${newsSummary}${sourceLineId}
 ATURAN KONTEN:
 - Judul (onImageText) = HOOK dari berita itu sendiri (fakta/angka/kejutan paling menarik), BUKAN nama produk/bisnismu. WAJIB tetap menyebut/menyiratkan SUBJEK KONKRET beritanya (nama produk/perusahaan/topik spesifik dari ringkasan di atas) — JANGAN sampai judulnya jadi kalimat abstrak yang bisa dipakai untuk berita apa pun (contoh SALAH: "Standar baru sedang dipaksakan ke kita semua" — tidak jelas ini soal apa; contoh BENAR: "OpenAI Rilis Model Baru, AI Sekarang Bisa Berpikir Runtut").
 - Caption = ringkas ceritanya (kata-kata sendiri) + tambahkan 1-2 kalimat opini/insight/koneksi ke industrimu — biar terasa "kamu yang ngomong", bukan cuma copy berita.
+- CAPTION WAJIB TETAP SPESIFIK ke berita ini — sebut jelas nama perusahaan/produk/orang/angka konkret dari ringkasan di atas di awal caption. DILARANG langsung melebar jadi opini umum soal industri/teknologi tanpa pernah menyebut fakta spesifik apa yang terjadi (contoh SALAH: "AI berkembang pesat, model baru bermunculan tiap hari" — tidak jelas kejadian spesifik apa; contoh BENAR: "OpenAI baru saja merilis model X yang bisa Y").
 - JANGAN membuat produk/bisnismu jadi topik utama — bisnismu cuma SUDUT PANDANG buat komentari berita ini, bukan yang dipromosikan.
 - JANGAN mengarang detail/angka yang tidak ada di ringkasan berita di atas.
 
@@ -54,6 +55,7 @@ ${newsSummary}${sourceLineEn}
 CONTENT RULES:
 - Headline (onImageText) = the HOOK from the news story itself (the most interesting fact/number/twist), NOT your product/business name. MUST still name/imply the CONCRETE SUBJECT of the story (specific product/company/topic from the summary above) — do NOT let the headline become an abstract sentence that could apply to any story (wrong example: "A new standard is being forced on us all" — unclear what this is even about; right example: "OpenAI Releases New Model, AI Can Now Reason Step-by-Step").
 - Caption = summarize the story (your own words) + add 1-2 sentences of opinion/insight/connection to your industry — so it feels like "you" talking, not just a copied news blurb.
+- THE CAPTION MUST STAY SPECIFIC to this story — clearly name the specific company/product/person/concrete number from the summary above, right at the start of the caption. Do NOT drift into general opinion about the industry/technology without ever stating the specific thing that happened (wrong example: "AI is advancing fast, new models keep popping up" — unclear what specifically happened; right example: "OpenAI just released model X which can do Y").
 - Do NOT make your product/business the main topic — your business is only the LENS for commenting on this news, not what's being promoted.
 - Do NOT invent details/numbers not present in the summary above.
 
