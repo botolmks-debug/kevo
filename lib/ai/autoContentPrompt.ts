@@ -52,7 +52,8 @@ const CAPTION_RULES_ID =
   "- Boleh dari sudut pandang pembaca (\"aku/kita\"), menyuarakan keseharian mereka.\n" +
   "- FORMAT WAJIB: pecah caption jadi 2-4 PARAGRAF PENDEK (1-2 kalimat per paragraf), dipisah BARIS KOSONG (\\n\\n di dalam string JSON) — JANGAN PERNAH satu paragraf panjang menyambung. Hashtag jadi paragraf terakhir sendiri.\n" +
   "- EMOJI: sisipkan 2-4 emoji total yang SESUAI mood teks (contoh: momen hangat ☕🌿, semangat usaha 💪✨, produk baru 🎉, tips 📌💡) — letakkan alami di akhir kalimat, maksimal 1-2 per paragraf, JANGAN menumpuk beruntun. HANYA emoji sopan & umum; DILARANG emoji kasar/vulgar/bermakna ganda (🖕😈🍆🍑💦 dan sejenisnya). Bagian hashtag tanpa emoji.\n" +
-  "- Isi total 3-6 kalimat, satu CTA halus di paragraf terakhir sebelum hashtag, lalu WAJIB diakhiri 3-5 hashtag relevan (format #katakunci tanpa spasi di dalam tag). SEMUA hashtag WAJIB berbahasa Indonesia (samakan dengan bahasa caption). JANGAN PERNAH mengosongkan hashtag. Patuhi nada brand & hindari topik terlarang.";
+  "- Isi total 3-6 kalimat, satu CTA halus di paragraf terakhir sebelum hashtag, lalu WAJIB diakhiri 3-5 hashtag relevan (format #katakunci tanpa spasi di dalam tag). SEMUA hashtag WAJIB berbahasa Indonesia (samakan dengan bahasa caption). JANGAN PERNAH mengosongkan hashtag. Patuhi nada brand & hindari topik terlarang.\n" +
+  "- HASHTAG LOKASI/DAERAH: HANYA boleh sebut nama kota/daerah kalau itu BENAR-BENAR lokasi/target pasar bisnis ini (lihat data profil bisnis di atas) — JANGAN PERNAH ambil nama daerah dari konteks lain yang kebetulan disebut (mis. contoh kota di artikel berita yang sedang dibahas, atau lokasi acak) kalau itu BUKAN lokasi/target bisnis ini. Kalau ragu atau data lokasi bisnisnya kosong, JANGAN pakai hashtag daerah sama sekali — pakai hashtag umum/nasional saja (mis. #umkmindonesia).";
 
 const CAPTION_RULES_EN =
   "caption = a LIVING, empathetic Instagram caption, in English:\n" +
@@ -62,7 +63,8 @@ const CAPTION_RULES_EN =
   "- Reader-first perspective is welcome (\"I/we\"), voicing their day-to-day.\n" +
   "- REQUIRED FORMAT: break the caption into 2-4 SHORT PARAGRAPHS (1-2 sentences each), separated by a BLANK LINE (\\n\\n inside the JSON string) — NEVER one long run-on paragraph. Hashtags go in their own final paragraph.\n" +
   "- EMOJI: weave in 2-4 emojis total that MATCH the mood (cozy moment ☕🌿, hustle energy 💪✨, launch 🎉, tips 📌💡) — placed naturally at sentence ends, max 1-2 per paragraph, never stacked in a row. ONLY polite, universally safe emojis; NO rude/vulgar/double-meaning emojis (🖕😈🍆🍑💦 and similar). No emojis in the hashtag block.\n" +
-  "- 3-6 sentences total, one subtle CTA in the last paragraph before the hashtags, then MUST end with 3-5 relevant hashtags (format #keyword, no spaces inside the tag). ALL hashtags MUST be in English (match the caption's language) — never mix Indonesian hashtags into English captions, even for local audiences (use transliterated versions like #makassarbusiness instead of #makassarbisnis). NEVER omit hashtags. Match brand voice & avoid restricted topics.";
+  "- 3-6 sentences total, one subtle CTA in the last paragraph before the hashtags, then MUST end with 3-5 relevant hashtags (format #keyword, no spaces inside the tag). ALL hashtags MUST be in English (match the caption's language) — never mix Indonesian hashtags into English captions, even for local audiences (use transliterated versions like #makassarbusiness instead of #makassarbisnis). NEVER omit hashtags. Match brand voice & avoid restricted topics.\n" +
+  "- LOCATION/REGION HASHTAGS: ONLY name a city/region if it is GENUINELY this business's own location/target market (see the business profile data above) — NEVER pick up a place name from unrelated context (e.g. an example city mentioned in a news article being discussed, or a random location) if it is NOT this business's actual location/market. If unsure or the business's location data is empty, do NOT use a location hashtag at all — use a general/national one instead (e.g. #smallbusiness).";
 
 
 // ── Gaya bahasa natural + aturan kejujuran (dipakai SEMUA jenis konten) ────
@@ -710,6 +712,7 @@ const INTERAKSI_CAPTION_RULES_ID =
   "- Nada ngobrol & hangat, boleh sedikit emoji. Variasikan pembuka SETIAP kali; HINDARI klise " +
   '("Pernah nggak sih", "Tenang saja", "Dijamin", "bosku", "gaskeun").\n' +
   "- 2-4 kalimat, DIAKHIRI ajakan interaksi lalu WAJIB 3-5 hashtag relevan (format #katakunci). SEMUA hashtag WAJIB berbahasa Indonesia. JANGAN PERNAH mengosongkan hashtag. Patuhi nada brand & hindari topik terlarang.\n" +
+  "- HASHTAG LOKASI/DAERAH: HANYA sebut kota/daerah kalau itu BENAR-BENAR lokasi/target bisnis ini — JANGAN ambil nama daerah dari konteks lain yang tidak terkait. Kalau ragu, pakai hashtag umum/nasional saja.\n" +
   'CONTOH GAYA (jangan disalin persis; SESUAIKAN dengan format terpilih): ' +
   '(kuis) "Coba tebak, menu andalan kami pakai bahan rahasia apa? 🤔 Tulis tebakanmu di komen ya! #..." | ' +
   '(tips) "Simpan dulu: 1 trik biar produkmu awet. Kamu biasanya gimana? Cerita dong 👇 #..."';
@@ -725,6 +728,7 @@ const INTERAKSI_CAPTION_RULES_EN =
   "- Warm, chatty tone; a bit of emoji is fine. Vary openings EVERY time; AVOID clichés " +
   '("Ever wondered", "You know that feeling", "Let\'s dive in", "Guess what", "Fun fact", "Real talk").\n' +
   "- 2-4 sentences, ENDING with an interaction invite, then MUST have 3-5 relevant hashtags (format #keyword). ALL hashtags MUST be in English. NEVER omit hashtags. Match brand voice & avoid restricted topics.\n" +
+  "- LOCATION/REGION HASHTAGS: ONLY name a city/region if it is GENUINELY this business's own location/target market — NEVER pick up an unrelated place name. If unsure, use a general/national hashtag instead.\n" +
   'STYLE EXAMPLES (don\'t copy verbatim; MATCH the chosen format): ' +
   '(quiz) "Bet you can\'t guess the secret ingredient in our bestseller 🤔 Drop your guess below! #..." | ' +
   '(tips) "Save this: one trick to make your product last longer. What\'s your go-to? 👇 #..."';
