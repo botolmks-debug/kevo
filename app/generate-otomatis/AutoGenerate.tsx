@@ -4,6 +4,7 @@ import { getLang, type Lang } from "@/lib/i18n";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { BusyToast } from "@/components/ui/BusyToast";
+import { GenerateLoadingOverlay } from "@/components/generate/GenerateLoadingOverlay";
 import { Card } from "@/components/ui/Card";
 import { Textarea } from "@/components/ui/Input";
 import { CanvasEditor } from "@/components/editor/CanvasEditor";
@@ -685,7 +686,9 @@ export function AutoGenerate() {
       </>
       ) : null}
 
-      <BusyToast active={isGenerating} />
+      {isGenerating ? (
+        <GenerateLoadingOverlay onCancel={() => setGenerateStatus("idle")} />
+      ) : null}
 
       {result && editTemplate ? (
         <div className="flex flex-col gap-4 rounded-[20px] border border-line bg-surface/50 p-5">
