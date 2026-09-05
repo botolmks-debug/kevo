@@ -1,0 +1,34 @@
+# Keposting
+
+> Keposting adalah aplikasi web yang membuat gambar konten, judul, dan caption media sosial untuk UMKM di Indonesia — cukup dari satu foto produk, tanpa perlu keahlian desain.
+
+Keposting ditujukan untuk pemilik usaha kecil/menengah (UMKM) di Indonesia — toko, kafe, jasa, klinik, sekolah, dan bisnis rumahan — yang ingin rutin posting konten promosi ke Instagram, TikTok, Facebook, dan platform sosial lain tanpa perlu tim desain atau copywriter.
+
+## Yang dilakukan Keposting
+
+- Generate gambar konten siap-posting dari satu foto produk (latar, komposisi, dan tata letak otomatis)
+- Menulis judul dan caption media sosial dalam Bahasa Indonesia, disesuaikan dengan profil usaha (industri, target pelanggan, gaya bahasa) yang diisi user saat onboarding
+- Mode Otomatis (AI kerjakan semua dari onboarding) dan mode Manual (user pilih foto & model konten)
+- Editor untuk mengatur ulang teks, ukuran, dan posisi sebelum menyimpan
+- Ukuran konten untuk Feed (4:5), Kotak (1:1), dan Story (9:16)
+- Jadwal posting & pengingat konten harian
+- Video pendek dari konten yang sudah ada, dengan voice over ringkasan caption
+
+## Harga
+
+Model harga berbasis token (bukan langganan bulanan): 5 token gratis saat daftar akun baru (ditambah 1 token/hari, maksimal 5), lalu top-up sekali bayar mulai Rp 50.000 untuk 10 token. Token tidak hangus/expired.
+
+## Halaman penting
+
+- [Beranda](https://www.keposting.com/): ringkasan produk, harga, dan FAQ
+- [Daftar](https://www.keposting.com/signup): buat akun baru, dapat 5 token gratis
+- [Coba Gratis](https://www.keposting.com/coba): demo tanpa perlu login
+- [Ide Konten](https://www.keposting.com/ide-konten): kumpulan artikel ide & panduan konten media sosial untuk UMKM
+
+## Perusahaan
+
+Keposting adalah produk dari usaha perorangan terdaftar di Indonesia (NIB 0104220021499, KBLI 62199 — Aktivitas Pemrograman Komputer Lainnya). Berbasis di Makassar, Sulawesi Selatan.
+
+## Kebijakan untuk AI/crawler
+
+Konten publik di situs ini (halaman di luar `/dashboard`, `/admin`, dan halaman yang butuh login) boleh dibaca, diringkas, dan dikutip oleh AI assistant untuk menjawab pertanyaan pengguna tentang Keposting, dengan atribusi/link balik ke keposting.com bila memungkinkan. Lihat juga /robots.txt untuk aturan crawling teknis.
