@@ -12,17 +12,38 @@ import SupportWidget from "@/components/support/SupportWidget";
 // "Buat Konten" = SATU menu (default /generate-otomatis — nilai jual Keposting).
 // Sub-menu Otomatis/Manual ada DI DALAM halaman (BuatKontenTabs), bukan di header.
 // match: prefix path yang bikin menu ini aktif (mis. /generate & /generate-otomatis).
-const navLinks: { href: string; key: string; match?: string }[] = [
+// children (opsional): submenu dropdown.
+const navLinks: {
+  href: string;
+  key: string;
+  match?: string;
+  children?: { href: string; key: string }[];
+}[] = [
   { href: "/generate-otomatis", key: "nav.buatKonten", match: "/generate" },
   { href: "/gambar", key: "nav.gambar" },
   { href: "/konten", key: "nav.editKonten" },
   { href: "/jadwal", key: "nav.jadwal" },
-  { href: "/videocerita", key: "nav.videoCerita" },
 ];
 // Menu Dashboard DIHAPUS dari nav — klik logo Keposting sudah mengarah ke /dashboard.
 
-// Menu khusus admin (botolmakassar).
-const adminLinks: { href: string; key: string; match?: string }[] = [
+// Menu khusus admin (botolmakassar). "Video Cerita" DIPINDAH KE SINI —
+// sementara ditutup lagi utk user biasa (sebelumnya sempat dibuka umum),
+// lihat catatan senada di proxy.ts (gerbang /video juga menutup /videocerita).
+const adminLinks: {
+  href: string;
+  key: string;
+  match?: string;
+  children?: { href: string; key: string }[];
+}[] = [
+  {
+    href: "/videocerita",
+    key: "nav.videoCerita",
+    match: "/videocerita",
+    children: [
+      { href: "/videocerita", key: "nav.videoCeritaProduk" },
+      { href: "/videocerita/singkat", key: "nav.videoCeritaSingkat" },
+    ],
+  },
   { href: "/video", key: "nav.video" },
   { href: "/admin", key: "nav.admin" },
 ];
@@ -79,11 +100,32 @@ export function Header() {
           {/* Menu desktop */}
           <div className="hidden min-w-0 items-center gap-1 md:flex">
             <nav className="flex items-center gap-0.5">
-              {links.map((link) => (
-                <Link key={link.href} href={link.href} data-tour={link.href} className={linkClass(link.href, link.match)}>
-                  {t(link.key, lang)}
-                </Link>
-              ))}
+              {links.map((link) =>
+                link.children ? (
+                  <div key={link.href} className="group relative">
+                    <Link href={link.href} data-tour={link.href} className={linkClass(link.href, link.match)}>
+                      {t(link.key, lang)}
+                    </Link>
+                    <div className="invisible absolute left-0 top-full z-30 min-w-[190px] rounded-2xl border border-line bg-white p-1.5 opacity-0 shadow-lg transition-opacity duration-150 group-hover:visible group-hover:opacity-100">
+                      {link.children.map((child) => (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          className={`block whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+                            pathname === child.href ? "bg-primary/10 text-primary" : "text-navy/70 hover:bg-navy/5 hover:text-navy"
+                          }`}
+                        >
+                          {t(child.key, lang)}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <Link key={link.href} href={link.href} data-tour={link.href} className={linkClass(link.href, link.match)}>
+                    {t(link.key, lang)}
+                  </Link>
+                ),
+              )}
             </nav>
             <button
               onClick={() => setPanduanOpen(true)}
@@ -128,9 +170,27 @@ export function Header() {
         {open ? (
           <div className="flex flex-col gap-1 border-t border-line bg-surface px-5 py-2 md:hidden">
             {links.map((link) => (
-              <Link key={link.href} href={link.href} className={linkClass(link.href, link.match)} onClick={() => setOpen(false)}>
-                {t(link.key, lang)}
-              </Link>
+              <div key={link.href} className="flex flex-col gap-1">
+                <Link href={link.href} className={linkClass(link.href, link.match)} onClick={() => setOpen(false)}>
+                  {t(link.key, lang)}
+                </Link>
+                {link.children ? (
+                  <div className="ml-3 flex flex-col gap-1 border-l border-line pl-3">
+                    {link.children.map((child) => (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        onClick={() => setOpen(false)}
+                        className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                          pathname === child.href ? "bg-primary/10 text-primary" : "text-navy/60 hover:bg-navy/5 hover:text-navy"
+                        }`}
+                      >
+                        {t(child.key, lang)}
+                      </Link>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             ))}
             <button
               onClick={() => { setOpen(false); setPanduanOpen(true); }}

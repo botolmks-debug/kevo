@@ -113,14 +113,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Fitur Video (Veo/Seedance/Sinematik, dll) masih khusus admin (sementara)
-  // -> non-admin dilempar ke /dashboard. "/videocerita" SENGAJA DIKECUALIKAN
-  // — Video Cerita Produk sudah dibuka untuk semua user (bukan lagi
-  // admin-only), jadi path publiknya "/videocerita" (bukan di bawah
-  // "/video/") harus lolos dari gerbang ini. "/videocerita".startsWith("/video")
-  // ikut TRUE secara string (bukan cuma prefix segmen), makanya butuh
-  // pengecualian eksplisit di bawah, bukan cuma mengandalkan path barunya.
-  if (path.startsWith("/video") && !path.startsWith("/videocerita") && !isAdmin(user?.email)) {
+  // Fitur Video (Veo/Seedance/Sinematik, Video Cerita, dll) khusus admin
+  // (sementara) -> non-admin dilempar ke /dashboard. "/videocerita" TIDAK
+  // dikecualikan lagi (sebelumnya sempat dibuka untuk semua user, lalu
+  // ditutup lagi atas permintaan) — "/videocerita".startsWith("/video")
+  // otomatis TRUE secara string, jadi satu kondisi ini sudah menggerbangi
+  // keduanya tanpa perlu baris terpisah.
+  if (path.startsWith("/video") && !isAdmin(user?.email)) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);

@@ -21,6 +21,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isAdmin } from "@/lib/supabase/tokens";
 import { logError } from "@/lib/monitoring/errorLog";
 import { textToSpeechElevenLabs } from "@/lib/video/elevenlabs";
 import { CERITA_SLIDE_COUNT } from "@/app/api/video/cerita/storyboard/route";
@@ -38,6 +39,7 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Belum login." }, { status: 401 });
+  if (!isAdmin(user.email)) return NextResponse.json({ error: "Fitur Video Cerita khusus admin (sementara)." }, { status: 403 });
 
   let body: RequestBody = {};
   try {

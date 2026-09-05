@@ -54,6 +54,8 @@ const DICT: Record<string, Entry> = {
   "nav.jadwal": { id: "Jadwal", en: "Schedule" },
   "nav.video": { id: "Video", en: "Video" },
   "nav.videoCerita": { id: "Video Cerita", en: "Story Video" },
+  "nav.videoCeritaProduk": { id: "Cerita Produk (5 Slide)", en: "Product Story (5 Slides)" },
+  "nav.videoCeritaSingkat": { id: "Ringkas 15 Detik", en: "15-Second Recap" },
   "nav.admin": { id: "Admin", en: "Admin" },
   "nav.panduan": { id: "Panduan", en: "Guide" },
   "nav.keluar": { id: "Keluar", en: "Log out" },

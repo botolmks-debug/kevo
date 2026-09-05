@@ -23,10 +23,26 @@ export type TtsResult =
 export async function textToSpeechElevenLabs(
   text: string,
   voiceId?: string,
+  modelId?: string,
 ): Promise<TtsResult> {
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) return { ok: false, error: "ELEVENLABS_API_KEY belum diisi di environment." };
   const vid = voiceId || process.env.ELEVENLABS_VOICE_ID || DEFAULT_VOICE_ID;
+  // model default TETAP multilingual_v2 (dipakai Cerita Produk 5-slide,
+  // tidak disentuh) — "Ringkas 15 Detik" mengirim eleven_v3 secara eksplisit
+  // (lebih ekspresif/natural, lihat catatan di bawah), supaya perubahan ini
+  // tidak mengubah perilaku fitur lama yang sudah stabil.
+  const model = modelId || "eleven_multilingual_v2";
+
+  // eleven_v3 TIDAK punya param "speed" (beda dari multilingual_v2) — kalau
+  // dikirim, request bisa ditolak. similarity_boost & stability tetap
+  // dipakai; stability diturunkan supaya lebih ekspresif/tidak monoton
+  // (dokumentasi ElevenLabs: makin rendah stability = makin variatif nada,
+  // makin tinggi = makin flat/konsisten).
+  const voiceSettings =
+    model === "eleven_v3"
+      ? { stability: 0.25, similarity_boost: 0.75, style: 0.45 }
+      : { stability: 0.5, similarity_boost: 0.75, speed: 0.9 };
 
   try {
     const res = await fetch(`${API_BASE}/text-to-speech/${vid}`, {
@@ -38,12 +54,8 @@ export async function textToSpeechElevenLabs(
       },
       body: JSON.stringify({
         text,
-        // multilingual_v2 = kualitas terbaik ElevenLabs untuk Bahasa Indonesia.
-        model_id: "eleven_multilingual_v2",
-        // speed 0.9 = sedikit lebih lambat dari default 1.0 (revisi: narasi
-        // kesannya terburu-buru). Range API 0.7-1.2; di bawah ~0.7 kualitas
-        // audio mulai menurun, jadi 0.9 dipilih sebagai penurunan yang aman.
-        voice_settings: { stability: 0.5, similarity_boost: 0.75, speed: 0.9 },
+        model_id: model,
+        voice_settings: voiceSettings,
       }),
     });
 

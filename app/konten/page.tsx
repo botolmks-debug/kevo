@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { GenerateLoadingOverlay } from "@/components/generate/GenerateLoadingOverlay";
 import * as htmlToImage from "html-to-image";
 import { createClient } from "@/lib/supabase/client";
 import { isAdmin } from "@/lib/supabase/tokens";
@@ -332,6 +333,11 @@ export default function KontenPage() {
   return (
     <>
       <Header />
+      {saveStatus === "saving" ? (
+        <GenerateLoadingOverlay
+          messages={["Merender gambar...", "Menyiapkan file...", "Mengunggah...", "Hampir selesai..."]}
+        />
+      ) : null}
       <main className="mx-auto flex max-w-4xl flex-col gap-6 px-6 pb-28 pt-10 sm:pb-10">
         <div>
           <h1 className="text-2xl font-bold text-navy">Edit Konten</h1>
