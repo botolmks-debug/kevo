@@ -7,6 +7,10 @@ export type TextSlotOverride = {
   fontSize?: number;
   color?: string;
   align?: "left" | "center" | "right";
+  italic?: boolean;
+  underline?: boolean;
+  tiltX?: number;
+  tiltY?: number;
   /** Shadow sekeliling teks. blur dalam px (skala template), warna hex. */
   shadow?: { blur: number; color: string; opacity: number } | null;
   outline?: { width: number; color: string } | null;
@@ -31,10 +35,10 @@ export type FooterOverride = {
  */
 export type ElementFx = { opacity?: number; rotation?: number; z?: number };
 
-/** Elemen bebas yang ditambah user (teks/gambar stiker/bentuk) — editor DOM v4. */
+/** Elemen bebas yang ditambah user (teks/gambar stiker) — editor DOM v4. */
 export type FreeItem = {
   id: string;
-  kind: "text" | "image" | "shape";
+  kind: "text" | "image";
   x: number;
   y: number;
   w: number;
@@ -46,19 +50,15 @@ export type FreeItem = {
   fontWeight?: number;
   color?: string;
   align?: "left" | "center" | "right";
+  italic?: boolean;
+  underline?: boolean;
+  tiltX?: number;
+  tiltY?: number;
   /** kind "text" — sama bentuk & perilaku dengan TextSlot.shadow/outline. */
   shadow?: { blur: number; color: string; opacity: number } | null;
   outline?: { width: number; color: string } | null;
   /** kind "image" — data URI (di-embed, aman untuk export). */
   src?: string;
-  /** kind "shape" — bentuk dasar, panah, & efek promo dengan fill & stroke. */
-  shapeType?: "rect" | "circle" | "triangle" | "arrow-right" | "arrow-block" | "arrow-curve" | "star" | "burst" | "ribbon" | "speech";
-  fill?: string;
-  stroke?: string;
-  /** 0 = tanpa garis tepi. Dalam satuan kanvas (di-skala saat ditampilkan). */
-  strokeWidth?: number;
-  /** hanya dipakai untuk shapeType "rect". */
-  cornerRadius?: number;
 };
 
 /** Lapisan warna/gradient di atas foto latar — editor DOM v4. */
@@ -104,6 +104,10 @@ export function applyEditorOverrides(
       fontWeight: override.fontWeight ?? slot.fontWeight,
       color: override.color ?? slot.color,
       align: override.align ?? slot.align,
+      ...(override.italic !== undefined ? { italic: override.italic } : {}),
+      ...(override.underline !== undefined ? { underline: override.underline } : {}),
+      ...(override.tiltX !== undefined ? { tiltX: override.tiltX } : {}),
+      ...(override.tiltY !== undefined ? { tiltY: override.tiltY } : {}),
       ...(override.shadow !== undefined ? { shadow: override.shadow } : {}),
       ...(override.outline !== undefined ? { outline: override.outline } : {}),
       ...(override.fontSize

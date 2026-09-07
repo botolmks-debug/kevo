@@ -79,6 +79,23 @@ function buildTextShadow(slot: ShadowOutlineShape, scale: number): string | unde
   return parts.length ? parts.join(", ") : undefined;
 }
 
+/**
+ * Bold pakai fontWeight yang sudah ada (bukan field baru — toggle 400/800).
+ * Italic/underline/tilt itu field BARU (lihat TextSlotOverride & FreeItem).
+ * Tilt = pendekatan "Perspective" ala Photoshop pakai CSS 3D rotateX/Y —
+ * BUKAN distort 4-titik sudut bebas yang sesungguhnya (itu jauh lebih rumit,
+ * butuh matrix3d per-titik/canvas warp), tapi kesan "miring 3D"-nya dapat.
+ */
+function textStyleExtras(t: { italic?: boolean; underline?: boolean; tiltX?: number; tiltY?: number }): React.CSSProperties {
+  const tx = t.tiltX ?? 0, ty = t.tiltY ?? 0;
+  return {
+    fontStyle: t.italic ? "italic" : "normal",
+    textDecoration: t.underline ? "underline" : "none",
+    transform: (tx || ty) ? `perspective(600px) rotateX(${tx}deg) rotateY(${ty}deg)` : undefined,
+    transformStyle: (tx || ty) ? "preserve-3d" : undefined,
+  };
+}
+
 function hexToRgba(hex: string, opacity: number): string {
   const h = hex.replace("#", "");
   const r = parseInt(h.slice(0,2),16) || 0, g = parseInt(h.slice(2,4),16) || 0, b = parseInt(h.slice(4,6),16) || 0;
@@ -101,22 +118,13 @@ function DecoView({ d, scale, z }: { d: Decoration; scale: number; z?: number })
   </div>;
 }
 
-// Titik-titik poligon "ledakan" (burst/starburst) untuk badge promo — dihitung
-// sekali di level modul (bukan tiap render).
-const BURST_POINTS = (() => {
-  const spikes = 12;
-  const outerR = 48, innerR = 36;
-  const pts: string[] = [];
-  for (let i = 0; i < spikes * 2; i++) {
-    const r = i % 2 === 0 ? outerR : innerR;
-    const angle = (Math.PI * i) / spikes - Math.PI / 2;
-    pts.push(`${(50 + r * Math.cos(angle)).toFixed(1)},${(50 + r * Math.sin(angle)).toFixed(1)}`);
-  }
-  return pts.join(" ");
-})();
-
-/** Katalog elemen yang bisa ditambah lewat dropdown "+ Elemen", dikelompokkan per kategori. */
-const SHAPE_CATALOG: { group: string; items: { type: FreeItem["shapeType"] & string; label: string; icon: string }[] }[] = [
+/**
+ * Katalog elemen tambahan dari menu "+ Elemen".
+ */
+const SHAPE_CATALOG: {
+  group: string;
+  items: { type: NonNullable<FreeItem["shapeType"]>; label: string; icon: string }[];
+}[] = [
   { group: "Bentuk Dasar", items: [
     { type: "rect", label: "Kotak", icon: "▭" },
     { type: "circle", label: "Bulat", icon: "●" },
@@ -135,49 +143,52 @@ const SHAPE_CATALOG: { group: string; items: { type: FreeItem["shapeType"] & str
   ]},
 ];
 
-/** Render satu elemen bentuk/panah/efek promo — mengisi 100% box induknya. */
+const BURST_POINTS = (() => {
+  const spikes = 12;
+  const outerR = 48, innerR = 36;
+  const pts: string[] = [];
+  for (let i = 0; i < spikes * 2; i++) {
+    const r = i % 2 === 0 ? outerR : innerR;
+    const angle = (Math.PI * i) / spikes - Math.PI / 2;
+    pts.push(`${(50 + r * Math.cos(angle)).toFixed(1)},${(50 + r * Math.sin(angle)).toFixed(1)}`);
+  }
+  return pts.join(" ");
+})();
+
 function ShapeView({ it, scale }: { it: FreeItem; scale: number }) {
   const fill = it.fill ?? "#2563eb";
   const strokeW = (it.strokeWidth ?? 0) * scale;
   const stroke = it.stroke ?? "#000000";
-  const strokeProps = strokeW > 0 ? { stroke, strokeWidth: strokeW, vectorEffect: "non-scaling-stroke" as const } : {};
+  const strokeProps = strokeW > 0
+    ? { stroke, strokeWidth: strokeW, vectorEffect: "non-scaling-stroke" as const }
+    : {};
 
   if (it.shapeType === "circle") {
-    return <div style={{ width: "100%", height: "100%", borderRadius: 9999, backgroundColor: fill,
-      boxSizing: "border-box", ...(strokeW > 0 ? { border: `${strokeW}px solid ${stroke}` } : {}) }} />;
+    return <div style={{ width:"100%", height:"100%", borderRadius:9999, backgroundColor:fill,
+      boxSizing:"border-box", ...(strokeW > 0 ? { border:`${strokeW}px solid ${stroke}` } : {}) }} />;
   }
   if (it.shapeType === "rect" || !it.shapeType) {
-    return <div style={{ width: "100%", height: "100%", borderRadius: (it.cornerRadius ?? 0) * scale, backgroundColor: fill,
-      boxSizing: "border-box", ...(strokeW > 0 ? { border: `${strokeW}px solid ${stroke}` } : {}) }} />;
+    return <div style={{ width:"100%", height:"100%", borderRadius:(it.cornerRadius ?? 0)*scale,
+      backgroundColor:fill, boxSizing:"border-box",
+      ...(strokeW > 0 ? { border:`${strokeW}px solid ${stroke}` } : {}) }} />;
   }
-  // Sisanya (segitiga, panah, efek promo) dirender via SVG — viewBox 0..100,
-  // preserveAspectRatio="none" supaya ikut mengisi box yang di-resize bebas.
+
   return (
-    <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ display: "block", overflow: "visible" }}>
-      {it.shapeType === "triangle" && (
-        <polygon points="50,2 98,98 2,98" fill={fill} {...strokeProps} />
-      )}
-      {it.shapeType === "arrow-right" && (
-        <polygon points="0,40 65,40 65,20 100,50 65,80 65,60 0,60" fill={fill} {...strokeProps} />
-      )}
-      {it.shapeType === "arrow-block" && (
-        <polygon points="0,30 55,30 55,5 100,50 55,95 55,70 0,70" fill={fill} {...strokeProps} />
-      )}
+    <svg width="100%" height="100%" viewBox="0 0 100 100"
+      preserveAspectRatio="none" style={{ display:"block", overflow:"visible" }}>
+      {it.shapeType === "triangle" && <polygon points="50,2 98,98 2,98" fill={fill} {...strokeProps} />}
+      {it.shapeType === "arrow-right" && <polygon points="0,40 65,40 65,20 100,50 65,80 65,60 0,60" fill={fill} {...strokeProps} />}
+      {it.shapeType === "arrow-block" && <polygon points="0,30 55,30 55,5 100,50 55,95 55,70 0,70" fill={fill} {...strokeProps} />}
       {it.shapeType === "arrow-curve" && (
         <>
-          <path d="M12,88 C12,28 50,12 90,12" fill="none" stroke={fill} strokeWidth={8} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+          <path d="M12,88 C12,28 50,12 90,12" fill="none" stroke={fill} strokeWidth={8}
+            strokeLinecap="round" vectorEffect="non-scaling-stroke" />
           <polygon points="76,2 100,12 80,28" fill={fill} {...strokeProps} />
         </>
       )}
-      {it.shapeType === "star" && (
-        <polygon points="50,5 61,35 95,35 68,57 79,91 50,70 21,91 32,57 5,35 39,35" fill={fill} {...strokeProps} />
-      )}
-      {it.shapeType === "burst" && (
-        <polygon points={BURST_POINTS} fill={fill} {...strokeProps} />
-      )}
-      {it.shapeType === "ribbon" && (
-        <polygon points="0,25 12,50 0,75 100,75 88,50 100,25" fill={fill} {...strokeProps} />
-      )}
+      {it.shapeType === "star" && <polygon points="50,5 61,35 95,35 68,57 79,91 50,70 21,91 32,57 5,35 39,35" fill={fill} {...strokeProps} />}
+      {it.shapeType === "burst" && <polygon points={BURST_POINTS} fill={fill} {...strokeProps} />}
+      {it.shapeType === "ribbon" && <polygon points="0,25 12,50 0,75 100,75 88,50 100,25" fill={fill} {...strokeProps} />}
       {it.shapeType === "speech" && (
         <>
           <rect x="2" y="2" width="96" height="68" rx="14" fill={fill} {...strokeProps} />
@@ -451,13 +462,18 @@ export function DomEditor({
     };
     reader.readAsDataURL(file);
   }
+
   function addShapeItem(shapeType: NonNullable<FreeItem["shapeType"]>) {
-    if (items.length >= MAX_ITEMS) { window.alert(`Maksimal ${MAX_ITEMS} elemen tambahan.`); return; }
+    if (items.length >= MAX_ITEMS) {
+      window.alert(`Maksimal ${MAX_ITEMS} elemen tambahan.`);
+      return;
+    }
     const id = `s${Date.now().toString(36)}`;
     const w = 220, h = 220;
     const item: FreeItem = {
       id, kind: "shape", shapeType,
-      x: Math.round((layout.canvas.width - w) / 2), y: Math.round((layout.canvas.height - h) / 2),
+      x: Math.round((layout.canvas.width - w) / 2),
+      y: Math.round((layout.canvas.height - h) / 2),
       w, h, fill: "#2563eb", strokeWidth: 0, stroke: "#000000",
       ...(shapeType === "rect" ? { cornerRadius: 0 } : {}),
     };
@@ -693,7 +709,7 @@ export function DomEditor({
   const selFx = selKey ? getFx(selKey) : {};
   const selLabel =
     selSlot ? (selSlot.label ?? selSlot.id)
-    : selItem ? (selItem.kind === "text" ? "Teks tambahan" : selItem.kind === "image" ? "Gambar tambahan" : "Bentuk tambahan")
+    : selItem ? (selItem.kind === "text" ? "Teks tambahan" : "Gambar tambahan")
     : selKey === "logo" ? "Logo" : selKey === "footer" ? "Sosmed" : selKey === "delivery" ? "Pesan-antar"
     : selKey === "badges" ? "Sertifikasi" : "";
 
@@ -718,12 +734,13 @@ export function DomEditor({
         <span className="mx-1 h-5 w-px bg-navy/10" />
         <div className="relative">
           <button type="button" onClick={()=>setShapeMenuOpen((v)=>!v)}
-            className={`rounded-lg border px-2.5 py-1 text-xs font-semibold ${shapeMenuOpen ? "border-primary bg-primary/10 text-primary" : "border-primary text-primary"}`}>
+            className={`rounded-lg border px-2.5 py-1 text-xs font-semibold ${
+              shapeMenuOpen ? "border-primary bg-primary/10 text-primary" : "border-primary text-primary"
+            }`}>
             + Elemen <span className="text-[10px]">{shapeMenuOpen ? "▲" : "▼"}</span>
           </button>
           {shapeMenuOpen && (
             <>
-              {/* backdrop tak terlihat — klik di luar menutup dropdown */}
               <div className="fixed inset-0 z-40" onClick={()=>setShapeMenuOpen(false)} />
               <div className="absolute left-0 top-full z-50 mt-1 w-56 rounded-xl border border-navy/10 bg-white p-2 shadow-lg">
                 {SHAPE_CATALOG.map((g) => (
@@ -799,13 +816,15 @@ export function DomEditor({
                   <div ref={editRef} contentEditable suppressContentEditableWarning
                     onPointerDown={(e)=>e.stopPropagation()}
                     onBlur={(e)=>{ onTextChange?.(slot.id, (e.target as HTMLDivElement).innerText); setEditingKey(null); }}
-                    onKeyDown={(e)=>{ e.stopPropagation(); if ((e.key === "Enter" && !e.shiftKey) || e.key === "Escape") { e.preventDefault(); (e.target as HTMLDivElement).blur(); } }}
+                    onKeyDown={(e)=>{ e.stopPropagation(); if (e.key === "Enter") { e.preventDefault(); document.execCommand("insertText", false, "\n"); } else if (e.key === "Escape") { e.preventDefault(); (e.target as HTMLDivElement).blur(); } }}
                     style={{ fontFamily:`"${slot.fontFamily}"`, fontSize:fitted*scale, fontWeight:slot.fontWeight ?? 400,
                       color:slot.color, textAlign:slot.align, lineHeight:1, textShadow:buildTextShadow(slot,scale), whiteSpace:"pre-wrap",
+                      ...textStyleExtras(slot),
                       outline:"none", cursor:"text", minWidth:20 }}>{value}</div>
                 ) : (
                   <div style={{ fontFamily:`"${slot.fontFamily}"`, fontSize:fitted*scale, fontWeight:slot.fontWeight ?? 400,
-                    color:slot.color, textAlign:slot.align, lineHeight:1, textShadow:buildTextShadow(slot,scale), whiteSpace:"pre-wrap", userSelect:"none" }}>{value}</div>
+                    color:slot.color, textAlign:slot.align, lineHeight:1, textShadow:buildTextShadow(slot,scale), whiteSpace:"pre-wrap",
+                    ...textStyleExtras(slot), userSelect:"none" }}>{value}</div>
                 )}
               </div>
             );
@@ -834,15 +853,16 @@ export function DomEditor({
                   <div ref={editRef} contentEditable suppressContentEditableWarning
                     onPointerDown={(e)=>e.stopPropagation()}
                     onBlur={(e)=>{ patchItem(it.id, { text: (e.target as HTMLDivElement).innerText }); setEditingKey(null); }}
-                    onKeyDown={(e)=>{ e.stopPropagation(); if ((e.key === "Enter" && !e.shiftKey) || e.key === "Escape") { e.preventDefault(); (e.target as HTMLDivElement).blur(); } }}
+                    onKeyDown={(e)=>{ e.stopPropagation(); if (e.key === "Enter") { e.preventDefault(); document.execCommand("insertText", false, "\n"); } else if (e.key === "Escape") { e.preventDefault(); (e.target as HTMLDivElement).blur(); } }}
                     style={{ fontFamily:`"${it.fontFamily ?? "Inter"}"`, fontSize:(it.fontSize ?? 64)*scale, fontWeight:it.fontWeight ?? 800,
                       color:it.color ?? "#ffffff", lineHeight:1.1, whiteSpace:"pre-wrap", textAlign:it.align ?? "left", width:"100%",
                       textShadow: buildTextShadow(it, scale),
+                      ...textStyleExtras(it),
                       outline:"none", cursor:"text", minWidth:20 }}>{it.text ?? ""}</div>
                 ) : (
                   <div style={{ fontFamily:`"${it.fontFamily ?? "Inter"}"`, fontSize:(it.fontSize ?? 64)*scale, fontWeight:it.fontWeight ?? 800,
                     color:it.color ?? "#ffffff", lineHeight:1.1, whiteSpace:"pre-wrap", textAlign:it.align ?? "left", width:"100%",
-                    textShadow: buildTextShadow(it, scale), userSelect:"none" }}>{it.text ?? ""}</div>
+                    textShadow: buildTextShadow(it, scale), ...textStyleExtras(it), userSelect:"none" }}>{it.text ?? ""}</div>
                 )
               ) : it.kind === "image" ? (
                 <img src={it.src} alt="" draggable={false}
@@ -1079,7 +1099,7 @@ export function DomEditor({
           {items.map((it, i) => (
             <button key={it.id} type="button" onClick={()=>setSelKey(`item-${it.id}`)}
               className={`rounded-full px-3.5 py-2 sm:px-3 sm:py-1 text-xs font-semibold ${selKey===`item-${it.id}`?"bg-primary text-white":"bg-navy/10 text-navy"}`}>
-              {it.kind === "text" ? `Teks+${i+1}` : it.kind === "image" ? `Gbr+${i+1}` : `Bentuk+${i+1}`}
+              {it.kind === "text" ? `Teks+${i+1}` : `Gbr+${i+1}`}
             </button>
           ))}
         </div>
@@ -1149,6 +1169,32 @@ export function DomEditor({
                   {a === "left" ? "Kiri" : a === "center" ? "Tengah" : "Kanan"}
                 </button>
               ))}
+            </div>
+
+            <div className="mt-3 flex items-center gap-2 sm:mt-2 text-xs">
+              <button type="button" onClick={()=>patchSlot(selSlot.id, { fontWeight: (selSlot.fontWeight ?? 400) >= 700 ? 400 : 800 })}
+                className={`flex-1 rounded-lg border px-2.5 py-2.5 font-bold sm:flex-none sm:py-1 ${(selSlot.fontWeight ?? 400) >= 700 ? "border-primary bg-primary/10 text-primary" : "border-navy/15 text-navy/70"}`}>B</button>
+              <button type="button" onClick={()=>patchSlot(selSlot.id, { italic: !selSlot.italic })}
+                className={`flex-1 rounded-lg border px-2.5 py-2.5 italic sm:flex-none sm:py-1 ${selSlot.italic ? "border-primary bg-primary/10 text-primary" : "border-navy/15 text-navy/70"}`}>I</button>
+              <button type="button" onClick={()=>patchSlot(selSlot.id, { underline: !selSlot.underline })}
+                className={`flex-1 rounded-lg border px-2.5 py-2.5 underline sm:flex-none sm:py-1 ${selSlot.underline ? "border-primary bg-primary/10 text-primary" : "border-navy/15 text-navy/70"}`}>U</button>
+            </div>
+
+            <div className="mt-3 flex flex-col gap-2.5 sm:mt-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 text-xs">
+              <SliderToggle label="Tilt X (perspective)" valueLabel={`${selSlot.tiltX ?? 0}°`}>
+                <input type="range" min={-45} max={45} value={selSlot.tiltX ?? 0}
+                  onChange={(e)=>patchSlot(selSlot.id, { tiltX: Number(e.target.value) })}
+                  className="h-6 w-full accent-primary" />
+              </SliderToggle>
+              <SliderToggle label="Tilt Y (perspective)" valueLabel={`${selSlot.tiltY ?? 0}°`}>
+                <input type="range" min={-45} max={45} value={selSlot.tiltY ?? 0}
+                  onChange={(e)=>patchSlot(selSlot.id, { tiltY: Number(e.target.value) })}
+                  className="h-6 w-full accent-primary" />
+              </SliderToggle>
+              {(selSlot.tiltX || selSlot.tiltY) ? (
+                <button type="button" onClick={()=>patchSlot(selSlot.id, { tiltX: 0, tiltY: 0 })}
+                  className="shrink-0 rounded border border-navy/15 px-2.5 py-1.5 text-navy/60">Reset tilt</button>
+              ) : null}
             </div>
 
             <div className="mt-3 flex flex-col gap-2.5 sm:mt-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 text-xs">
@@ -1230,6 +1276,32 @@ export function DomEditor({
               </div>
             </div>
 
+            <div className="mt-3 flex items-center gap-2 sm:mt-2 text-xs">
+              <button type="button" onClick={()=>patchItem(selItem.id, { fontWeight: (selItem.fontWeight ?? 800) >= 700 ? 400 : 800 })}
+                className={`flex-1 rounded-lg border px-2.5 py-2.5 font-bold sm:flex-none sm:py-1 ${(selItem.fontWeight ?? 800) >= 700 ? "border-primary bg-primary/10 text-primary" : "border-navy/15 text-navy/70"}`}>B</button>
+              <button type="button" onClick={()=>patchItem(selItem.id, { italic: !selItem.italic })}
+                className={`flex-1 rounded-lg border px-2.5 py-2.5 italic sm:flex-none sm:py-1 ${selItem.italic ? "border-primary bg-primary/10 text-primary" : "border-navy/15 text-navy/70"}`}>I</button>
+              <button type="button" onClick={()=>patchItem(selItem.id, { underline: !selItem.underline })}
+                className={`flex-1 rounded-lg border px-2.5 py-2.5 underline sm:flex-none sm:py-1 ${selItem.underline ? "border-primary bg-primary/10 text-primary" : "border-navy/15 text-navy/70"}`}>U</button>
+            </div>
+
+            <div className="mt-3 flex flex-col gap-2.5 sm:mt-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 text-xs">
+              <SliderToggle label="Tilt X (perspective)" valueLabel={`${selItem.tiltX ?? 0}°`}>
+                <input type="range" min={-45} max={45} value={selItem.tiltX ?? 0}
+                  onChange={(e)=>patchItem(selItem.id, { tiltX: Number(e.target.value) })}
+                  className="h-6 w-full accent-primary" />
+              </SliderToggle>
+              <SliderToggle label="Tilt Y (perspective)" valueLabel={`${selItem.tiltY ?? 0}°`}>
+                <input type="range" min={-45} max={45} value={selItem.tiltY ?? 0}
+                  onChange={(e)=>patchItem(selItem.id, { tiltY: Number(e.target.value) })}
+                  className="h-6 w-full accent-primary" />
+              </SliderToggle>
+              {(selItem.tiltX || selItem.tiltY) ? (
+                <button type="button" onClick={()=>patchItem(selItem.id, { tiltX: 0, tiltY: 0 })}
+                  className="shrink-0 rounded border border-navy/15 px-2.5 py-1.5 text-navy/60">Reset tilt</button>
+              ) : null}
+            </div>
+
             <div className="mt-3 flex flex-col gap-2.5 sm:mt-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 text-xs">
               <label className="flex items-center gap-2 font-medium text-navy/70">
                 <input type="checkbox" checked={!!selItem.shadow}
@@ -1277,43 +1349,6 @@ export function DomEditor({
               )}
             </div>
           </>
-        )}
-
-        {/* kontrol bentuk dasar (kotak/bulat/segitiga) — mobile: 1 kontrol per baris */}
-        {selItem && selItem.kind === "shape" && (
-          <div className="mt-3 flex flex-col gap-2.5 sm:mt-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 text-xs">
-            <label className="flex items-center gap-2 font-medium text-navy/70">
-              Warna
-              <input type="color" value={selItem.fill ?? "#2563eb"}
-                onChange={(e)=>patchItem(selItem.id, { fill: e.target.value })}
-                className="h-10 w-12 shrink-0 rounded border border-navy/15 sm:h-8 sm:w-9" />
-            </label>
-            {selItem.shapeType === "rect" && (
-              <SliderToggle label="Sudut" valueLabel={`${selItem.cornerRadius ?? 0}`}>
-                <input type="range" min={0} max={Math.round(Math.min(selItem.w, selItem.h) / 2)} value={selItem.cornerRadius ?? 0} title="Sudut"
-                  onChange={(e)=>patchItem(selItem.id, { cornerRadius: Number(e.target.value) })}
-                  className="h-6 w-full accent-primary sm:h-auto sm:w-28" />
-              </SliderToggle>
-            )}
-            <label className="flex items-center gap-2 font-medium text-navy/70">
-              <input type="checkbox" checked={!!(selItem.strokeWidth && selItem.strokeWidth > 0)}
-                onChange={(e)=>patchItem(selItem.id, { strokeWidth: e.target.checked ? 4 : 0 })}
-                className="h-5 w-5 sm:h-4 sm:w-4" />
-              Garis tepi
-            </label>
-            {!!(selItem.strokeWidth && selItem.strokeWidth > 0) && (
-              <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-                <SliderToggle label="Tebal" valueLabel={`${selItem.strokeWidth}`}>
-                  <input type="range" min={1} max={20} value={selItem.strokeWidth} title="Tebal"
-                    onChange={(e)=>patchItem(selItem.id, { strokeWidth: Number(e.target.value) })}
-                    className="h-6 w-full accent-primary sm:h-auto sm:w-24" />
-                </SliderToggle>
-                <input type="color" value={selItem.stroke ?? "#000000"}
-                  onChange={(e)=>patchItem(selItem.id, { stroke: e.target.value })}
-                  className="h-10 w-12 shrink-0 rounded border border-navy/15 sm:h-7 sm:w-8" />
-              </div>
-            )}
-          </div>
         )}
       </div>
     </div>

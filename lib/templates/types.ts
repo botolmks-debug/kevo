@@ -13,6 +13,11 @@ export type TextSlot = {
   align: "left" | "center" | "right";
   color: string;
   fontWeight?: number;
+  italic?: boolean;
+  underline?: boolean;
+  /** Tilt 3D ala "Perspective" Photoshop — derajat rotasi sumbu X/Y teks. */
+  tiltX?: number;
+  tiltY?: number;
   /** Label manusiawi untuk form (fallback ke `id` kalau tidak diisi). */
   label?: string;
   /** Contoh isi (dipakai sebagai placeholder di form, bukan value awal). */
