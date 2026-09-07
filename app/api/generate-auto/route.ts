@@ -28,6 +28,7 @@ import {
   buildGeneralContentPrompt,
   buildInteraksiContentPrompt,
   buildProdukContentPrompt,
+  buildProdukCaptionForTitlePrompt,
   buildGabungContentPrompt,
   themeInstruction,
   themeImageNote,
@@ -90,7 +91,7 @@ export async function GET() {
 const VALID_TEMA = ["hook", "edukasi", "produk", "promo"] as const;
 type ContentTema = (typeof VALID_TEMA)[number];
 
-type RequestBody = { jenis: GeneratedContentJenis; ratio: AspectRatio; imageId?: string; imageIds?: string[]; language?: "id" | "en"; referenceDataUri?: string; tema?: ContentTema };
+type RequestBody = { jenis: GeneratedContentJenis; ratio: AspectRatio; imageId?: string; imageIds?: string[]; language?: "id" | "en"; referenceDataUri?: string; tema?: ContentTema; konsep?: string; lockedTitle?: string; produkDescOverride?: string };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -107,6 +108,9 @@ function isValidBody(body: unknown): body is RequestBody {
   }
   if (body.referenceDataUri !== undefined && typeof body.referenceDataUri !== "string") return false;
   if (body.tema !== undefined && !VALID_TEMA.includes(body.tema as ContentTema)) return false;
+  if (body.konsep !== undefined && (typeof body.konsep !== "string" || body.konsep.length > 500)) return false;
+  if (body.lockedTitle !== undefined && (typeof body.lockedTitle !== "string" || body.lockedTitle.length > 200)) return false;
+  if (body.produkDescOverride !== undefined && typeof body.produkDescOverride !== "string") return false;
   return true;
 }
 
@@ -198,10 +202,14 @@ export async function POST(request: NextRequest) {
   // terbukti di /coba — di sini dipakai best-effort: gagal → jalan seperti
   // biasa dengan deskripsi apa adanya. Foto yang sudah diunduh dipakai ulang
   // untuk editImage di bawah (tidak download 2x).
-  let produkDesc = sourceImage?.description ?? "";
+  let produkDesc = body.produkDescOverride?.trim() || sourceImage?.description || "";
   let produkBase64: string | null = null;
   let produkMime = "image/jpeg";
-  if (body.jenis === "produk" && !isGabung && sourceImage && produkDesc.trim().length < 12) {
+  // Kalau produkDescOverride sudah dikirim (dari step popup 5-judul, yang
+  // sudah lebih dulu jalanin describeProductImage), SKIP vision-AI di sini —
+  // hemat 1 panggilan API yang sama persis, bukan cuma soal cepat tapi juga
+  // soal biaya (dipanggil 2x kalau tidak di-skip).
+  if (body.jenis === "produk" && !isGabung && sourceImage && !body.produkDescOverride?.trim() && produkDesc.trim().length < 12) {
     try {
       const { data, error } = await createServiceRoleClient().storage.from(BUCKET).download(sourceImage.storage_path);
       if (!error && data) {
@@ -258,25 +266,66 @@ export async function POST(request: NextRequest) {
   // instruksi gaya lewat param `extra`. HANYA utk produk/gabung/general —
   // Interaksi punya format sendiri (kuis/quote/tips) dan tidak ikut tema.
   // Anti-repetisi & momen berlaku SEMUA jenis. Carousel punya alur terpisah.
+  //
+  // KONSEP (field baru, opsional, ditulis bebas oleh user): kalau diisi,
+  // JADI PRIORITAS UTAMA — mengalahkan tema & pendekatan default (data
+  // produk/bisnis onboarding tetap dipakai sebagai KONTEKS, tapi arah
+  // kreatifnya ngikutin konsep ini). Kalau kosong, perilaku lama (tema atau
+  // default berbasis data produk/bisnis) tetap jalan tanpa berubah.
+  const konsepText = body.konsep?.trim();
+  // Instruksi konsep utk produk (baik jalur langsung maupun caption-setelah-
+  // judul-terkunci) sekarang dibangun DI DALAM buildProdukContentPrompt /
+  // buildProdukCaptionForTitlePrompt sendiri (konsepDecisionBlock) — bukan
+  // digabung ke extraAll lagi. Alasan: kalimat pembuka fungsi2 itu ("Produk =
+  // BINTANG UTAMA") ternyata PREMIS FONDASI yang lebih kuat drpd instruksi
+  // konsep yang cuma ditambahkan belakangan, jadi pembukanya sendiri sekarang
+  // dibuat kondisional. Utk jalur GABUNG (multi-foto, > 1 gambar dipilih)
+  // tetap pakai cara lama (konsepExtra biasa) — fungsi buildGabungContentPrompt
+  // belum di-upgrade ke pola yang sama, jangan sampai kehilangan konsep sama
+  // sekali di jalur itu.
+  const konsepExtraLegacy = konsepText
+    ? (body.language === "en"
+        ? `PRIORITY CONCEPT (from the user, OVERRIDES the theme/default direction below if they conflict): "${konsepText}"\nStill ground the content in the real product/business data above — the concept sets the CREATIVE DIRECTION, it doesn't replace real facts with invented ones.`
+        : `KONSEP PRIORITAS (dari user, MENGALAHKAN tema/arah default di bawah kalau bertentangan): "${konsepText}"\nTetap berpijak pada data produk/bisnis asli di atas — konsep ini menentukan ARAH KREATIFNYA, bukan mengganti fakta asli dengan karangan.`)
+    : undefined;
   const temaExtra = body.tema ? themeInstruction(body.tema, body.language) : undefined;
   const sharedExtra = [antiRepetisiBlock, momenBlock].filter(Boolean).join("\n");
-  const extraAll = [temaExtra, sharedExtra].filter(Boolean).join("\n") || undefined;
+  const extraAllNonProduk = [konsepExtraLegacy, temaExtra, sharedExtra].filter(Boolean).join("\n") || undefined;
+  const extraProdukOnly = [temaExtra, sharedExtra].filter(Boolean).join("\n") || undefined;
   const extraInteraksi = sharedExtra || undefined;
-  const contentPrompt = (
-    isGabung ? buildGabungContentPrompt(profile, sourceImages.map((s) => s.description ?? ""), body.language, extraAll)
-    : body.jenis === "produk" ? buildProdukContentPrompt(profile, produkDesc, body.language, extraAll)
-    : body.jenis === "general" ? buildGeneralContentPrompt(profile, body.language, extraAll)
-    : buildInteraksiContentPrompt(profile, body.language, extraInteraksi)
-  ) + notesBlock;
+  const lockedTitle = body.lockedTitle?.trim();
+  // Kalau user sudah pilih judul dari popup "5 pilihan judul" — jangan
+  // generate judul baru, cuma minta CAPTION yang nyambung ke judul itu.
+  // Cuma didukung utk jenis "produk" tunggal (bukan gabung/carousel) —
+  // sama seperti scope route /titles di atas.
+  const contentPrompt = lockedTitle && body.jenis === "produk" && !isGabung
+    ? buildProdukCaptionForTitlePrompt(profile, produkDesc, lockedTitle, body.language, extraProdukOnly, konsepText) + notesBlock
+    : (
+        isGabung ? buildGabungContentPrompt(profile, sourceImages.map((s) => s.description ?? ""), body.language, extraAllNonProduk)
+        : body.jenis === "produk" ? buildProdukContentPrompt(profile, produkDesc, body.language, extraProdukOnly, konsepText)
+        : body.jenis === "general" ? buildGeneralContentPrompt(profile, body.language, extraAllNonProduk)
+        : buildInteraksiContentPrompt(profile, body.language, extraInteraksi)
+      ) + notesBlock;
 
   const contentResult = await generateJsonContent(contentPrompt);
   if (!contentResult.ok) return fail(contentResult.error, 502);
 
   const requireScene = body.jenis !== "produk";
-  if (!isAutoContent(contentResult.data, requireScene)) {
-    return fail("AI mengembalikan format konten tidak lengkap. Coba lagi.", 502);
+  let content: AutoContent;
+  if (lockedTitle && body.jenis === "produk" && !isGabung) {
+    // Prompt caption-only cuma minta {"caption","fontId"} — onImageText
+    // TIDAK diminta AI, langsung pakai judul yang sudah dipilih user.
+    const capData = contentResult.data as { caption?: unknown; fontId?: unknown };
+    if (typeof capData.caption !== "string" || capData.caption.trim().length === 0) {
+      return fail("AI mengembalikan format caption tidak lengkap. Coba lagi.", 502);
+    }
+    content = { onImageText: lockedTitle, caption: capData.caption, fontId: typeof capData.fontId === "string" ? capData.fontId : undefined };
+  } else {
+    if (!isAutoContent(contentResult.data, requireScene)) {
+      return fail("AI mengembalikan format konten tidak lengkap. Coba lagi.", 502);
+    }
+    content = contentResult.data;
   }
-  const content = contentResult.data;
   const fontOption = content.fontId ? FONT_OPTIONS.find((f) => f.id === content.fontId) : null;
 
   // ── Generate gambar bersih (tanpa overlay) ───────────────────────────────
@@ -324,6 +373,11 @@ export async function POST(request: NextRequest) {
       ? `\n\nCONTENT HEADLINE that will be overlaid on this image: "${content.onImageText.trim()}" — if it implies a usage moment, activity, or place, keep the scene consistent with it (never contradict it).`
       : "";
     const temaImageNote = body.tema ? themeImageNote(body.tema, body.language) : "";
+    const konsepImageNote = konsepText
+      ? (body.language === "en"
+          ? `\n\nPRIORITY CONCEPT for this scene (from the user, overrides default styling if it conflicts): "${konsepText}"\nIf this concept describes a standalone situation/event/moment, depict THAT situation — the product does not have to be the visual focus (or even present) if the concept doesn't call for it.`
+          : `\n\nKONSEP PRIORITAS untuk adegan ini (dari user, mengalahkan gaya default kalau bertentangan): "${konsepText}"\nKalau konsep ini menggambarkan situasi/peristiwa/momen yang berdiri sendiri, gambarkan SITUASI itu — produk tidak wajib jadi fokus visual (atau bahkan tidak wajib muncul) kalau konsepnya memang tidak menuntut itu.`)
+      : "";
     const prompt = (
       sourceImage.type === "makanan" ? buildFoodPrompt(profile, produkDesc.trim() ? produkDesc : undefined, body.language)
       : sourceImage.type === "skincare" ? buildSkincarePrompt(profile, produkDesc.trim() ? produkDesc : undefined, body.language)
@@ -331,7 +385,7 @@ export async function POST(request: NextRequest) {
       : sourceImage.type === "suasana" ? buildRuanganPrompt(profile, sourceImage.size_hint ?? undefined, body.language)
       : sourceImage.type === "wajah" ? buildOrangPrompt(profile, body.language)
       : buildScenePrompt(profile, sourceImage.size_hint ?? undefined, body.language, produkDesc)
-    ) + headlineNote + temaImageNote;
+    ) + headlineNote + temaImageNote + konsepImageNote;
     let result;
     if (body.referenceDataUri) {
       // Konten manual dengan referensi gaya: kirim foto produk + gambar referensi.
@@ -343,7 +397,7 @@ export async function POST(request: NextRequest) {
         referenceBase64: refMatch[2],
         referenceMime: refMatch[1],
         aspectRatio: body.ratio,
-        prompt: buildReferencePrompt(profile, produkDesc.trim() ? produkDesc : undefined, body.language) + temaImageNote,
+        prompt: buildReferencePrompt(profile, produkDesc.trim() ? produkDesc : undefined, body.language) + temaImageNote + konsepImageNote,
       });
     } else {
       result = await editImage({ imageBase64, mimeType, aspectRatio: body.ratio, prompt });

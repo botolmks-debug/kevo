@@ -38,7 +38,7 @@ export type ElementFx = { opacity?: number; rotation?: number; z?: number };
 /** Elemen bebas yang ditambah user (teks/gambar stiker) — editor DOM v4. */
 export type FreeItem = {
   id: string;
-  kind: "text" | "image";
+  kind: "text" | "image" | "shape";
   x: number;
   y: number;
   w: number;
@@ -59,6 +59,12 @@ export type FreeItem = {
   outline?: { width: number; color: string } | null;
   /** kind "image" — data URI (di-embed, aman untuk export). */
   src?: string;
+  /** kind "shape" — bentuk dasar/panah/efek promo dari menu "+ Elemen". */
+  shapeType?: "rect" | "circle" | "triangle" | "arrow-right" | "arrow-block" | "arrow-curve" | "star" | "burst" | "ribbon" | "speech";
+  fill?: string;
+  stroke?: string;
+  strokeWidth?: number;
+  cornerRadius?: number;
 };
 
 /** Lapisan warna/gradient di atas foto latar — editor DOM v4. */

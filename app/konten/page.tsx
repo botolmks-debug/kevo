@@ -248,11 +248,32 @@ export default function KontenPage() {
       form.append("onImageText", onImageText);
       form.append("caption", selected.caption);
       form.append("layoutState", JSON.stringify(layoutState));
-      await fetch(`/api/generate-auto/${selected.id}`, { method: "PATCH", body: form });
+      // PENTING: sebelumnya fetch ini TIDAK dicek res.ok DAN tidak punya
+      // timeout — kalau request-nya menggantung di server, saveStatus tidak
+      // pernah berubah dari "saving", jadi GenerateLoadingOverlay kelihatan
+      // macet SELAMANYA walau file PNG-nya sendiri sudah berhasil di-download
+      // duluan (baris downloadBlob di atas). Timeout 25 detik + cek res.ok
+      // sekarang memastikan status SELALU berubah (ke "saved" atau "error"),
+      // tidak pernah menggantung tanpa batas.
+      const patchController = new AbortController();
+      const patchTimeout = setTimeout(() => patchController.abort(), 25_000);
+      try {
+        const patchRes = await fetch(`/api/generate-auto/${selected.id}`, {
+          method: "PATCH", body: form, signal: patchController.signal,
+        });
+        if (!patchRes.ok) {
+          throw new Error("Gambar sudah ke-download, tapi gagal menyimpan datanya ke server. Coba \"Simpan Gambar\" lagi.");
+        }
+      } finally {
+        clearTimeout(patchTimeout);
+      }
       setSaveStatus("saved");
     } catch (e) {
       setSaveStatus("error");
-      setSaveError(e instanceof Error ? e.message : "Gagal menyimpan.");
+      const isAbort = e instanceof Error && e.name === "AbortError";
+      setSaveError(isAbort
+        ? "Gambar sudah ke-download, tapi server terlalu lama merespons. Coba \"Simpan Gambar\" lagi."
+        : (e instanceof Error ? e.message : "Gagal menyimpan."));
     }
   }
 

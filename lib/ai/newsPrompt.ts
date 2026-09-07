@@ -7,9 +7,11 @@ import { persona, captionRules, onImageRule, fontRule, jsonTail } from "@/lib/ai
 /**
  * Judul+caption dari 1 berita industri (hasil searchIndustryNews). Beda dari
  * buildProdukContentPrompt: BUKAN promosi produk langsung — ini konten
- * reaksi/opini/komentar terhadap berita, dengan bisnis user sebagai SUDUT
- * PANDANG (bukan bintang utama). Tujuannya variasi tema, bukan jualan
- * langsung tiap post.
+ * INFORMASI BERITA MURNI (bukan opini/reaksi pribadi lagi — sempat begitu,
+ * tapi diubah krn orang buka konten ini butuh info berita, bukan pendapat
+ * bisnisnya soal beritanya), dengan CTA promosi bisnis dipisah jadi baris
+ * tersendiri di akhir caption (bukan menyatu ke narasi beritanya). Tujuannya
+ * variasi tema, bukan jualan langsung tiap post.
  */
 export function buildNewsContentPrompt(
   profile: BusinessProfile,
@@ -33,9 +35,9 @@ ${newsSummary}${sourceLineId}
 
 ATURAN KONTEN:
 - Judul (onImageText) = HOOK dari berita itu sendiri (fakta/angka/kejutan paling menarik), BUKAN nama produk/bisnismu. INI MENGGANTIKAN batas "maks 8 kata" di ONIMAGE_RULE di bawah — khusus format Berita, batasnya MAKSIMAL 12 KATA (bukan 8), supaya ada ruang cukup buat hook YANG TETAP menyebut subjek konkretnya. WAJIB tetap menyebut/menyiratkan SUBJEK KONKRET beritanya (nama produk/perusahaan/topik spesifik dari ringkasan di atas) — JANGAN sampai judulnya jadi kalimat abstrak yang bisa dipakai untuk berita apa pun (contoh SALAH: "Standar baru sedang dipaksakan ke kita semua" — tidak jelas ini soal apa; contoh BENAR: "OpenAI Rilis Model Baru, AI Sekarang Bisa Berpikir Runtut").
-- Caption = ringkas ceritanya (kata-kata sendiri) + tambahkan 1-2 kalimat opini/insight/koneksi ke industrimu — biar terasa "kamu yang ngomong", bukan cuma copy berita.
-- CAPTION WAJIB TETAP SPESIFIK ke berita ini — sebut jelas nama perusahaan/produk/orang/angka konkret dari ringkasan di atas di awal caption. DILARANG langsung melebar jadi opini umum soal industri/teknologi tanpa pernah menyebut fakta spesifik apa yang terjadi (contoh SALAH: "AI berkembang pesat, model baru bermunculan tiap hari" — tidak jelas kejadian spesifik apa; contoh BENAR: "OpenAI baru saja merilis model X yang bisa Y").
-- JANGAN membuat produk/bisnismu jadi topik utama — bisnismu cuma SUDUT PANDANG buat komentari berita ini, bukan yang dipromosikan.
+- CAPTION = INFORMASI BERITA MURNI, dirangkum detail & informatif, dalam kata-katamu sendiri — BUKAN opini/insight pribadi, BUKAN dikait-kaitkan ke bisnismu. Orang buka konten ini untuk TAHU BERITANYA, bukan untuk dengar pendapatmu soal bisnismu sendiri. INI MENGGANTIKAN instruksi "satu CTA halus di paragraf terakhir" di CAPTION_RULES di bawah — CTA-nya WAJIB dipisah jadi baris TERAKHIR TERSENDIRI (lihat poin CTA di bawah), bukan menyatu/melebur ke paragraf info beritanya.
+- CAPTION WAJIB TETAP SPESIFIK ke berita ini — sebut jelas nama perusahaan/produk/orang/angka konkret dari ringkasan di atas, rangkum kronologi/detail pentingnya selengkap yang ringkasan di atas kasih. DILARANG jadi opini umum soal industri/teknologi tanpa menyebut fakta spesifik apa yang terjadi (contoh SALAH: "AI berkembang pesat, model baru bermunculan tiap hari" — tidak jelas kejadian spesifik apa; contoh BENAR: "OpenAI baru saja merilis model X yang bisa Y, diumumkan tanggal Z, diklaim lebih baik karena W").
+- CTA (baris TERPISAH, di paling akhir, SETELAH paragraf info berita, SEBELUM hashtag) — 1 kalimat pendek & sederhana yang mempromosikan bisnis/produk INI SENDIRI secara umum (bukan menyambungkan ke topik beritanya) — contoh pola (sesuaikan produk/bisnisnya): "Butuh [kategori produk/jasa bisnis ini] yang gampang & cepat? Coba [nama bisnis]." Pisahkan dengan baris kosong dari paragraf info berita di atasnya, biar jelas kelihatan sebagai bagian terpisah (bukan menyatu ke ceritanya).
 - JANGAN mengarang detail/angka yang tidak ada di ringkasan berita di atas.
 
 Format JSON: {"onImageText": "...", "caption": "...", "imageScene": "...", "fontId": "..."}
@@ -45,7 +47,7 @@ ${captionRules(lang)}
 ${fontRule(lang)}
 ${jsonTail(lang)}`;
 
-  const coreEn = `You are a business owner making a REACTION/OPINION post about a news story relevant to your industry — NOT a direct product-selling post. The style is like a news-commentary account: a hooky headline, then a caption that summarizes the story + adds a short opinion/insight from your business's point of view.
+  const coreEn = `You are making an INFORMATIONAL news post about a story relevant to your industry — NOT a direct product-selling post, and NOT a personal-opinion post. The style is like a news-summary account: a hooky headline, then a caption that informs the reader about the actual story in detail.
 
 ${buildProfileBlock(profile, lang)}
 
@@ -54,9 +56,9 @@ ${newsSummary}${sourceLineEn}
 
 CONTENT RULES:
 - Headline (onImageText) = the HOOK from the news story itself (the most interesting fact/number/twist), NOT your product/business name. THIS OVERRIDES the "max 8 words" rule in ONIMAGE_RULE below — for the News format specifically, the limit is MAX 12 WORDS (not 8), giving enough room for a real hook that STILL names the concrete subject. MUST still name/imply the CONCRETE SUBJECT of the story (specific product/company/topic from the summary above) — do NOT let the headline become an abstract sentence that could apply to any story (wrong example: "A new standard is being forced on us all" — unclear what this is even about; right example: "OpenAI Releases New Model, AI Can Now Reason Step-by-Step").
-- Caption = summarize the story (your own words) + add 1-2 sentences of opinion/insight/connection to your industry — so it feels like "you" talking, not just a copied news blurb.
-- THE CAPTION MUST STAY SPECIFIC to this story — clearly name the specific company/product/person/concrete number from the summary above, right at the start of the caption. Do NOT drift into general opinion about the industry/technology without ever stating the specific thing that happened (wrong example: "AI is advancing fast, new models keep popping up" — unclear what specifically happened; right example: "OpenAI just released model X which can do Y").
-- Do NOT make your product/business the main topic — your business is only the LENS for commenting on this news, not what's being promoted.
+- CAPTION = PURE NEWS INFORMATION, summarized in detail and informatively, in your own words — NOT personal opinion/insight, NOT tied back to your business. Readers open this content to LEARN THE NEWS, not to hear your opinion about your own business. THIS OVERRIDES the "one subtle CTA in the last paragraph" instruction in CAPTION_RULES below — the CTA MUST be split into its own separate final line (see CTA point below), not blended into the news-info paragraph.
+- THE CAPTION MUST STAY SPECIFIC to this story — clearly name the specific company/product/person/concrete number from the summary above, summarize the chronology/important details as fully as the summary above allows. Do NOT drift into general opinion about the industry/technology without ever stating the specific thing that happened (wrong example: "AI is advancing fast, new models keep popping up" — unclear what specifically happened; right example: "OpenAI just released model X which can do Y, announced on date Z, claimed to be better because W").
+- CTA (SEPARATE line, at the very end, AFTER the news-info paragraph, BEFORE the hashtags) — 1 short, simple sentence promoting THIS business/product itself generically (not tied to the news topic) — example pattern (adapt to the actual product/business): "Need [this business's product/service category] that's quick & easy? Try [business name]." Separate it with a blank line from the news-info paragraph above, so it clearly reads as a distinct part, not blended into the story.
 - Do NOT invent details/numbers not present in the summary above.
 
 JSON format: {"onImageText": "...", "caption": "...", "imageScene": "...", "fontId": "..."}

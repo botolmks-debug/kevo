@@ -81,18 +81,21 @@ function buildTextShadow(slot: ShadowOutlineShape, scale: number): string | unde
 
 /**
  * Bold pakai fontWeight yang sudah ada (bukan field baru — toggle 400/800).
- * Italic/underline/tilt itu field BARU (lihat TextSlotOverride & FreeItem).
- * Tilt = pendekatan "Perspective" ala Photoshop pakai CSS 3D rotateX/Y —
- * BUKAN distort 4-titik sudut bebas yang sesungguhnya (itu jauh lebih rumit,
- * butuh matrix3d per-titik/canvas warp), tapi kesan "miring 3D"-nya dapat.
+ * Italic/underline itu field terpisah.
+ * Tilt = "Perspective" versi sederhana (slider Tilt X/Y, CSS rotateX/Y) —
+ * ini VERSI 1 yang dipertahankan setelah dites aman. Versi distort 4-sudut-
+ * bebas (drag tiap pojok, matrix3d homografi) SUDAH DIHAPUS PERMANEN karena
+ * bikin teks hilang saat dipakai — jangan dibangun ulang tanpa perbaikan
+ * yang tervalidasi visual dulu.
  */
 function textStyleExtras(t: { italic?: boolean; underline?: boolean; tiltX?: number; tiltY?: number }): React.CSSProperties {
   const tx = t.tiltX ?? 0, ty = t.tiltY ?? 0;
   return {
     fontStyle: t.italic ? "italic" : "normal",
     textDecoration: t.underline ? "underline" : "none",
-    transform: (tx || ty) ? `perspective(600px) rotateX(${tx}deg) rotateY(${ty}deg)` : undefined,
-    transformStyle: (tx || ty) ? "preserve-3d" : undefined,
+    ...(tx || ty
+      ? { transform: `perspective(600px) rotateX(${tx}deg) rotateY(${ty}deg)`, backfaceVisibility: "visible" as const }
+      : {}),
   };
 }
 
@@ -709,7 +712,7 @@ export function DomEditor({
   const selFx = selKey ? getFx(selKey) : {};
   const selLabel =
     selSlot ? (selSlot.label ?? selSlot.id)
-    : selItem ? (selItem.kind === "text" ? "Teks tambahan" : "Gambar tambahan")
+    : selItem ? (selItem.kind === "text" ? "Teks tambahan" : selItem.kind === "shape" ? "Bentuk" : "Gambar tambahan")
     : selKey === "logo" ? "Logo" : selKey === "footer" ? "Sosmed" : selKey === "delivery" ? "Pesan-antar"
     : selKey === "badges" ? "Sertifikasi" : "";
 
@@ -1099,7 +1102,7 @@ export function DomEditor({
           {items.map((it, i) => (
             <button key={it.id} type="button" onClick={()=>setSelKey(`item-${it.id}`)}
               className={`rounded-full px-3.5 py-2 sm:px-3 sm:py-1 text-xs font-semibold ${selKey===`item-${it.id}`?"bg-primary text-white":"bg-navy/10 text-navy"}`}>
-              {it.kind === "text" ? `Teks+${i+1}` : `Gbr+${i+1}`}
+              {it.kind === "text" ? `Teks+${i+1}` : it.kind === "shape" ? `Bentuk+${i+1}` : `Gbr+${i+1}`}
             </button>
           ))}
         </div>
@@ -1151,8 +1154,16 @@ export function DomEditor({
                   className="flex-1 rounded-lg border border-navy/15 px-3 py-2.5 sm:flex-none sm:px-2 sm:py-1.5">
                   {FONT_OPTIONS.map((f) => <option key={f.id} value={f.family}>{f.family}</option>)}
                 </select>
-                <input type="color" value={/^#/.test(selSlot.color) ? selSlot.color.slice(0,7) : "#ffffff"} onChange={(e)=>patchSlot(selSlot.id, { color: e.target.value })}
-                  className="h-11 w-14 shrink-0 rounded border border-navy/15 sm:h-8 sm:w-9" />
+                <input type="color" value={/^#/.test(selSlot.color) ? selSlot.color.slice(0,7) : "#ffffff"}
+                  onChange={(e)=>patchSlot(selSlot.id, { color: e.target.value })}
+                  disabled={selSlot.color === "transparent"}
+                  className="h-11 w-14 shrink-0 rounded border border-navy/15 disabled:opacity-30 sm:h-8 sm:w-9" />
+                <label className="flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] text-navy/60">
+                  <input type="checkbox" checked={selSlot.color === "transparent"}
+                    onChange={(e)=>patchSlot(selSlot.id, { color: e.target.checked ? "transparent" : "#ffffff" })}
+                    className="h-4 w-4" />
+                  Tanpa isi
+                </label>
               </div>
               <SliderToggle label="Ukuran font" valueLabel={`${selSlot.maxFontSize}`}>
                 <input type="range" min={12} max={140} value={selSlot.maxFontSize} title="Ukuran font"
@@ -1257,8 +1268,16 @@ export function DomEditor({
                   className="flex-1 rounded-lg border border-navy/15 px-3 py-2.5 sm:flex-none sm:px-2 sm:py-1.5">
                   {FONT_OPTIONS.map((f) => <option key={f.id} value={f.family}>{f.family}</option>)}
                 </select>
-                <input type="color" value={selItem.color ?? "#ffffff"} onChange={(e)=>patchItem(selItem.id, { color: e.target.value })}
-                  className="h-11 w-14 shrink-0 rounded border border-navy/15 sm:h-8 sm:w-9" />
+                <input type="color" value={/^#/.test(selItem.color ?? "") ? (selItem.color as string).slice(0,7) : "#ffffff"}
+                  onChange={(e)=>patchItem(selItem.id, { color: e.target.value })}
+                  disabled={selItem.color === "transparent"}
+                  className="h-11 w-14 shrink-0 rounded border border-navy/15 disabled:opacity-30 sm:h-8 sm:w-9" />
+                <label className="flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] text-navy/60">
+                  <input type="checkbox" checked={selItem.color === "transparent"}
+                    onChange={(e)=>patchItem(selItem.id, { color: e.target.checked ? "transparent" : "#ffffff" })}
+                    className="h-4 w-4" />
+                  Tanpa isi
+                </label>
               </div>
               <SliderToggle label="Ukuran font" valueLabel={`${selItem.fontSize ?? 64}`}>
                 <input type="range" min={12} max={160} value={selItem.fontSize ?? 64} title="Ukuran font"
@@ -1349,6 +1368,48 @@ export function DomEditor({
               )}
             </div>
           </>
+        )}
+
+        {/* kontrol shape (Bentuk Dasar/Panah/Efek Promo dari menu + Elemen) —
+            SEBELUMNYA field fill/stroke/strokeWidth/cornerRadius sudah ada di
+            tipe data & ShapeView, tapi TIDAK PERNAH ada panel buat ubah-nya —
+            makanya warna shape tidak bisa diganti. Ini yang menutup celah itu. */}
+        {selItem && selItem.kind === "shape" && (
+          <div className="mt-3 flex flex-col gap-2.5 sm:mt-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 text-xs">
+            <label className="flex shrink-0 items-center gap-2 font-medium text-navy/70">
+              Warna isi
+              <input type="color" value={selItem.fill ?? "#2563eb"}
+                onChange={(e)=>patchItem(selItem.id, { fill: e.target.value })}
+                className="h-10 w-12 shrink-0 rounded border border-navy/15 sm:h-8 sm:w-9" />
+            </label>
+            <div className="flex items-center gap-2">
+              <label className="flex shrink-0 items-center gap-2 font-medium text-navy/70">
+                <input type="checkbox" checked={(selItem.strokeWidth ?? 0) > 0}
+                  onChange={(e)=>patchItem(selItem.id, { strokeWidth: e.target.checked ? 3 : 0, stroke: selItem.stroke ?? "#000000" })}
+                  className="h-5 w-5 sm:h-4 sm:w-4" />
+                Garis tepi
+              </label>
+              {(selItem.strokeWidth ?? 0) > 0 && (
+                <>
+                  <input type="color" value={selItem.stroke ?? "#000000"}
+                    onChange={(e)=>patchItem(selItem.id, { stroke: e.target.value })}
+                    className="h-10 w-12 shrink-0 rounded border border-navy/15 sm:h-8 sm:w-9" />
+                  <SliderToggle label="Tebal" valueLabel={`${selItem.strokeWidth ?? 0}`}>
+                    <input type="range" min={1} max={20} value={selItem.strokeWidth ?? 0}
+                      onChange={(e)=>patchItem(selItem.id, { strokeWidth: Number(e.target.value) })}
+                      className="h-6 w-full accent-primary sm:h-auto sm:w-24" />
+                  </SliderToggle>
+                </>
+              )}
+            </div>
+            {selItem.shapeType === "rect" && (
+              <SliderToggle label="Sudut membulat" valueLabel={`${selItem.cornerRadius ?? 0}`}>
+                <input type="range" min={0} max={60} value={selItem.cornerRadius ?? 0}
+                  onChange={(e)=>patchItem(selItem.id, { cornerRadius: Number(e.target.value) })}
+                  className="h-6 w-full accent-primary sm:h-auto sm:w-24" />
+              </SliderToggle>
+            )}
+          </div>
         )}
       </div>
     </div>

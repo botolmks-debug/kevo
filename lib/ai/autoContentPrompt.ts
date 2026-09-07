@@ -872,7 +872,42 @@ function extraBlocks(extra?: string): string {
 // BUILDERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-export function buildProdukContentPrompt(profile: BusinessProfile, productDescription: string, lang?: Lang, extra?: string): string {
+/**
+ * Instruksi "keputusan konsep" yang KUAT & terpisah visual dari prosa lain —
+ * dipakai di buildProdukContentPrompt/buildProdukTitlesPrompt/
+ * buildProdukCaptionForTitlePrompt. Ditemukan lewat audit: kalimat pembuka
+ * fungsi2 itu bilang "Produk = BINTANG UTAMA" secara MUTLAK di baris paling
+ * atas (SEBELUM konsep bahkan disebut) — itu jadi PREMIS FONDASI yang harus
+ * "dilawan" instruksi konsep belakangan, jauh lebih sulit menang drpd kalau
+ * dari awal premisnya sendiri sudah tidak product-centric secara mutlak.
+ * Makanya sekarang kalimat pembukanya JUGA dibuat kondisional (lihat
+ * produkOpener di bawah), bukan cuma nambah instruksi "menang" di sini.
+ */
+function konsepDecisionBlock(konsep: string, lang?: Lang): string {
+  return isEn(lang)
+    ? `============================================
+MANDATORY CONCEPT FROM THE USER — READ THIS BEFORE WRITING ANYTHING:
+"${konsep}"
+
+MANDATORY STEPS, follow EXACTLY in order:
+1) Read the concept above. Determine: is this a STANDALONE SITUATION/TOPIC (an event, natural disaster, weather, holiday, trend, news, issue) that has NO natural connection to the product below?
+2) IF YES (standalone situation) — the output MUST be 100% about THAT topic only. Do NOT mention the product/business name AT ALL. Act as if you're writing content purely about that topic — NOT a product promotion. The product description below is IRRELEVANT in this case, ignore it.
+3) IF NO (the concept is actually about this product — a photo style, mood, target buyer, etc.) — use the product below as normal, guided by this concept.
+This concept OVERRIDES every other instruction in this prompt if they conflict.
+============================================`
+    : `============================================
+KONSEP WAJIB DARI USER — BACA INI DULU SEBELUM MENULIS APA PUN:
+"${konsep}"
+
+LANGKAH WAJIB, ikuti PERSIS urutannya:
+1) Baca konsep di atas. Tentukan: apakah ini SITUASI/TOPIK BERDIRI SENDIRI (kejadian, bencana alam, cuaca, hari raya, tren, berita, isu) yang TIDAK ADA hubungan alaminya dengan produk di bawah?
+2) KALAU YA (situasi berdiri sendiri) — hasilnya WAJIB 100% membahas topik ITU SAJA. JANGAN sebut nama produk/bisnis SAMA SEKALI. Anggap kamu sedang menulis konten tentang topik itu doang — BUKAN promosi produk. Deskripsi produk di bawah TIDAK RELEVAN dalam kasus ini, abaikan.
+3) KALAU TIDAK (konsepnya memang soal produk ini — gaya foto, mood, target pembeli, dst) — pakai produk di bawah seperti biasa, dengan arahan dari konsep ini.
+Konsep ini MENGALAHKAN semua instruksi lain di prompt ini kalau bertentangan.
+============================================`;
+}
+
+export function buildProdukContentPrompt(profile: BusinessProfile, productDescription: string, lang?: Lang, extra?: string, konsep?: string): string {
   // Kalau deskripsi foto SPESIFIK ini (dari vision-AI atau manual) sudah
   // jelas nyebut satu varian, itu yang dipakai apa adanya — tidak perlu
   // aturan tambahan. Aturan ini SPESIFIK untuk kasus deskripsi foto generik
@@ -893,15 +928,18 @@ export function buildProdukContentPrompt(profile: BusinessProfile, productDescri
       ? `\nVARIANT NOTE: the business profile lists SEVERAL variants/flavors/types. If the photo description above already specifies one clear variant, use it as-is in the title & caption. If the photo description is still GENERIC (variant unclear), do NOT guess/invent a specific variant name for the title — this photo may not be that variant. You may mention the variety as an OVERALL CONCEPT in the caption only (e.g. "many flavors to choose from"), not claimed as specific.`
       : "";
   if (isEn(lang)) {
+    const opener = konsep?.trim()
+      ? `Create content in English — READ THE MANDATORY CONCEPT BELOW FIRST before assuming this is a normal product promotion.`
+      : `Create promotional content for ONE product, in English. The product = MAIN STAR.`;
     return `${persona(lang)}
 ${outputLangDirective(lang)}
-Create promotional content for ONE product, in English. The product = MAIN STAR.
+${opener}
 
-${profileBlock(profile, lang)}
+${konsep?.trim() ? konsepDecisionBlock(konsep, lang) + "\n\n" : ""}${profileBlock(profile, lang)}
 
 Product: ${productDescription || "(no description)"}${variantRuleEn}
 
-${pickContentDirection(lang)}
+${extraBlocks(extra)}${pickContentDirection(lang)}
 
 For the HEADLINE (onImageText) this time, use ${pickHeadlineAngleForProduk(lang)}. Craft a FRESH new phrase; don't repeat commonly used titles.
 For the caption WRITING STYLE this time, use: ${pickWritingStyle(lang)} (still within the brand voice defined above).
@@ -910,18 +948,21 @@ JSON format: {"onImageText": "...", "caption": "...", "fontId": "..."}
 ${onImageRule(lang)}
 ${captionRules(lang)}
 ${fontRule(lang)}
-${extraBlocks(extra)}${jsonTail(lang)}`;
+${jsonTail(lang)}`;
   }
 
+  const openerId = konsep?.trim()
+    ? `Buat konten dalam Bahasa Indonesia — BACA KONSEP WAJIB DI BAWAH DULU sebelum menganggap ini promosi produk biasa.`
+    : `Buat konten promosi SATU produk, dalam Bahasa Indonesia. Produk = BINTANG UTAMA.`;
   return `${persona(lang)}
 ${outputLangDirective(lang)}
-Buat konten promosi SATU produk, dalam Bahasa Indonesia. Produk = BINTANG UTAMA.
+${openerId}
 
-${profileBlock(profile, lang)}
+${konsep?.trim() ? konsepDecisionBlock(konsep, lang) + "\n\n" : ""}${profileBlock(profile, lang)}
 
 Produk: ${productDescription || "(tidak ada deskripsi)"}${variantRuleId}
 
-${pickContentDirection(lang)}
+${extraBlocks(extra)}${pickContentDirection(lang)}
 
 Untuk JUDUL (onImageText) kali ini, pakai ${pickHeadlineAngleForProduk(lang)}. Buat frasa BARU yang segar; jangan mengulang judul yang biasa dipakai.
 Untuk GAYA PENULISAN caption kali ini, pakai: ${pickWritingStyle(lang)} (tetap dalam nada brand yang sudah ditentukan di atas).
@@ -930,7 +971,97 @@ Format JSON: {"onImageText": "...", "caption": "...", "fontId": "..."}
 ${onImageRule(lang)}
 ${captionRules(lang)}
 ${fontRule(lang)}
-${extraBlocks(extra)}${jsonTail(lang)}`;
+${jsonTail(lang)}`;
+}
+
+/**
+ * Popup "5 pilihan judul dulu" — dipanggil SEBELUM gambar & caption
+ * digenerate. Cuma minta 5 VARIASI JUDUL (onImageText), bukan konten
+ * lengkap — jauh lebih murah/cepat drpd generate 5 gambar. Setelah user
+ * pilih 1, baru dipanggil buildProdukCaptionForTitlePrompt (di bawah) buat
+ * bikin caption yang cocok sama judul terpilih + generate gambarnya.
+ */
+export function buildProdukTitlesPrompt(profile: BusinessProfile, productDescription: string, lang?: Lang, extra?: string, konsep?: string): string {
+  const base = isEn(lang)
+    ? `${persona(lang)}
+${outputLangDirective(lang)}
+${konsep?.trim() ? `Generate 5 headline (onImageText) options, in English — READ THE MANDATORY CONCEPT BELOW FIRST before assuming this is a normal product promotion.` : `Generate 5 DIFFERENT headline (onImageText) options for ONE product's promotional content, in English. The product = MAIN STAR.`}
+
+${konsep?.trim() ? konsepDecisionBlock(konsep, lang) + "\n\n" : ""}${profileBlock(profile, lang)}
+
+Product: ${productDescription || "(no description)"}
+
+${extraBlocks(extra)}Each of the 5 headlines MUST use a genuinely DIFFERENT angle/hook STYLE — not 5 minor rewordings of the same phrasing (vary between: a question, a bold claim, a relatable everyday moment, a benefit-first statement, a curiosity gap, etc.). IMPORTANT: this variety applies to the DELIVERY/PHRASING STYLE ONLY — all 5 headlines MUST still be about the SAME underlying topic (the product above, or the mandatory concept above if one was given). Do NOT let "make them different" turn into 5 headlines about 5 different topics — that misses the point entirely.
+
+JSON format: {"titles": ["...", "...", "...", "...", "..."]}
+${onImageRule(lang)}
+Reply with ONLY the JSON object, no other text.`
+    : `${persona(lang)}
+${outputLangDirective(lang)}
+${konsep?.trim() ? `Buat 5 pilihan judul (onImageText), dalam Bahasa Indonesia — BACA KONSEP WAJIB DI BAWAH DULU sebelum menganggap ini promosi produk biasa.` : `Buat 5 PILIHAN judul (onImageText) yang BERBEDA untuk konten promosi SATU produk, dalam Bahasa Indonesia. Produk = BINTANG UTAMA.`}
+
+${konsep?.trim() ? konsepDecisionBlock(konsep, lang) + "\n\n" : ""}${profileBlock(profile, lang)}
+
+Produk: ${productDescription || "(tidak ada deskripsi)"}
+
+${extraBlocks(extra)}Kelima judul WAJIB pakai GAYA sudut/hook yang BENAR-BENAR beda satu sama lain — bukan 5 variasi kalimat dari phrasing yang sama (variasikan antara: pertanyaan, klaim berani, momen sehari-hari yang relatable, pernyataan manfaat langsung, rasa penasaran, dst). PENTING: variasi ini HANYA soal GAYA PENYAMPAIAN/PHRASING — kelima judul WAJIB tetap membahas TOPIK YANG SAMA (produk di atas, atau konsep wajib di atas kalau ada). JANGAN sampai "bikin beda-beda" malah jadi 5 judul dengan topik yang beda-beda — itu salah paham total soal instruksi ini.
+
+Format JSON: {"titles": ["...", "...", "...", "...", "..."]}
+${onImageRule(lang)}
+Jawab HANYA dengan objek JSON itu, tanpa teks lain.`;
+  return base;
+}
+
+/**
+ * Dipanggil SETELAH user pilih 1 dari 5 judul di popup. Judulnya sudah FIX
+ * (tidak digenerate ulang) — tugas AI di sini cuma bikin CAPTION yang
+ * nyambung & konsisten sama judul yang sudah dipilih itu.
+ */
+export function buildProdukCaptionForTitlePrompt(profile: BusinessProfile, productDescription: string, chosenTitle: string, lang?: Lang, extra?: string, konsep?: string): string {
+  const variantCount = profile.offering.mainProducts
+    .split(/[,;\n]|(?:\bdan\b)|(?:\batau\b)|(?:\bor\b)|(?:\band\b)/i)
+    .map((s) => s.trim())
+    .filter(Boolean).length;
+  const variantNoteId = variantCount > 1
+    ? `\nCATATAN VARIAN: profil bisnis mencatat BEBERAPA varian/rasa/jenis produk. Kalau deskripsi foto MASIH GENERIK (tidak jelas variannya), JANGAN mengarang satu nama varian spesifik di caption — foto belum tentu variannya itu.`
+    : "";
+  const variantNoteEn = variantCount > 1
+    ? `\nVARIANT NOTE: the business profile lists SEVERAL variants/flavors/types. If the photo description is still GENERIC (variant unclear), do NOT invent a specific variant name in the caption — this photo may not be that variant.`
+    : "";
+  if (isEn(lang)) {
+    return `${persona(lang)}
+${outputLangDirective(lang)}
+Write the CAPTION for this content, in English. The headline is ALREADY DECIDED (below, by the user) — do NOT change it, just write a caption that flows naturally from it.
+
+${konsep?.trim() ? konsepDecisionBlock(konsep, lang) + "\n\n" : ""}${profileBlock(profile, lang)}
+
+Product: ${productDescription || "(no description)"}${variantNoteEn}
+
+${extraBlocks(extra)}HEADLINE ALREADY CHOSEN (do not repeat it verbatim in the caption, but the caption must clearly connect to and build on this exact angle — if the headline is about a standalone concept/situation unrelated to the product, the caption stays on that same topic too, do NOT drag the product back in): "${chosenTitle}"
+
+For the caption WRITING STYLE, use: ${pickWritingStyle(lang)} (still within the brand voice defined above, UNLESS the concept above says otherwise).
+
+JSON format: {"caption": "...", "fontId": "..."}
+${captionRules(lang)}
+${fontRule(lang)}
+Reply with ONLY the JSON object, no other text.`;
+  }
+  return `${persona(lang)}
+${outputLangDirective(lang)}
+Tulis CAPTION untuk konten ini, dalam Bahasa Indonesia. Judulnya SUDAH DITENTUKAN (di bawah, oleh user) — JANGAN diubah, cukup tulis caption yang mengalir natural dari judul itu.
+
+${konsep?.trim() ? konsepDecisionBlock(konsep, lang) + "\n\n" : ""}${profileBlock(profile, lang)}
+
+Produk: ${productDescription || "(tidak ada deskripsi)"}${variantNoteId}
+
+${extraBlocks(extra)}JUDUL YANG SUDAH DIPILIH (jangan diulang persis di caption, tapi caption harus jelas nyambung & membangun dari sudut ini — kalau judulnya soal konsep/situasi berdiri sendiri yang tidak terkait produk, caption-nya juga TETAP di topik itu, JANGAN tarik-tarik produknya masuk lagi): "${chosenTitle}"
+
+Untuk GAYA PENULISAN caption, pakai: ${pickWritingStyle(lang)} (tetap dalam nada brand yang sudah ditentukan di atas, KECUALI konsep di atas bilang lain).
+
+Format JSON: {"caption": "...", "fontId": "..."}
+${captionRules(lang)}
+${fontRule(lang)}
+Jawab HANYA dengan objek JSON itu, tanpa teks lain.`;
 }
 
 export function buildGeneralContentPrompt(profile: BusinessProfile, lang?: Lang, extra?: string): string {

@@ -198,6 +198,23 @@ export function ImageLibrary() {
         {file ? <span className="text-sm text-navy/50">{file.name}</span> : null}
       </div>
 
+      {/* Kategori dipindah ke ATAS (sebelum field nama produk) — field di
+          bawahnya (nama/jenis produk, ukuran) BERGANTUNG pada kategori yang
+          dipilih di sini, jadi urutannya harus kategori dulu baru detailnya,
+          bukan sebaliknya. */}
+      <label className="flex flex-col gap-1.5">
+        <span className="flex items-center gap-1.5 text-sm font-medium text-navy">
+          {t("dash.img.category", lang)}
+          <HelpTip title={t("dash.img.categoryTipTitle", lang)} align="left" text={t("dash.img.categoryTipText", lang)} />
+        </span>
+        <select value={category} onChange={(e) => setCategory(e.target.value)}
+          className="rounded-card border border-slate-200 bg-white px-4 py-2.5 text-sm text-navy focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+          {IMAGE_CATEGORIES.map((c) => (
+            <option key={c.category} value={c.category}>{c.label}</option>
+          ))}
+        </select>
+      </label>
+
       {FIELD_SETS[category] ? (
         <div className="flex flex-col gap-3">
           {FIELD_SETS[category].map((f) => (
@@ -250,19 +267,6 @@ export function ImageLibrary() {
           </span>
         </label>
       )}
-
-      <label className="flex flex-col gap-1.5">
-        <span className="flex items-center gap-1.5 text-sm font-medium text-navy">
-          {t("dash.img.category", lang)}
-          <HelpTip title={t("dash.img.categoryTipTitle", lang)} align="left" text={t("dash.img.categoryTipText", lang)} />
-        </span>
-        <select value={category} onChange={(e) => setCategory(e.target.value)}
-          className="rounded-card border border-slate-200 bg-white px-4 py-2.5 text-sm text-navy focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
-          {IMAGE_CATEGORIES.map((c) => (
-            <option key={c.category} value={c.category}>{c.label}</option>
-          ))}
-        </select>
-      </label>
 
       <div className="flex flex-col gap-1.5">
         <span className="flex items-center gap-1.5 text-sm font-medium text-navy">

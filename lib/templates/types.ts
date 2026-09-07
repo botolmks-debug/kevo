@@ -15,7 +15,13 @@ export type TextSlot = {
   fontWeight?: number;
   italic?: boolean;
   underline?: boolean;
-  /** Tilt 3D ala "Perspective" Photoshop — derajat rotasi sumbu X/Y teks. */
+  /**
+   * Tilt 3D sederhana ala "Perspective" Photoshop, via slider (CSS
+   * perspective + rotateX/rotateY) — VERSI 1 yang dipertahankan. Versi
+   * distort 4-sudut-bebas (drag tiap pojok, homografi) SUDAH DIHAPUS karena
+   * bikin teks hilang saat dipakai — jangan dibangun ulang tanpa perbaikan
+   * yang tervalidasi dulu.
+   */
   tiltX?: number;
   tiltY?: number;
   /** Label manusiawi untuk form (fallback ke `id` kalau tidak diisi). */

@@ -103,6 +103,13 @@ export type ContentTema = "hook" | "edukasi" | "produk" | "promo";
 export function AutoGenerate() {
   const [jenis, setJenis] = useState<GeneratedContentJenis | "referensi" | "carousel">("produk");
   const [tema, setTema] = useState<ContentTema | null>(null); // pilihan tema konten (judul+deskripsi+gambar)
+  const [konsep, setKonsep] = useState(""); // arahan bebas dari user (opsional) — kalau diisi, jadi prioritas di atas tema
+  // Popup "5 pilihan judul dulu" — khusus jenis "produk". null = popup tidak
+  // tampil. Array = tampil dengan pilihan ini. produkDesc disimpan dari
+  // respons /titles supaya generate final TIDAK perlu describeProductImage
+  // ulang (hemat 1 panggilan vision-AI yang sama persis).
+  const [titleChoices, setTitleChoices] = useState<{ titles: string[]; produkDesc: string; ratioArg?: AspectRatio } | null>(null);
+  const [titlesLoading, setTitlesLoading] = useState(false);
   const [uiLang, setUiLang] = useState<Lang>("id");
   useEffect(() => setUiLang(getLang()), []);
   const L = (id: string, en: string) => (uiLang === "en" ? en : id);
@@ -221,7 +228,7 @@ export function AutoGenerate() {
     img.src = url;
   }
 
-  async function handleGenerate(ratioArg?: AspectRatio) {
+  async function handleGenerate(ratioArg?: AspectRatio, locked?: { title: string; produkDesc: string }) {
     if (jenis === "carousel") return; // carousel punya alur generate sendiri (CarouselAuto)
     if (generatingRef.current) return; // sudah ada proses generate berjalan
     if ((jenis === "produk" || jenis === "referensi") && selectedImageIds.length === 0) {
@@ -238,6 +245,37 @@ export function AutoGenerate() {
     if (jenis === "referensi" && !hasAcceptedReferenceTerms()) {
       pendingRatioRef.current = ratioArg;
       setShowReferenceModal(true);
+      return;
+    }
+    // "Dari Foto" (produk) TANPA judul terkunci — ambil 5 pilihan judul dulu,
+    // tampilkan popup, JANGAN lanjut generate gambar sampai user pilih satu.
+    if (jenis === "produk" && !locked) {
+      if (generatingRef.current) return;
+      generatingRef.current = true;
+      setTitlesLoading(true);
+      setGenerateStatus("idle");
+      setGenerateError(null);
+      try {
+        const res = await fetch("/api/generate-auto/titles", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            imageIds: selectedImageIds,
+            language: getLang(),
+            tema: tema ?? undefined,
+            konsep: konsep.trim() || undefined,
+          }),
+        });
+        const data = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(data?.error ?? L("Gagal ambil pilihan judul.", "Failed to get title options."));
+        setTitleChoices({ titles: data.titles as string[], produkDesc: (data.produkDesc as string) ?? "", ratioArg });
+      } catch (error) {
+        setGenerateStatus("error");
+        setGenerateError(error instanceof Error ? error.message : L("Gagal ambil pilihan judul.", "Failed to get title options."));
+      } finally {
+        setTitlesLoading(false);
+        generatingRef.current = false;
+      }
       return;
     }
     generatingRef.current = true;
@@ -269,6 +307,11 @@ export function AutoGenerate() {
                 referenceDataUri: jenis === "referensi" ? (refDataUri ?? undefined) : undefined,
                 // Tema hanya relevan utk produk/referensi/general (bukan interaksi)
                 tema: tema && (jenis === "produk" || jenis === "referensi") ? tema : undefined,
+                // Konsep bebas dari user — cuma relevan utk Dari Foto/Referensi (ada foto produk)
+                konsep: konsep.trim() && (jenis === "produk" || jenis === "referensi") ? konsep.trim() : undefined,
+                // Judul yang sudah dipilih user dari popup 5-judul (cuma jenis "produk")
+                lockedTitle: locked ? locked.title : undefined,
+                produkDescOverride: locked ? locked.produkDesc : undefined,
               }),
             });
       let res = await doPost();
@@ -298,6 +341,15 @@ export function AutoGenerate() {
     } finally {
       generatingRef.current = false;
     }
+  }
+
+  /** Dipanggil pas user klik salah satu dari 5 kartu judul di popup. */
+  function handlePickTitle(title: string) {
+    if (!titleChoices) return;
+    const ratioArg = titleChoices.ratioArg;
+    const produkDesc = titleChoices.produkDesc;
+    setTitleChoices(null);
+    void handleGenerate(ratioArg, { title, produkDesc });
   }
 
   function downloadBlob(blob: Blob, filename: string) {
@@ -504,6 +556,30 @@ export function AutoGenerate() {
       {jenis === "produk" || jenis === "referensi" ? (
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium text-navy">
+            {L("Konsep (opsional)", "Concept (optional)")}
+          </span>
+          <textarea
+            value={konsep}
+            onChange={(e) => setKonsep(e.target.value)}
+            placeholder={L(
+              "Tulis arahan bebas kalau ada ide spesifik (mis. \"suasana pagi hari, nuansa hangat, buat yang lagi buru-buru berangkat kerja\"). Kosongkan kalau mau AI tentukan sendiri dari data produk & bisnismu.",
+              "Write a free-form direction if you have a specific idea (e.g. \"morning vibe, warm mood, for people rushing to work\"). Leave empty to let AI decide from your product & business data.",
+            )}
+            rows={2}
+            maxLength={500}
+            className="w-full rounded-xl border border-line px-3.5 py-2.5 text-sm text-navy placeholder:text-navy/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+          {konsep.trim() ? (
+            <span className="text-xs text-primary/80">
+              {L("Konsep ini akan diutamakan — mengalahkan Tema di bawah kalau bertentangan.", "This concept takes priority — it overrides the Theme below if they conflict.")}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
+      {jenis === "produk" || jenis === "referensi" ? (
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium text-navy">
             {L("Tema konten (opsional)", "Content theme (optional)")}
           </span>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -688,6 +764,33 @@ export function AutoGenerate() {
 
       {isGenerating ? (
         <GenerateLoadingOverlay onCancel={() => setGenerateStatus("idle")} />
+      ) : null}
+
+      {titlesLoading ? (
+        <GenerateLoadingOverlay onCancel={() => { generatingRef.current = false; setTitlesLoading(false); }} />
+      ) : null}
+
+      {/* Popup "5 pilihan judul" — khusus jenis Dari Foto (produk). User pilih
+          satu, baru AI lanjut generate gambar+caption dari judul itu. */}
+      {titleChoices ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setTitleChoices(null)}>
+          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-1 text-lg font-bold text-navy">{L("Pilih judul dulu", "Pick a headline first")}</h3>
+            <p className="mb-4 text-sm text-navy/60">
+              {L("AI akan buat gambar & caption berdasarkan judul yang kamu pilih.", "AI will generate the image & caption based on the headline you choose.")}
+            </p>
+            <div className="flex flex-col gap-2.5">
+              {titleChoices.titles.map((t, i) => (
+                <button key={i} type="button" onClick={() => handlePickTitle(t)}
+                  className="rounded-xl border border-line px-4 py-3 text-left text-sm font-medium text-navy transition hover:border-primary hover:bg-primary/5">
+                  {t}
+                </button>
+              ))}
+            </div>
+            <button type="button" onClick={() => setTitleChoices(null)}
+              className="mt-4 text-sm text-navy/50 hover:text-navy">{L("Batal", "Cancel")}</button>
+          </div>
+        </div>
       ) : null}
 
       {result && editTemplate ? (
