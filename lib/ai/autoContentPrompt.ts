@@ -916,7 +916,17 @@ Konsep ini MENGALAHKAN semua instruksi lain di prompt ini kalau bertentangan.
 ============================================`;
 }
 
-export function buildProdukContentPrompt(profile: BusinessProfile, productDescription: string, lang?: Lang, extra?: string, konsep?: string): string {
+/**
+ * forDemo (param ke-6, opsional): KHUSUS halaman /coba — profil demo itu
+ * SINTETIS/KOSONG (nama, cerita, semua field teks kosong), jadi topik acak
+ * dari pickContentDirection() (yang kadang minta AI gali topik butuh
+ * cerita/data personal usaha) DILEWATI kalau forDemo=true — tidak ada data
+ * asli buat digali, hasilnya cuma bakal mengarang. Awalnya sempat rusak
+ * krn ditambahkan sbg argumen ke-5 (posisi yang sekarang dipakai `konsep`)
+ * dari sesi lain yang beda dgn sesi ini — makanya sekarang WAJIB dikirim di
+ * posisi ke-6, SETELAH konsep (bisa `undefined` kalau tidak dipakai).
+ */
+export function buildProdukContentPrompt(profile: BusinessProfile, productDescription: string, lang?: Lang, extra?: string, konsep?: string, forDemo?: boolean): string {
   // Kalau deskripsi foto SPESIFIK ini (dari vision-AI atau manual) sudah
   // jelas nyebut satu varian, itu yang dipakai apa adanya — tidak perlu
   // aturan tambahan. Aturan ini SPESIFIK untuk kasus deskripsi foto generik
@@ -948,7 +958,7 @@ ${konsep?.trim() ? konsepDecisionBlock(konsep, lang) + "\n\n" : ""}${profileBloc
 
 Product: ${productDescription || "(no description)"}${variantRuleEn}
 
-${extraBlocks(extra)}${pickContentDirection(lang)}
+${extraBlocks(extra)}${forDemo ? "" : pickContentDirection(lang)}
 
 For the HEADLINE (onImageText) this time, use ${pickHeadlineAngleForProduk(lang)}. Craft a FRESH new phrase; don't repeat commonly used titles.
 For the caption WRITING STYLE this time, use: ${pickWritingStyle(lang)} (still within the brand voice defined above).
@@ -971,7 +981,7 @@ ${konsep?.trim() ? konsepDecisionBlock(konsep, lang) + "\n\n" : ""}${profileBloc
 
 Produk: ${productDescription || "(tidak ada deskripsi)"}${variantRuleId}
 
-${extraBlocks(extra)}${pickContentDirection(lang)}
+${extraBlocks(extra)}${forDemo ? "" : pickContentDirection(lang)}
 
 Untuk JUDUL (onImageText) kali ini, pakai ${pickHeadlineAngleForProduk(lang)}. Buat frasa BARU yang segar; jangan mengulang judul yang biasa dipakai.
 Untuk GAYA PENULISAN caption kali ini, pakai: ${pickWritingStyle(lang)} (tetap dalam nada brand yang sudah ditentukan di atas).
