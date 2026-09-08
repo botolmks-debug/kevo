@@ -33,7 +33,7 @@ export type FooterOverride = {
  * HANYA dipakai editor DOM + export html-to-image; mesin Satori (fallback)
  * mengabaikannya — sengaja opsional supaya konten lama & fallback tetap jalan.
  */
-export type ElementFx = { opacity?: number; rotation?: number; z?: number };
+export type ElementFx = { opacity?: number; rotation?: number; z?: number; hidden?: boolean };
 
 /** Elemen bebas yang ditambah user (teks/gambar stiker) — editor DOM v4. */
 export type FreeItem = {

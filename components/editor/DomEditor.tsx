@@ -65,18 +65,30 @@ type ShadowOutlineShape = {
 };
 
 function buildTextShadow(slot: ShadowOutlineShape, scale: number): string | undefined {
-  const parts: string[] = [];
-  if (slot.outline && slot.outline.width > 0) {
-    const w = slot.outline.width * scale, c = slot.outline.color;
-    for (const [dx, dy] of [[-w,0],[w,0],[0,-w],[0,w],[-w,-w],[w,-w],[-w,w],[w,w]])
-      parts.push(`${dx}px ${dy}px 0 ${c}`);
-  }
-  if (slot.shadow) {
-    const h = slot.shadow.color.replace("#","");
-    const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
-    parts.push(`0px 0px ${slot.shadow.blur*scale}px rgba(${r},${g},${b},${slot.shadow.opacity})`);
-  }
-  return parts.length ? parts.join(", ") : undefined;
+  if (!slot.shadow) return undefined;
+  const h = slot.shadow.color.replace("#","");
+  const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
+  return `0px 0px ${slot.shadow.blur*scale}px rgba(${r},${g},${b},${slot.shadow.opacity})`;
+}
+
+/**
+ * Outline teks — DIGANTI dari trik manual "8 arah offset" (textShadow
+ * ditumpuk N/S/E/W/diagonal) ke properti CSS NATIF `-webkit-text-stroke`.
+ * Kenapa: trik 8-arah itu HANYA kelihatan mulus kalau fill-nya solid/tidak
+ * transparan — pinggirannya ketutup fill di atasnya. Begitu fill dibuat
+ * transparan ("Tanpa isi"), 8 titik sample itu jadi kelihatan jelas sebagai
+ * outline "sunburst" bergerigi/berongga, bukan cincin mulus mengelilingi
+ * huruf — ini persis keluhannya ("bersinggungan dgn fill", tidak bersih).
+ * `-webkit-text-stroke` dirender NATIF oleh browser mengikuti kontur huruf
+ * yang sebenarnya, jadi selalu mulus di ketebalan berapa pun & terlepas dari
+ * fill transparan atau tidak. Didukung Chrome/Edge/Safari & Firefox modern.
+ */
+function buildOutlineStyle(shape: ShadowOutlineShape, scale: number): React.CSSProperties {
+  if (!shape.outline || shape.outline.width <= 0) return {};
+  return {
+    WebkitTextStroke: `${shape.outline.width * scale}px ${shape.outline.color}`,
+    paintOrder: "stroke fill", // stroke digambar DULU, fill di atasnya — outline jadi tampil bersih di LUAR bentuk huruf, tidak "makan" ke dalam fill
+  };
 }
 
 /**
@@ -88,6 +100,57 @@ function buildTextShadow(slot: ShadowOutlineShape, scale: number): string | unde
  * bikin teks hilang saat dipakai — jangan dibangun ulang tanpa perbaikan
  * yang tervalidasi visual dulu.
  */
+/**
+ * Warna teks PER-BLOK (bagian dalam satu kotak teks bisa beda warna) —
+ * sebelumnya ganti warna SELALU mengubah semua teks dalam 1 slot/item krn
+ * warnanya cuma 1 field (`color`) yang berlaku ke SELURUH teks. Sekarang
+ * teks disimpan sbg HTML (bukan cuma string polos) supaya bisa menampung
+ * potongan <span style="color:..."> per-bagian yang dihasilkan
+ * document.execCommand('foreColor', ...) — API browser standar & sudah lama
+ * dipakai buat rich-text editor, jauh lebih rendah risiko drpd bikin sistem
+ * rich-text sendiri dari nol.
+ *
+ * `color` di slot/item TETAP ada — dipakai sbg WARNA DASAR (default) utk
+ * bagian teks yang belum pernah diwarnai manual via seleksi.
+ *
+ * stripHtml() dipakai utk field <input> polos di panel samping (yang masih
+ * edit teks sbg string biasa, tanpa mixed-color) — kalau user ngetik lewat
+ * situ, hasilnya jadi teks polos 1 warna (mixed-color cuma bisa diatur lewat
+ * seleksi langsung di kanvas).
+ */
+export function stripHtml(html: string): string {
+  return html.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "");
+}
+
+/** Sanitasi ringan sebelum simpan innerHTML — buang hal yang jelas berbahaya
+ * (script/handler event/javascript: href). Sumbernya cuma ketikan user
+ * sendiri via contentEditable (bukan konten dari orang lain), jadi risikonya
+ * kecil, tapi tetap dijaga sebagai langkah defensif. */
+function sanitizeEditableHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/\son\w+="[^"]*"/gi, "")
+    .replace(/\son\w+='[^']*'/gi, "")
+    .replace(/javascript:/gi, "");
+}
+
+/**
+ * Dipakai saat "Tanpa isi" dicentang — HAPUS semua warna inline per-bagian
+ * (span style="color:...") dari HTML tersimpan. TANPA ini, bug yang
+ * dilaporkan terjadi: warna slot di-set "transparent", tapi bagian teks yang
+ * pernah diwarnai manual (via swatch/wheel seleksi) TETAP kelihatan
+ * warnanya — karena warna inline di child SELALU menang atas warna yang
+ * diwariskan dari induk (aturan CSS biasa), jadi cuma bikin transparent di
+ * level blok tidak cukup kalau ada span berwarna eksplisit di dalamnya.
+ */
+function stripInlineColors(html: string): string {
+  return html
+    .replace(/(<[^>]+style="[^"]*)color\s*:\s*[^;"]+;?/gi, "$1")
+    .replace(/(<[^>]+style='[^']*)color\s*:\s*[^;']+;?/gi, "$1")
+    .replace(/<font[^>]*color="[^"]*"[^>]*>/gi, (m) => m.replace(/\scolor="[^"]*"/i, ""));
+}
+
+
 function textStyleExtras(t: { italic?: boolean; underline?: boolean; tiltX?: number; tiltY?: number }): React.CSSProperties {
   const tx = t.tiltX ?? 0, ty = t.tiltY ?? 0;
   return {
@@ -224,6 +287,43 @@ function SliderToggle({ label, valueLabel, children }: { label: string; valueLab
   );
 }
 
+// Palet lebih luas (24 warna) drpd percobaan swatch pertama (10 warna) —
+// user minta lebih banyak pilihan drpd terlalu terbatas, sambil tetap
+// menghindari dialog color-wheel native yang rapuh utk pewarnaan-per-seleksi.
+const SELECTION_COLOR_SWATCHES = [
+  "#ffffff","#e5e7eb","#9ca3af","#4b5563","#1f2937","#000000",
+  "#ef4444","#f97316","#f59e0b","#eab308","#84cc16","#22c55e",
+  "#10b981","#14b8a6","#06b6d4","#0ea5e9","#3b82f6","#6366f1",
+  "#8b5cf6","#a855f7","#d946ef","#ec4899","#f43f5e","#78350f",
+];
+
+/**
+ * Warna teks PER-BAGIAN (bukan seluruh blok) — cuma tampil saat SEDANG
+ * mengetik (editingKey === key) DAN ada teks yang diseleksi di kanvas.
+ * Klik salah satu swatch mewarnai HANYA bagian yang diseleksi (lihat
+ * applySwatchColor) — pakai TOMBOL biasa (bukan <input type="color">)
+ * dengan onMouseDown preventDefault, supaya fokus TIDAK PERNAH lepas dari
+ * kotak teks — beda dari color-wheel native yang membuka dialog OS/browser
+ * di luar kendali JS dan terbukti tidak bisa diandalkan menjaga seleksi.
+ */
+function SelectionColorSwatches({ onPick }: { onPick: (hex: string) => void }) {
+  return (
+    <div className="flex flex-col gap-1.5 rounded-lg border border-primary/30 bg-primary/5 p-2">
+      <span className="text-[11px] font-semibold text-primary/80">Warnai bagian yang diblok/diseleksi:</span>
+      <div className="flex flex-wrap gap-1.5">
+        {SELECTION_COLOR_SWATCHES.map((hex) => (
+          <button key={hex} type="button"
+            onMouseDown={(e) => e.preventDefault()} // WAJIB — jaga fokus tetap di kotak teks, jangan sampai seleksi hilang
+            onClick={() => onPick(hex)}
+            title={hex}
+            style={{ background: hex }}
+            className="h-7 w-7 shrink-0 rounded border border-navy/20" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function DomEditor({
   layout, values, overrides, onOverridesChange, onTextChange, photo, logoUrl,
   socials = [], businessName, logoVariant = "light", canToggleLogo, onLogoVariantChange, exportRef,
@@ -259,8 +359,23 @@ export function DomEditor({
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [shapeMenuOpen, setShapeMenuOpen] = useState(false);
   const editRef = useRef<HTMLDivElement | null>(null);
+  // Simpan lokasi seleksi teks SEBELUM color-wheel (input type="color")
+  // mengambil fokus (dialog warna native OS/browser bikin fokus pindah dari
+  // kotak teks, yang NORMALNYA menghapus seleksi sebelum sempat diwarnai).
+  // Ditangkap di onMouseDown (sebelum fokus pindah), dikembalikan lagi di
+  // onChange (setelah user pilih warna) sebelum execCommand dijalankan.
+  const savedRangeRef = useRef<{ key: string; range: Range } | null>(null);
   useEffect(() => {
+    // Reset rekaman seleksi warna tiap kali PINDAH sesi edit (baik mulai
+    // ngedit elemen baru maupun keluar dari mode edit) — cegah kepakainya
+    // seleksi BASI dari teks/elemen sebelumnya yang sudah tidak relevan lagi.
+    savedRangeRef.current = null;
     if (editingKey && editRef.current) {
+      // styleWithCSS: bikin execCommand("foreColor", ...) hasilkan
+      // <span style="color:..."> yang bersih, bukan tag <font color="...">
+      // ala HTML lama (browser modern masih dukung command ini walau
+      // "deprecated" di spec — perilakunya tetap stabil & konsisten).
+      try { document.execCommand("styleWithCSS", false, "true"); } catch { /* abaikan kalau browser tidak dukung */ }
       editRef.current.focus();
       const r = document.createRange();
       r.selectNodeContents(editRef.current);
@@ -368,7 +483,18 @@ export function DomEditor({
       opacity: f.opacity ?? 1,
       zIndex: f.z ?? defaultZ(key),
       ...(f.rotation ? { transform: `rotate(${f.rotation}deg)` } : {}),
+      ...(f.hidden ? { display: "none" } : {}),
     };
+  }
+  /** Sembunyikan/tampilkan elemen bawaan TEMPLATE (Judul, Logo, Sosmed,
+   * Pesan-antar, Sertifikasi) — beda dari deleteItem() yang MENGHAPUS
+   * elemen tambahan (+Teks/+Gambar/+Elemen) dari array items. Elemen
+   * template bukan bagian dari array yang bisa dihapus, jadi "dihapus"-nya
+   * di sini artinya disembunyikan (fx.hidden) — bisa ditampilkan lagi kapan
+   * saja lewat Ctrl+Z atau toggle "Tampilkan lagi" di panel. */
+  function toggleHidden(key: string) {
+    pushHist();
+    patchFx(key, { hidden: !getFx(key).hidden });
   }
 
   // ----- delivery & cert badges -----
@@ -423,6 +549,85 @@ export function DomEditor({
   }
   function patchItem(id: string, patch: Partial<FreeItem>) {
     commit({ ...overrides, items: items.map((it) => (it.id === id ? { ...it, ...patch } : it)) });
+  }
+  /**
+   * Tangkap seleksi teks SEKARANG (dipanggil di onMouseDown color-wheel,
+   * SEBELUM dialog warna native mengambil fokus & menghapus seleksinya).
+   * Hanya menyimpan kalau memang sedang mengetik (editingKey === key) DAN
+   * seleksinya tidak kosong/collapsed (user benar2 mem-block sebagian teks).
+   */
+  /**
+   * Rekam seleksi teks TERUS-MENERUS selagi user menyeleksi di kanvas
+   * (dipasang di onMouseUp/onKeyUp kotak contentEditable-nya sendiri) —
+   * BUKAN ditangkap reaktif tepat saat color-wheel diklik seperti percobaan
+   * sebelumnya. Alasan ganti pendekatan: browser ternyata bisa langsung
+   * MENGHAPUS/COLLAPSE seleksi teks begitu ada mousedown di elemen LAIN (mis.
+   * color-wheel di panel), sebagai bagian dari perilaku native-nya sendiri —
+   * ini bisa terjadi SEBELUM handler React manapun sempat jalan, jadi
+   * "menangkap pas mousedown wheel" kadang sudah kelambatan (selalu dapat
+   * seleksi kosong). Dengan merekam terus selagi menyeleksi, begitu wheel-nya
+   * diklik nanti, seleksi TERAKHIR yang valid sudah aman tersimpan duluan.
+   */
+  /**
+   * Rekam seleksi teks TERUS-MENERUS selagi user menyeleksi di kanvas
+   * (dipasang di onMouseUp/onKeyUp kotak contentEditable-nya sendiri).
+   * Dipakai oleh swatch warna (lihat applySwatchColor) — BUKAN oleh
+   * color-wheel besar. Color-wheel besar SELALU ganti warna SELURUH blok,
+   * titik — karena percobaan bikin wheel "pintar" (ikut seleksi) ternyata
+   * tidak bisa diandalkan: <input type="color"> membuka dialog NATIVE
+   * milik OS/browser yang di luar kendali JavaScript sepenuhnya, dan dialog
+   * itu kadang menghapus seleksi teks dengan cara yang tidak konsisten
+   * antar-browser — user melaporkan ini "sering" terjadi walau sudah
+   * beberapa lapis perbaikan dicoba. Tombol swatch BIASA (bukan dialog
+   * native) TIDAK punya masalah ini — fokus tidak pernah benar-benar lepas
+   * dari kotak teks (tombolnya pakai onMouseDown preventDefault), jadi ini
+   * yang dipertahankan sbg mekanisme pewarnaan-per-seleksi.
+   */
+  function trackSelection(key: string) {
+    if (!editRef.current) return;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return; // biarkan rekaman lama (kalau ada) tetap tersimpan
+    const range = sel.getRangeAt(0);
+    if (!editRef.current.contains(range.commonAncestorContainer)) return;
+    savedRangeRef.current = { key, range: range.cloneRange() };
+  }
+  /**
+   * Terapkan warna dari SWATCH (bukan color-wheel) ke bagian teks yang
+   * sedang diseleksi — dipanggil dari tombol biasa (onMouseDown
+   * preventDefault, TIDAK pernah bikin blur), jadi tidak butuh penanganan
+   * blur-suppression atau onChange-berkali-kali seperti percobaan wheel
+   * sebelumnya. Kalau tidak ada seleksi valid tertangkap, tidak melakukan
+   * apa-apa (tombol ini memang HANYA utk pewarnaan-per-seleksi).
+   */
+  function applySwatchColor(key: string, hex: string) {
+    const saved = savedRangeRef.current;
+    if (!saved || saved.key !== key || !editRef.current || editingKey !== key) return;
+    try {
+      const range = saved.range;
+      const span = document.createElement("span");
+      span.style.color = hex;
+      // extractContents (bukan surroundContents) — aman walau batas seleksi
+      // jatuh di TENGAH node/span lain (mis. sebagian teks sudah pernah
+      // diwarnai beda sebelumnya); browser otomatis memecah node yang perlu.
+      const fragment = range.extractContents();
+      // Bersihkan warna INLINE lama di dalam area yang baru diseleksi ini —
+      // kalau tidak, warna lama yang lebih dalam/bersarang akan tetap
+      // menang secara CSS atas warna baru yang mau diterapkan.
+      fragment.querySelectorAll?.("[style]").forEach((el) => {
+        const htmlEl = el as HTMLElement;
+        htmlEl.style.removeProperty("color");
+        if (!htmlEl.getAttribute("style")?.trim()) htmlEl.removeAttribute("style");
+      });
+      span.appendChild(fragment);
+      range.insertNode(span);
+      savedRangeRef.current = null; // seleksi ini sudah "dipakai" (Range lama tidak valid lagi setelah node dipindah)
+      const html = sanitizeEditableHtml(editRef.current.innerHTML);
+      if (key.startsWith("slot-")) onTextChange?.(key.slice(5), html);
+      else if (key.startsWith("item-")) patchItem(key.slice(5), { text: html });
+    } catch {
+      // Manipulasi Range gagal (mis. seleksi lintas struktur yang tidak
+      // didukung) — diamkan saja, jangan sampai bikin error/crash editor.
+    }
   }
   function deleteItem(id: string) {
     commit({ ...overrides, items: items.filter((it) => it.id !== id) });
@@ -681,6 +886,18 @@ export function DomEditor({
       return;
     }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); return; }
+    if (e.key === "Delete" || e.key === "Backspace") {
+      // Hapus/sembunyikan elemen yang lagi dipilih — Delete utk elemen
+      // TAMBAHAN (+Teks/+Gambar/+Elemen) beneran menghapusnya dari daftar;
+      // utk elemen BAWAAN TEMPLATE (Judul/deskripsi, Logo, Sosmed, Pesan-
+      // antar, Sertifikasi) yang bukan array yang bisa dihapus, artinya
+      // disembunyikan (fx.hidden) — bisa dimunculkan lagi kapan saja lewat
+      // Ctrl+Z atau tombol "Tampilkan lagi" di panel. Tidak berlaku sama
+      // sekali kalau sedang mengetik teks (dicek di baris paling atas fungsi
+      // ini), jadi aman dari kena Backspace pas ngedit tulisan.
+      if (selItem) { e.preventDefault(); deleteItem(selItem.id); return; }
+      if (selKey) { e.preventDefault(); toggleHidden(selKey); return; }
+    }
     const step = e.shiftKey ? 10 : 2;
     let dx = 0, dy = 0;
     if (e.key === "ArrowLeft") dx = -step;
@@ -795,7 +1012,12 @@ export function DomEditor({
           {/* teks */}
           {slots.map((slot) => {
             const value = values[slot.id] ?? slot.placeholder ?? "";
-            const fitted = fitFontSize(value, { boxWidth:slot.box.width, boxHeight:slot.box.height, maxFontSize:slot.maxFontSize, minFontSize:slot.minFontSize, lineHeight:1 });
+            // fitFontSize HARUS pakai teks BERSIH (tanpa tag HTML) — kalau
+            // tidak, panjang string jadi ke-inflate oleh karakter tag
+            // (mis. <span style="color:...">) yang bukan bagian dari teks
+            // yang benar-benar tampil, bikin ukuran font kehitung lebih
+            // kecil dari seharusnya begitu ada bagian teks yang diwarnai.
+            const fitted = fitFontSize(stripHtml(value), { boxWidth:slot.box.width, boxHeight:slot.box.height, maxFontSize:slot.maxFontSize, minFontSize:slot.minFontSize, lineHeight:1 });
             const justify = slot.align === "left" ? "flex-start" : slot.align === "right" ? "flex-end" : "center";
             return (
               <div key={slot.id} ref={registerElem(`slot-${slot.id}`)}
@@ -818,16 +1040,20 @@ export function DomEditor({
                 {editingKey === `slot-${slot.id}` ? (
                   <div ref={editRef} contentEditable suppressContentEditableWarning
                     onPointerDown={(e)=>e.stopPropagation()}
-                    onBlur={(e)=>{ onTextChange?.(slot.id, (e.target as HTMLDivElement).innerText); setEditingKey(null); }}
+                    onMouseUp={()=>trackSelection(`slot-${slot.id}`)}
+                    onKeyUp={()=>trackSelection(`slot-${slot.id}`)}
+                    onBlur={(e)=>{ onTextChange?.(slot.id, sanitizeEditableHtml((e.target as HTMLDivElement).innerHTML)); setEditingKey(null); }}
                     onKeyDown={(e)=>{ e.stopPropagation(); if (e.key === "Enter") { e.preventDefault(); document.execCommand("insertText", false, "\n"); } else if (e.key === "Escape") { e.preventDefault(); (e.target as HTMLDivElement).blur(); } }}
                     style={{ fontFamily:`"${slot.fontFamily}"`, fontSize:fitted*scale, fontWeight:slot.fontWeight ?? 400,
-                      color:slot.color, textAlign:slot.align, lineHeight:1, textShadow:buildTextShadow(slot,scale), whiteSpace:"pre-wrap",
+                      color:slot.color, textAlign:slot.align, lineHeight:1, textShadow:buildTextShadow(slot,scale), ...buildOutlineStyle(slot,scale), whiteSpace:"pre-wrap",
                       ...textStyleExtras(slot),
-                      outline:"none", cursor:"text", minWidth:20 }}>{value}</div>
+                      outline:"none", cursor:"text", minWidth:20 }}
+                    dangerouslySetInnerHTML={{ __html: value }} />
                 ) : (
                   <div style={{ fontFamily:`"${slot.fontFamily}"`, fontSize:fitted*scale, fontWeight:slot.fontWeight ?? 400,
-                    color:slot.color, textAlign:slot.align, lineHeight:1, textShadow:buildTextShadow(slot,scale), whiteSpace:"pre-wrap",
-                    ...textStyleExtras(slot), userSelect:"none" }}>{value}</div>
+                    color:slot.color, textAlign:slot.align, lineHeight:1, textShadow:buildTextShadow(slot,scale), ...buildOutlineStyle(slot,scale), whiteSpace:"pre-wrap",
+                    ...textStyleExtras(slot), userSelect:"none" }}
+                    dangerouslySetInnerHTML={{ __html: value }} />
                 )}
               </div>
             );
@@ -855,17 +1081,21 @@ export function DomEditor({
                 editingKey === `item-${it.id}` ? (
                   <div ref={editRef} contentEditable suppressContentEditableWarning
                     onPointerDown={(e)=>e.stopPropagation()}
-                    onBlur={(e)=>{ patchItem(it.id, { text: (e.target as HTMLDivElement).innerText }); setEditingKey(null); }}
+                    onMouseUp={()=>trackSelection(`item-${it.id}`)}
+                    onKeyUp={()=>trackSelection(`item-${it.id}`)}
+                    onBlur={(e)=>{ patchItem(it.id, { text: sanitizeEditableHtml((e.target as HTMLDivElement).innerHTML) }); setEditingKey(null); }}
                     onKeyDown={(e)=>{ e.stopPropagation(); if (e.key === "Enter") { e.preventDefault(); document.execCommand("insertText", false, "\n"); } else if (e.key === "Escape") { e.preventDefault(); (e.target as HTMLDivElement).blur(); } }}
                     style={{ fontFamily:`"${it.fontFamily ?? "Inter"}"`, fontSize:(it.fontSize ?? 64)*scale, fontWeight:it.fontWeight ?? 800,
                       color:it.color ?? "#ffffff", lineHeight:1.1, whiteSpace:"pre-wrap", textAlign:it.align ?? "left", width:"100%",
-                      textShadow: buildTextShadow(it, scale),
+                      textShadow: buildTextShadow(it, scale), ...buildOutlineStyle(it, scale),
                       ...textStyleExtras(it),
-                      outline:"none", cursor:"text", minWidth:20 }}>{it.text ?? ""}</div>
+                      outline:"none", cursor:"text", minWidth:20 }}
+                    dangerouslySetInnerHTML={{ __html: it.text ?? "" }} />
                 ) : (
                   <div style={{ fontFamily:`"${it.fontFamily ?? "Inter"}"`, fontSize:(it.fontSize ?? 64)*scale, fontWeight:it.fontWeight ?? 800,
                     color:it.color ?? "#ffffff", lineHeight:1.1, whiteSpace:"pre-wrap", textAlign:it.align ?? "left", width:"100%",
-                    textShadow: buildTextShadow(it, scale), ...textStyleExtras(it), userSelect:"none" }}>{it.text ?? ""}</div>
+                    textShadow: buildTextShadow(it, scale), ...buildOutlineStyle(it, scale), ...textStyleExtras(it), userSelect:"none" }}
+                    dangerouslySetInnerHTML={{ __html: it.text ?? "" }} />
                 )
               ) : it.kind === "image" ? (
                 <img src={it.src} alt="" draggable={false}
@@ -999,7 +1229,7 @@ export function DomEditor({
             </div>
           )}
         </div>
-        <p className="mt-2 text-xs text-navy/50">Seret elemen langsung — nempel otomatis ke tengah/tepi. Dobel-klik teks = ketik langsung. Kotak hijau di pojok = ubah ukuran, ikon ↻ di pojok atas = putar. Panah = geser halus (Shift = cepat). Dobel-klik logo: terang/gelap.</p>
+        <p className="mt-2 text-xs text-navy/50">Seret elemen langsung — nempel otomatis ke tengah/tepi. Dobel-klik teks = ketik langsung. Kotak hijau di pojok = ubah ukuran, ikon ↻ di pojok atas = putar. Panah = geser halus (Shift = cepat). Dobel-klik logo: terang/gelap. Tombol Delete/Backspace di keyboard = hapus/sembunyikan elemen yang lagi dipilih.</p>
       </div>
 
       {/* overlay foto */}
@@ -1079,25 +1309,25 @@ export function DomEditor({
         <div className="mb-2 flex flex-wrap gap-2">
           {slots.map((s) => (
             <button key={s.id} type="button" onClick={()=>setSelKey(`slot-${s.id}`)}
-              className={`rounded-full px-3.5 py-2 sm:px-3 sm:py-1 text-xs font-semibold ${selKey===`slot-${s.id}`?"bg-primary text-white":"bg-navy/10 text-navy"}`}>
-              {s.label ?? s.id}
+              className={`rounded-full px-3.5 py-2 sm:px-3 sm:py-1 text-xs font-semibold ${selKey===`slot-${s.id}`?"bg-primary text-white":getFx(`slot-${s.id}`).hidden?"bg-navy/5 text-navy/40 italic":"bg-navy/10 text-navy"}`}>
+              {s.label ?? s.id}{getFx(`slot-${s.id}`).hidden ? " (tersembunyi)" : ""}
             </button>
           ))}
           {logoUrl && (
             <button type="button" onClick={()=>setSelKey("logo")}
-              className={`rounded-full px-3.5 py-2 sm:px-3 sm:py-1 text-xs font-semibold ${selKey==="logo"?"bg-primary text-white":"bg-navy/10 text-navy"}`}>Logo</button>
+              className={`rounded-full px-3.5 py-2 sm:px-3 sm:py-1 text-xs font-semibold ${selKey==="logo"?"bg-primary text-white":getFx("logo").hidden?"bg-navy/5 text-navy/40 italic":"bg-navy/10 text-navy"}`}>Logo{getFx("logo").hidden ? " (tersembunyi)" : ""}</button>
           )}
           {(visSocials.length > 0 || businessName) && (
             <button type="button" onClick={()=>setSelKey("footer")}
-              className={`rounded-full px-3.5 py-2 sm:px-3 sm:py-1 text-xs font-semibold ${selKey==="footer"?"bg-primary text-white":"bg-navy/10 text-navy"}`}>Sosmed</button>
+              className={`rounded-full px-3.5 py-2 sm:px-3 sm:py-1 text-xs font-semibold ${selKey==="footer"?"bg-primary text-white":getFx("footer").hidden?"bg-navy/5 text-navy/40 italic":"bg-navy/10 text-navy"}`}>Sosmed{getFx("footer").hidden ? " (tersembunyi)" : ""}</button>
           )}
           {deliveryIds.length > 0 && (
             <button type="button" onClick={()=>setSelKey("delivery")}
-              className={`rounded-full px-3.5 py-2 sm:px-3 sm:py-1 text-xs font-semibold ${selKey==="delivery"?"bg-primary text-white":"bg-navy/10 text-navy"}`}>Pesan-antar</button>
+              className={`rounded-full px-3.5 py-2 sm:px-3 sm:py-1 text-xs font-semibold ${selKey==="delivery"?"bg-primary text-white":getFx("delivery").hidden?"bg-navy/5 text-navy/40 italic":"bg-navy/10 text-navy"}`}>Pesan-antar{getFx("delivery").hidden ? " (tersembunyi)" : ""}</button>
           )}
           {badgeItems.length > 0 && (
             <button type="button" onClick={()=>setSelKey("badges")}
-              className={`rounded-full px-3.5 py-2 sm:px-3 sm:py-1 text-xs font-semibold ${selKey==="badges"?"bg-primary text-white":"bg-navy/10 text-navy"}`}>Sertifikasi</button>
+              className={`rounded-full px-3.5 py-2 sm:px-3 sm:py-1 text-xs font-semibold ${selKey==="badges"?"bg-primary text-white":getFx("badges").hidden?"bg-navy/5 text-navy/40 italic":"bg-navy/10 text-navy"}`}>Sertifikasi{getFx("badges").hidden ? " (tersembunyi)" : ""}</button>
           )}
           {items.map((it, i) => (
             <button key={it.id} type="button" onClick={()=>setSelKey(`item-${it.id}`)}
@@ -1136,9 +1366,19 @@ export function DomEditor({
               <button type="button" title="Turunkan selapis" onClick={()=>patchFx(selKey, { z: Math.max(1, (selFx.z ?? defaultZ(selKey)) - 1) })}
                 className="rounded border border-navy/15 px-3.5 py-2 font-bold text-navy sm:px-2 sm:py-0.5">▼</button>
             </span>
-            {selItem && (
+            {selItem ? (
               <button type="button" onClick={()=>deleteItem(selItem.id)}
                 className="rounded-lg border border-red-300 px-3.5 py-2 font-semibold text-red-500 sm:px-2.5 sm:py-1">Hapus</button>
+            ) : (
+              // Elemen BAWAAN TEMPLATE (Judul/deskripsi, Logo, Sosmed, dst)
+              // bukan array yang bisa dihapus — tombol Delete keyboard cuma
+              // menyembunyikannya (fx.hidden). Tombol ini kebalikannya: kalau
+              // sedang tersembunyi, tampilkan lagi tanpa perlu Ctrl+Z.
+              <button type="button" onClick={()=>toggleHidden(selKey)}
+                className={`rounded-lg border px-3.5 py-2 font-semibold sm:px-2.5 sm:py-1 ${selFx.hidden ? "border-primary text-primary" : "border-red-300 text-red-500"}`}
+                title={selFx.hidden ? "" : "Tekan Delete/Backspace di keyboard juga bisa"}>
+                {selFx.hidden ? "Tampilkan lagi" : "Sembunyikan"}
+              </button>
             )}
           </div>
         )}
@@ -1147,24 +1387,43 @@ export function DomEditor({
         {selSlot && (
           <>
             <div className="mt-3 flex flex-col gap-2.5 sm:mt-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 text-sm">
-              <input type="text" value={values[selSlot.id] ?? ""} onChange={(e)=>onTextChange?.(selSlot.id, e.target.value)}
+              {/* value di-strip dari tag HTML (values[id] sekarang bisa berisi
+                  <span style="color:..."> dari pewarnaan per-bagian) — field
+                  polos ini nulis ulang sbg teks polos 1 warna kalau diedit
+                  dari sini (mixed-color cuma bisa diatur lewat seleksi
+                  langsung di kanvas, lihat SelectionColorSwatches/applySwatchColor). */}
+              <input type="text" value={stripHtml(values[selSlot.id] ?? "")} onChange={(e)=>onTextChange?.(selSlot.id, e.target.value)}
                 className="w-full rounded-lg border border-navy/15 px-3 py-2.5 sm:min-w-[140px] sm:flex-1 sm:px-2 sm:py-1.5" placeholder="Teks…" />
               <div className="flex gap-2.5 sm:contents">
                 <select value={selSlot.fontFamily} onChange={(e)=>patchSlot(selSlot.id, { fontFamily: e.target.value })}
                   className="flex-1 rounded-lg border border-navy/15 px-3 py-2.5 sm:flex-none sm:px-2 sm:py-1.5">
                   {FONT_OPTIONS.map((f) => <option key={f.id} value={f.family}>{f.family}</option>)}
                 </select>
+                {/* Color-wheel ini SELALU ganti warna SELURUH blok — tidak
+                    ikut seleksi (lihat SelectionColorSwatches di bawah utk
+                    pewarnaan-per-bagian; wheel native TIDAK bisa diandalkan
+                    utk itu krn dialog warnanya di luar kendali JS). */}
                 <input type="color" value={/^#/.test(selSlot.color) ? selSlot.color.slice(0,7) : "#ffffff"}
                   onChange={(e)=>patchSlot(selSlot.id, { color: e.target.value })}
                   disabled={selSlot.color === "transparent"}
                   className="h-11 w-14 shrink-0 rounded border border-navy/15 disabled:opacity-30 sm:h-8 sm:w-9" />
                 <label className="flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] text-navy/60">
                   <input type="checkbox" checked={selSlot.color === "transparent"}
-                    onChange={(e)=>patchSlot(selSlot.id, { color: e.target.checked ? "transparent" : "#ffffff" })}
+                    onChange={(e)=>{
+                      patchSlot(selSlot.id, { color: e.target.checked ? "transparent" : "#ffffff" });
+                      // Bug: warna per-bagian (span berwarna dari seleksi
+                      // manual) tetap kelihatan walau blok di-set transparan
+                      // — krn warna inline anak menang atas warna induk.
+                      // Bersihkan warna inline-nya juga saat "Tanpa isi" ON.
+                      if (e.target.checked) onTextChange?.(selSlot.id, stripInlineColors(values[selSlot.id] ?? ""));
+                    }}
                     className="h-4 w-4" />
                   Tanpa isi
                 </label>
               </div>
+              {editingKey === `slot-${selSlot.id}` && (
+                <SelectionColorSwatches onPick={(hex) => applySwatchColor(`slot-${selSlot.id}`, hex)} />
+              )}
               <SliderToggle label="Ukuran font" valueLabel={`${selSlot.maxFontSize}`}>
                 <input type="range" min={12} max={140} value={selSlot.maxFontSize} title="Ukuran font"
                   onChange={(e)=>patchSlot(selSlot.id, { fontSize: Number(e.target.value) })}
@@ -1261,7 +1520,7 @@ export function DomEditor({
         {selItem && selItem.kind === "text" && (
           <>
             <div className="mt-3 flex flex-col gap-2.5 sm:mt-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 text-sm">
-              <input type="text" value={selItem.text ?? ""} onChange={(e)=>patchItem(selItem.id, { text: e.target.value })}
+              <input type="text" value={stripHtml(selItem.text ?? "")} onChange={(e)=>patchItem(selItem.id, { text: e.target.value })}
                 className="w-full rounded-lg border border-navy/15 px-3 py-2.5 sm:min-w-[140px] sm:flex-1 sm:px-2 sm:py-1.5" placeholder="Teks…" />
               <div className="flex gap-2.5 sm:contents">
                 <select value={selItem.fontFamily ?? "Inter"} onChange={(e)=>patchItem(selItem.id, { fontFamily: e.target.value })}
@@ -1274,11 +1533,18 @@ export function DomEditor({
                   className="h-11 w-14 shrink-0 rounded border border-navy/15 disabled:opacity-30 sm:h-8 sm:w-9" />
                 <label className="flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] text-navy/60">
                   <input type="checkbox" checked={selItem.color === "transparent"}
-                    onChange={(e)=>patchItem(selItem.id, { color: e.target.checked ? "transparent" : "#ffffff" })}
+                    onChange={(e)=>{
+                      const next: Partial<FreeItem> = { color: e.target.checked ? "transparent" : "#ffffff" };
+                      if (e.target.checked) next.text = stripInlineColors(selItem.text ?? "");
+                      patchItem(selItem.id, next);
+                    }}
                     className="h-4 w-4" />
                   Tanpa isi
                 </label>
               </div>
+              {editingKey === `item-${selItem.id}` && (
+                <SelectionColorSwatches onPick={(hex) => applySwatchColor(`item-${selItem.id}`, hex)} />
+              )}
               <SliderToggle label="Ukuran font" valueLabel={`${selItem.fontSize ?? 64}`}>
                 <input type="range" min={12} max={160} value={selItem.fontSize ?? 64} title="Ukuran font"
                   onChange={(e)=>patchItem(selItem.id, { fontSize: Number(e.target.value) })}

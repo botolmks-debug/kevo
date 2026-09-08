@@ -108,7 +108,7 @@ export function AutoGenerate() {
   // tampil. Array = tampil dengan pilihan ini. produkDesc disimpan dari
   // respons /titles supaya generate final TIDAK perlu describeProductImage
   // ulang (hemat 1 panggilan vision-AI yang sama persis).
-  const [titleChoices, setTitleChoices] = useState<{ titles: string[]; produkDesc: string; ratioArg?: AspectRatio } | null>(null);
+  const [titleChoices, setTitleChoices] = useState<{ titles: string[]; produkDesc: string; formatLabel?: string; ratioArg?: AspectRatio } | null>(null);
   const [titlesLoading, setTitlesLoading] = useState(false);
   const [uiLang, setUiLang] = useState<Lang>("id");
   useEffect(() => setUiLang(getLang()), []);
@@ -228,7 +228,7 @@ export function AutoGenerate() {
     img.src = url;
   }
 
-  async function handleGenerate(ratioArg?: AspectRatio, locked?: { title: string; produkDesc: string }) {
+  async function handleGenerate(ratioArg?: AspectRatio, locked?: { title: string; produkDesc: string; formatLabel?: string }) {
     if (jenis === "carousel") return; // carousel punya alur generate sendiri (CarouselAuto)
     if (generatingRef.current) return; // sudah ada proses generate berjalan
     if ((jenis === "produk" || jenis === "referensi") && selectedImageIds.length === 0) {
@@ -247,20 +247,26 @@ export function AutoGenerate() {
       setShowReferenceModal(true);
       return;
     }
-    // "Dari Foto" (produk) TANPA judul terkunci — ambil 5 pilihan judul dulu,
-    // tampilkan popup, JANGAN lanjut generate gambar sampai user pilih satu.
-    if (jenis === "produk" && !locked) {
+    // "Dari Foto" (produk), "Referensi", "General", & "Interaksi" TANPA
+    // judul terkunci — ambil 5 pilihan judul dulu, tampilkan popup, JANGAN
+    // lanjut generate gambar sampai user pilih satu. Referensi numpang infra
+    // produk (titles cuma butuh foto+deskripsi produk, bukan gambar
+    // referensi gayanya — referenceDataUri baru dipakai di tahap generate
+    // gambar FINAL). General & Interaksi tidak butuh foto sama sekali.
+    if ((jenis === "produk" || jenis === "referensi" || jenis === "general" || jenis === "interaksi") && !locked) {
       if (generatingRef.current) return;
       generatingRef.current = true;
       setTitlesLoading(true);
       setGenerateStatus("idle");
       setGenerateError(null);
       try {
+        const titlesJenis = jenis === "referensi" ? "produk" : jenis; // server /titles cuma kenal produk/general/interaksi
         const res = await fetch("/api/generate-auto/titles", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            imageIds: selectedImageIds,
+            jenis: titlesJenis,
+            imageIds: (jenis === "produk" || jenis === "referensi") ? selectedImageIds : undefined,
             language: getLang(),
             tema: tema ?? undefined,
             konsep: konsep.trim() || undefined,
@@ -268,7 +274,12 @@ export function AutoGenerate() {
         });
         const data = await res.json().catch(() => null);
         if (!res.ok) throw new Error(data?.error ?? L("Gagal ambil pilihan judul.", "Failed to get title options."));
-        setTitleChoices({ titles: data.titles as string[], produkDesc: (data.produkDesc as string) ?? "", ratioArg });
+        setTitleChoices({
+          titles: data.titles as string[],
+          produkDesc: (data.produkDesc as string) ?? "",
+          formatLabel: data.formatLabel as string | undefined,
+          ratioArg,
+        });
       } catch (error) {
         setGenerateStatus("error");
         setGenerateError(error instanceof Error ? error.message : L("Gagal ambil pilihan judul.", "Failed to get title options."));
@@ -309,9 +320,12 @@ export function AutoGenerate() {
                 tema: tema && (jenis === "produk" || jenis === "referensi") ? tema : undefined,
                 // Konsep bebas dari user — cuma relevan utk Dari Foto/Referensi (ada foto produk)
                 konsep: konsep.trim() && (jenis === "produk" || jenis === "referensi") ? konsep.trim() : undefined,
-                // Judul yang sudah dipilih user dari popup 5-judul (cuma jenis "produk")
+                // Judul yang sudah dipilih user dari popup 5-judul
                 lockedTitle: locked ? locked.title : undefined,
                 produkDescOverride: locked ? locked.produkDesc : undefined,
+                // Format Interaksi (Kuis/Edukasi/dst) yang dikunci dari tahap
+                // /titles — WAJIB dipakai ulang PERSIS sama di tahap ini.
+                formatLabel: locked?.formatLabel,
               }),
             });
       let res = await doPost();
@@ -348,8 +362,9 @@ export function AutoGenerate() {
     if (!titleChoices) return;
     const ratioArg = titleChoices.ratioArg;
     const produkDesc = titleChoices.produkDesc;
+    const formatLabel = titleChoices.formatLabel;
     setTitleChoices(null);
-    void handleGenerate(ratioArg, { title, produkDesc });
+    void handleGenerate(ratioArg, { title, produkDesc, formatLabel });
   }
 
   function downloadBlob(blob: Blob, filename: string) {

@@ -26,7 +26,11 @@ import { getRecentCaptions, buildAntiRepetisiBlock } from "@/lib/ai/antiRepetisi
 import { buildMomenBlock } from "@/lib/ai/momenKalender";
 import {
   buildGeneralContentPrompt,
+  buildGeneralCaptionForTitlePrompt,
   buildInteraksiContentPrompt,
+  buildInteraksiCaptionForTitlePrompt,
+  pickInteraksiFormat,
+  findInteraksiFormatByLabel,
   buildProdukContentPrompt,
   buildProdukCaptionForTitlePrompt,
   buildGabungContentPrompt,
@@ -91,7 +95,7 @@ export async function GET() {
 const VALID_TEMA = ["hook", "edukasi", "produk", "promo"] as const;
 type ContentTema = (typeof VALID_TEMA)[number];
 
-type RequestBody = { jenis: GeneratedContentJenis; ratio: AspectRatio; imageId?: string; imageIds?: string[]; language?: "id" | "en"; referenceDataUri?: string; tema?: ContentTema; konsep?: string; lockedTitle?: string; produkDescOverride?: string };
+type RequestBody = { jenis: GeneratedContentJenis; ratio: AspectRatio; imageId?: string; imageIds?: string[]; language?: "id" | "en"; referenceDataUri?: string; tema?: ContentTema; konsep?: string; lockedTitle?: string; produkDescOverride?: string; formatLabel?: string };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -111,6 +115,7 @@ function isValidBody(body: unknown): body is RequestBody {
   if (body.konsep !== undefined && (typeof body.konsep !== "string" || body.konsep.length > 500)) return false;
   if (body.lockedTitle !== undefined && (typeof body.lockedTitle !== "string" || body.lockedTitle.length > 200)) return false;
   if (body.produkDescOverride !== undefined && typeof body.produkDescOverride !== "string") return false;
+  if (body.formatLabel !== undefined && typeof body.formatLabel !== "string") return false;
   return true;
 }
 
@@ -290,36 +295,64 @@ export async function POST(request: NextRequest) {
     : undefined;
   const temaExtra = body.tema ? themeInstruction(body.tema, body.language) : undefined;
   const sharedExtra = [antiRepetisiBlock, momenBlock].filter(Boolean).join("\n");
-  const extraAllNonProduk = [konsepExtraLegacy, temaExtra, sharedExtra].filter(Boolean).join("\n") || undefined;
+  const extraGabung = [konsepExtraLegacy, temaExtra, sharedExtra].filter(Boolean).join("\n") || undefined;
   const extraProdukOnly = [temaExtra, sharedExtra].filter(Boolean).join("\n") || undefined;
+  const extraGeneralOnly = sharedExtra || undefined; // konsep utk general lewat param dedicated (lihat bawah)
   const extraInteraksi = sharedExtra || undefined;
   const lockedTitle = body.lockedTitle?.trim();
   // Kalau user sudah pilih judul dari popup "5 pilihan judul" — jangan
-  // generate judul baru, cuma minta CAPTION yang nyambung ke judul itu.
-  // Cuma didukung utk jenis "produk" tunggal (bukan gabung/carousel) —
-  // sama seperti scope route /titles di atas.
-  const contentPrompt = lockedTitle && body.jenis === "produk" && !isGabung
-    ? buildProdukCaptionForTitlePrompt(profile, produkDesc, lockedTitle, body.language, extraProdukOnly, konsepText) + notesBlock
-    : (
-        isGabung ? buildGabungContentPrompt(profile, sourceImages.map((s) => s.description ?? ""), body.language, extraAllNonProduk)
-        : body.jenis === "produk" ? buildProdukContentPrompt(profile, produkDesc, body.language, extraProdukOnly, konsepText)
-        : body.jenis === "general" ? buildGeneralContentPrompt(profile, body.language, extraAllNonProduk)
-        : buildInteraksiContentPrompt(profile, body.language, extraInteraksi)
-      ) + notesBlock;
+  // generate judul baru, cuma minta CAPTION (+jawaban/imageScene sesuai
+  // jenisnya) yang nyambung ke judul itu. Produk: cuma utk foto TUNGGAL
+  // (bukan gabung/carousel). Interaksi: format (Kuis/Edukasi/dst) yang
+  // sudah dikunci dari tahap /titles WAJIB dipakai ulang PERSIS sama —
+  // dicari via label yang dikirim balik client, fallback ke pilih acak baru
+  // kalau labelnya tidak ketemu (jaga2 kalau ada mismatch versi).
+  const isLockedProduk = !!lockedTitle && body.jenis === "produk" && !isGabung;
+  const isLockedGeneral = !!lockedTitle && body.jenis === "general";
+  const isLockedInteraksi = !!lockedTitle && body.jenis === "interaksi";
+  const lockedInteraksiFormat = isLockedInteraksi
+    ? (body.formatLabel ? findInteraksiFormatByLabel(body.formatLabel, body.language) : undefined) ?? pickInteraksiFormat(body.language)
+    : undefined;
+
+  const contentPrompt = (
+    isLockedProduk ? buildProdukCaptionForTitlePrompt(profile, produkDesc, lockedTitle!, body.language, extraProdukOnly, konsepText)
+    : isLockedGeneral ? buildGeneralCaptionForTitlePrompt(profile, lockedTitle!, body.language, extraGeneralOnly, konsepText)
+    : isLockedInteraksi ? buildInteraksiCaptionForTitlePrompt(profile, lockedInteraksiFormat!, lockedTitle!, body.language, extraInteraksi)
+    : isGabung ? buildGabungContentPrompt(profile, sourceImages.map((s) => s.description ?? ""), body.language, extraGabung)
+    : body.jenis === "produk" ? buildProdukContentPrompt(profile, produkDesc, body.language, extraProdukOnly, konsepText)
+    : body.jenis === "general" ? buildGeneralContentPrompt(profile, body.language, extraGeneralOnly, konsepText)
+    : buildInteraksiContentPrompt(profile, body.language, extraInteraksi)
+  ) + notesBlock;
 
   const contentResult = await generateJsonContent(contentPrompt);
   if (!contentResult.ok) return fail(contentResult.error, 502);
 
   const requireScene = body.jenis !== "produk";
   let content: AutoContent;
-  if (lockedTitle && body.jenis === "produk" && !isGabung) {
+  if (isLockedProduk) {
     // Prompt caption-only cuma minta {"caption","fontId"} — onImageText
     // TIDAK diminta AI, langsung pakai judul yang sudah dipilih user.
     const capData = contentResult.data as { caption?: unknown; fontId?: unknown };
     if (typeof capData.caption !== "string" || capData.caption.trim().length === 0) {
       return fail("AI mengembalikan format caption tidak lengkap. Coba lagi.", 502);
     }
-    content = { onImageText: lockedTitle, caption: capData.caption, fontId: typeof capData.fontId === "string" ? capData.fontId : undefined };
+    content = { onImageText: lockedTitle!, caption: capData.caption, fontId: typeof capData.fontId === "string" ? capData.fontId : undefined };
+  } else if (isLockedGeneral) {
+    const capData = contentResult.data as { caption?: unknown; imageScene?: unknown; fontId?: unknown };
+    if (typeof capData.caption !== "string" || capData.caption.trim().length === 0 || typeof capData.imageScene !== "string" || capData.imageScene.trim().length === 0) {
+      return fail("AI mengembalikan format konten tidak lengkap. Coba lagi.", 502);
+    }
+    content = { onImageText: lockedTitle!, caption: capData.caption, imageScene: capData.imageScene, fontId: typeof capData.fontId === "string" ? capData.fontId : undefined };
+  } else if (isLockedInteraksi) {
+    const capData = contentResult.data as { caption?: unknown; jawaban?: unknown; imageScene?: unknown; fontId?: unknown };
+    if (typeof capData.caption !== "string" || capData.caption.trim().length === 0 || typeof capData.imageScene !== "string" || capData.imageScene.trim().length === 0) {
+      return fail("AI mengembalikan format konten tidak lengkap. Coba lagi.", 502);
+    }
+    content = {
+      onImageText: lockedTitle!, caption: capData.caption, imageScene: capData.imageScene,
+      jawaban: typeof capData.jawaban === "string" ? capData.jawaban : undefined,
+      fontId: typeof capData.fontId === "string" ? capData.fontId : undefined,
+    };
   } else {
     if (!isAutoContent(contentResult.data, requireScene)) {
       return fail("AI mengembalikan format konten tidak lengkap. Coba lagi.", 502);

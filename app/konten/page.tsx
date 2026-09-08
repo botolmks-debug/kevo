@@ -5,7 +5,7 @@ import { GenerateLoadingOverlay } from "@/components/generate/GenerateLoadingOve
 import * as htmlToImage from "html-to-image";
 import { createClient } from "@/lib/supabase/client";
 import { isAdmin } from "@/lib/supabase/tokens";
-import { DomEditor } from "@/components/editor/DomEditor";
+import { DomEditor, stripHtml } from "@/components/editor/DomEditor";
 import { Header } from "@/components/ui/Header";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -242,7 +242,10 @@ export default function KontenPage() {
         bgColor: editBgColor,
         descCount: editDescCount,
       };
-      const onImageText = editValues.title ?? editValues.caption ?? "";
+      // Strip HTML — editValues sekarang bisa berisi <span style="color:...">
+      // dari pewarnaan per-bagian teks; onImageText di sini cuma metadata
+      // catatan teks-di-gambar buat server, bukan buat dirender ulang.
+      const onImageText = stripHtml(editValues.title ?? editValues.caption ?? "");
       const form = new FormData();
       form.append("file", blob, "hasil.png");
       form.append("onImageText", onImageText);
@@ -329,7 +332,7 @@ export default function KontenPage() {
 
   const baseTemplate =
     editTemplateId === "produk-latar" ? createProdukLatarTemplate(editBgColor)
-    : editTemplateId === "standar" ? createStandarTemplate(editDescCount ?? 1, editValues.title ?? editValues.caption)
+    : editTemplateId === "standar" ? createStandarTemplate(editDescCount ?? 1, stripHtml(editValues.title ?? editValues.caption ?? ""))
     : editTemplateId === "teks-saja" ? createTeksSajaTemplate(editDescCount ?? 1)
     : editTemplateId === "carousel" ? createCarouselTemplate()
     : editTemplateId === "interaksi" ? interaksiTemplate

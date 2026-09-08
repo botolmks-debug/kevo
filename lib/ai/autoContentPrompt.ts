@@ -738,7 +738,7 @@ function interaksiCaptionRules(lang?: Lang): string {
 }
 
 // ── Interaksi formats ──────────────────────────────────────────────────────
-type InteraksiFormat = { label: string; brief: string; scene: string };
+export type InteraksiFormat = { label: string; brief: string; scene: string };
 
 const INTERAKSI_FORMATS_ID: InteraksiFormat[] = [
   {
@@ -838,9 +838,18 @@ const INTERAKSI_FORMATS_EN: InteraksiFormat[] = [
   },
 ];
 
-function pickInteraksiFormat(lang?: Lang): InteraksiFormat {
+export function pickInteraksiFormat(lang?: Lang): InteraksiFormat {
   const arr = isEn(lang) ? INTERAKSI_FORMATS_EN : INTERAKSI_FORMATS_ID;
   return arr[Math.floor(Math.random() * arr.length)];
+}
+
+/** Cari format Interaksi berdasarkan label persisnya — dipakai buat "mengunci"
+ * format yang sama antara tahap popup-5-judul dan tahap generate final,
+ * supaya tidak ganti format acak lagi di tengah jalan (title Kuis tapi
+ * caption-nya malah format Tips, misalnya). */
+export function findInteraksiFormatByLabel(label: string, lang?: Lang): InteraksiFormat | undefined {
+  const arr = isEn(lang) ? INTERAKSI_FORMATS_EN : INTERAKSI_FORMATS_ID;
+  return arr.find((f) => f.label === label);
 }
 
 // ── Font & JSON tail ───────────────────────────────────────────────────────
@@ -890,9 +899,9 @@ MANDATORY CONCEPT FROM THE USER — READ THIS BEFORE WRITING ANYTHING:
 "${konsep}"
 
 MANDATORY STEPS, follow EXACTLY in order:
-1) Read the concept above. Determine: is this a STANDALONE SITUATION/TOPIC (an event, natural disaster, weather, holiday, trend, news, issue) that has NO natural connection to the product below?
-2) IF YES (standalone situation) — the output MUST be 100% about THAT topic only. Do NOT mention the product/business name AT ALL. Act as if you're writing content purely about that topic — NOT a product promotion. The product description below is IRRELEVANT in this case, ignore it.
-3) IF NO (the concept is actually about this product — a photo style, mood, target buyer, etc.) — use the product below as normal, guided by this concept.
+1) Read the concept above. Determine: is this a STANDALONE SITUATION/TOPIC (an event, natural disaster, weather, holiday, trend, news, issue) that has NO natural connection to the product/business topic below?
+2) IF YES (standalone situation) — the output MUST be 100% about THAT topic only. Do NOT mention the product/business name AT ALL. Act as if you're writing content purely about that topic — NOT a promotion for anything. Everything below about the product/business is IRRELEVANT in this case, ignore it.
+3) IF NO (the concept is actually about the product/business — a photo style, mood, target audience, etc.) — use the product/business info below as normal, guided by this concept.
 This concept OVERRIDES every other instruction in this prompt if they conflict.
 ============================================`
     : `============================================
@@ -900,9 +909,9 @@ KONSEP WAJIB DARI USER — BACA INI DULU SEBELUM MENULIS APA PUN:
 "${konsep}"
 
 LANGKAH WAJIB, ikuti PERSIS urutannya:
-1) Baca konsep di atas. Tentukan: apakah ini SITUASI/TOPIK BERDIRI SENDIRI (kejadian, bencana alam, cuaca, hari raya, tren, berita, isu) yang TIDAK ADA hubungan alaminya dengan produk di bawah?
-2) KALAU YA (situasi berdiri sendiri) — hasilnya WAJIB 100% membahas topik ITU SAJA. JANGAN sebut nama produk/bisnis SAMA SEKALI. Anggap kamu sedang menulis konten tentang topik itu doang — BUKAN promosi produk. Deskripsi produk di bawah TIDAK RELEVAN dalam kasus ini, abaikan.
-3) KALAU TIDAK (konsepnya memang soal produk ini — gaya foto, mood, target pembeli, dst) — pakai produk di bawah seperti biasa, dengan arahan dari konsep ini.
+1) Baca konsep di atas. Tentukan: apakah ini SITUASI/TOPIK BERDIRI SENDIRI (kejadian, bencana alam, cuaca, hari raya, tren, berita, isu) yang TIDAK ADA hubungan alaminya dengan produk/topik usaha di bawah?
+2) KALAU YA (situasi berdiri sendiri) — hasilnya WAJIB 100% membahas topik ITU SAJA. JANGAN sebut nama produk/bisnis SAMA SEKALI. Anggap kamu sedang menulis konten tentang topik itu doang — BUKAN promosi apa pun. Semua info produk/bisnis di bawah TIDAK RELEVAN dalam kasus ini, abaikan.
+3) KALAU TIDAK (konsepnya memang soal produk/bisnis ini — gaya foto, mood, target audiens, dst) — pakai info produk/bisnis di bawah seperti biasa, dengan arahan dari konsep ini.
 Konsep ini MENGALAHKAN semua instruksi lain di prompt ini kalau bertentangan.
 ============================================`;
 }
@@ -1064,15 +1073,18 @@ ${fontRule(lang)}
 Jawab HANYA dengan objek JSON itu, tanpa teks lain.`;
 }
 
-export function buildGeneralContentPrompt(profile: BusinessProfile, lang?: Lang, extra?: string): string {
+export function buildGeneralContentPrompt(profile: BusinessProfile, lang?: Lang, extra?: string, konsep?: string): string {
   if (isEn(lang)) {
+    const opener = konsep?.trim()
+      ? `Create content in English — READ THE MANDATORY CONCEPT BELOW FIRST before assuming this is a normal business-topic piece.`
+      : `Create ONE general content piece (NOT a specific product promo) that explains/highlights this business, in English. Stay on the business's topic.`;
     return `${persona(lang)}
 ${outputLangDirective(lang)}
-Create ONE general content piece (NOT a specific product promo) that explains/highlights this business, in English. Stay on the business's topic.
+${opener}
 
-${profileBlock(profile, lang)}
+${konsep?.trim() ? konsepDecisionBlock(konsep, lang) + "\n\n" : ""}${profileBlock(profile, lang)}
 
-${pickContentDirection(lang)}
+${extraBlocks(extra)}${pickContentDirection(lang)}
 
 For the HEADLINE (onImageText) this time, use ${pickHeadlineAngle(lang)}. Craft a FRESH new phrase; don't repeat commonly used titles.
 For the caption WRITING STYLE this time, use: ${pickWritingStyle(lang)} (still within the brand voice defined above).
@@ -1080,18 +1092,21 @@ For the caption WRITING STYLE this time, use: ${pickWritingStyle(lang)} (still w
 JSON format: {"onImageText": "...", "caption": "...", "imageScene": "...", "fontId": "..."}
 ${onImageRule(lang)}
 ${captionRules(lang)}
-imageScene = one English sentence, a realistic photo scene that reflects the topic/direction note above. Specific, not generic. No text/logo in the scene.
+imageScene = one English sentence, a realistic photo scene that reflects the topic/direction note above (or the mandatory concept above if one was given). Specific, not generic. No text/logo in the scene.
 ${fontRule(lang)}
-${extraBlocks(extra)}${jsonTail(lang)}`;
+${jsonTail(lang)}`;
   }
 
+  const openerId = konsep?.trim()
+    ? `Buat konten dalam Bahasa Indonesia — BACA KONSEP WAJIB DI BAWAH DULU sebelum menganggap ini konten topik usaha biasa.`
+    : `Buat SATU konten umum (BUKAN promosi produk spesifik) yang menjelaskan/mengangkat usaha ini, dalam Bahasa Indonesia. Tetap pada topik usaha.`;
   return `${persona(lang)}
 ${outputLangDirective(lang)}
-Buat SATU konten umum (BUKAN promosi produk spesifik) yang menjelaskan/mengangkat usaha ini, dalam Bahasa Indonesia. Tetap pada topik usaha.
+${openerId}
 
-${profileBlock(profile, lang)}
+${konsep?.trim() ? konsepDecisionBlock(konsep, lang) + "\n\n" : ""}${profileBlock(profile, lang)}
 
-${pickContentDirection(lang)}
+${extraBlocks(extra)}${pickContentDirection(lang)}
 
 Untuk JUDUL (onImageText) kali ini, pakai ${pickHeadlineAngle(lang)}. Buat frasa BARU yang segar; jangan mengulang judul yang biasa dipakai.
 Untuk GAYA PENULISAN caption kali ini, pakai: ${pickWritingStyle(lang)} (tetap dalam nada brand yang sudah ditentukan di atas).
@@ -1099,13 +1114,83 @@ Untuk GAYA PENULISAN caption kali ini, pakai: ${pickWritingStyle(lang)} (tetap d
 Format JSON: {"onImageText": "...", "caption": "...", "imageScene": "...", "fontId": "..."}
 ${onImageRule(lang)}
 ${captionRules(lang)}
-imageScene = satu kalimat Bahasa Indonesia, adegan foto realistis yang mencerminkan topik/arah konten di atas. Spesifik, bukan umum. Tanpa teks/logo di adegan.
+imageScene = satu kalimat Bahasa Indonesia, adegan foto realistis yang mencerminkan topik/arah konten di atas (atau konsep wajib di atas kalau ada). Spesifik, bukan umum. Tanpa teks/logo di adegan.
 ${fontRule(lang)}
-${extraBlocks(extra)}${jsonTail(lang)}`;
+${jsonTail(lang)}`;
 }
 
-export function buildInteraksiContentPrompt(profile: BusinessProfile, lang?: Lang, extra?: string): string {
-  const format = pickInteraksiFormat(lang);
+/** Popup "5 pilihan judul" versi General — sama filosofinya dengan produk. */
+export function buildGeneralTitlesPrompt(profile: BusinessProfile, lang?: Lang, extra?: string, konsep?: string): string {
+  if (isEn(lang)) {
+    const opener = konsep?.trim()
+      ? `Generate 5 headline options, in English — READ THE MANDATORY CONCEPT BELOW FIRST before assuming this is a normal business-topic piece.`
+      : `Generate 5 DIFFERENT headline (onImageText) options for ONE general content piece (NOT a specific product promo) that explains/highlights this business, in English.`;
+    return `${persona(lang)}
+${outputLangDirective(lang)}
+${opener}
+
+${konsep?.trim() ? konsepDecisionBlock(konsep, lang) + "\n\n" : ""}${profileBlock(profile, lang)}
+
+${extraBlocks(extra)}Each of the 5 headlines MUST use a genuinely DIFFERENT angle/hook STYLE — not 5 minor rewordings of the same phrasing. IMPORTANT: this variety applies to the DELIVERY/PHRASING STYLE ONLY — all 5 headlines MUST still be about the SAME underlying topic (the business above, or the mandatory concept above if one was given).
+
+JSON format: {"titles": ["...", "...", "...", "...", "..."]}
+${onImageRule(lang)}
+Reply with ONLY the JSON object, no other text.`;
+  }
+  const openerId = konsep?.trim()
+    ? `Buat 5 pilihan judul, dalam Bahasa Indonesia — BACA KONSEP WAJIB DI BAWAH DULU sebelum menganggap ini konten topik usaha biasa.`
+    : `Buat 5 PILIHAN judul (onImageText) yang BERBEDA untuk SATU konten umum (BUKAN promosi produk spesifik) yang menjelaskan/mengangkat usaha ini, dalam Bahasa Indonesia.`;
+  return `${persona(lang)}
+${outputLangDirective(lang)}
+${openerId}
+
+${konsep?.trim() ? konsepDecisionBlock(konsep, lang) + "\n\n" : ""}${profileBlock(profile, lang)}
+
+${extraBlocks(extra)}Kelima judul WAJIB pakai GAYA sudut/hook yang BENAR-BENAR beda satu sama lain — bukan 5 variasi kalimat dari phrasing yang sama. PENTING: variasi ini HANYA soal GAYA PENYAMPAIAN — kelima judul WAJIB tetap membahas TOPIK YANG SAMA (usaha di atas, atau konsep wajib di atas kalau ada).
+
+Format JSON: {"titles": ["...", "...", "...", "...", "..."]}
+${onImageRule(lang)}
+Jawab HANYA dengan objek JSON itu, tanpa teks lain.`;
+}
+
+/** Dipanggil setelah user pilih judul dari popup — General butuh imageScene juga (beda dari produk yg edit foto asli). */
+export function buildGeneralCaptionForTitlePrompt(profile: BusinessProfile, chosenTitle: string, lang?: Lang, extra?: string, konsep?: string): string {
+  if (isEn(lang)) {
+    return `${persona(lang)}
+${outputLangDirective(lang)}
+Write the CAPTION + image scene for this content, in English. The headline is ALREADY DECIDED (below, by the user) — do NOT change it, just write content that flows naturally from it.
+
+${konsep?.trim() ? konsepDecisionBlock(konsep, lang) + "\n\n" : ""}${profileBlock(profile, lang)}
+
+${extraBlocks(extra)}HEADLINE ALREADY CHOSEN (do not repeat it verbatim in the caption, but the caption must clearly connect to and build on this exact angle — if the headline is about a standalone concept/situation, the caption stays on that same topic too, do NOT drag the business back in unnecessarily): "${chosenTitle}"
+
+For the caption WRITING STYLE, use: ${pickWritingStyle(lang)} (still within the brand voice defined above, UNLESS the concept above says otherwise).
+
+JSON format: {"caption": "...", "imageScene": "...", "fontId": "..."}
+${captionRules(lang)}
+imageScene = one English sentence, a realistic photo scene reflecting the chosen headline above. Specific, not generic. No text/logo in the scene.
+${fontRule(lang)}
+Reply with ONLY the JSON object, no other text.`;
+  }
+  return `${persona(lang)}
+${outputLangDirective(lang)}
+Tulis CAPTION + adegan gambar untuk konten ini, dalam Bahasa Indonesia. Judulnya SUDAH DITENTUKAN (di bawah, oleh user) — JANGAN diubah, cukup tulis konten yang mengalir natural dari judul itu.
+
+${konsep?.trim() ? konsepDecisionBlock(konsep, lang) + "\n\n" : ""}${profileBlock(profile, lang)}
+
+${extraBlocks(extra)}JUDUL YANG SUDAH DIPILIH (jangan diulang persis di caption, tapi caption harus jelas nyambung & membangun dari sudut ini — kalau judulnya soal konsep/situasi berdiri sendiri, caption-nya juga TETAP di topik itu, JANGAN tarik-tarik bisnisnya masuk lagi kalau tidak perlu): "${chosenTitle}"
+
+Untuk GAYA PENULISAN caption, pakai: ${pickWritingStyle(lang)} (tetap dalam nada brand yang sudah ditentukan di atas, KECUALI konsep di atas bilang lain).
+
+Format JSON: {"caption": "...", "imageScene": "...", "fontId": "..."}
+${captionRules(lang)}
+imageScene = satu kalimat Bahasa Indonesia, adegan foto realistis yang mencerminkan judul terpilih di atas. Spesifik, bukan umum. Tanpa teks/logo di adegan.
+${fontRule(lang)}
+Jawab HANYA dengan objek JSON itu, tanpa teks lain.`;
+}
+
+export function buildInteraksiContentPrompt(profile: BusinessProfile, lang?: Lang, extra?: string, formatOverride?: InteraksiFormat): string {
+  const format = formatOverride ?? pickInteraksiFormat(lang);
   if (isEn(lang)) {
     return `${persona(lang)}
 ${outputLangDirective(lang)}
@@ -1145,6 +1230,91 @@ jawaban = penjelasan SINGKAT khusus untuk PEMILIK BISNIS (TIDAK ikut diposting k
 imageScene = 1-2 kalimat Bahasa Indonesia. ${format.scene} Adegan WAJIB mengisi PENUH seluruh bingkai dari atas sampai bawah (tanpa area kosong/polos). Boleh gaya ilustrasi, kartun, atau semi-realistis. Spesifik & relatable ke target pasar, bukan generik. TANPA teks/huruf/angka/logo di dalam adegan.
 ${fontRule(lang)}
 ${extraBlocks(extra)}${jsonTail(lang)}`;
+}
+
+/**
+ * Popup "5 pilihan judul" versi Interaksi. Format (Kuis/Edukasi/Tips/dst)
+ * di-pick SEKALI oleh PEMANGGIL (route) — bukan di dalam fungsi ini — supaya
+ * bisa "dikunci" & dikirim balik ke client, lalu dipakai ulang PERSIS sama
+ * di buildInteraksiCaptionForTitlePrompt (tahap 2). Kalau tidak dikunci,
+ * risikonya: judul cocok format Kuis, tapi caption/jawaban/adegan kepilih
+ * ulang jadi format Tips — jelas tidak konsisten.
+ */
+export function buildInteraksiTitlesPrompt(profile: BusinessProfile, format: InteraksiFormat, lang?: Lang, extra?: string): string {
+  if (isEn(lang)) {
+    return `${persona(lang)}
+${outputLangDirective(lang)}
+Generate 5 DIFFERENT headline (onImageText) options for ONE INTERACTIVE piece of content, in English. MAIN GOAL = invite INTERACTION, NOT selling.
+
+${profileBlock(profile, lang)}
+
+CONTENT FORMAT FOR THIS PIECE (MUST use this, DON'T switch to another format): ${format.label}.
+Format instruction: ${format.brief}
+
+${extraBlocks(extra)}Each of the 5 headlines MUST use a genuinely DIFFERENT angle/hook STYLE while staying within the format above — not 5 minor rewordings of the same phrasing.
+
+JSON format: {"titles": ["...", "...", "...", "...", "..."]}
+${onImageRuleInteraksi(lang)}
+Reply with ONLY the JSON object, no other text.`;
+  }
+  return `${persona(lang)}
+${outputLangDirective(lang)}
+Buat 5 PILIHAN judul (onImageText) yang BERBEDA untuk SATU konten INTERAKTIF, dalam Bahasa Indonesia. Tujuan UTAMA = memancing INTERAKSI, BUKAN jualan.
+
+${profileBlock(profile, lang)}
+
+FORMAT KONTEN KALI INI (WAJIB pakai ini, JANGAN diganti ke format lain): ${format.label}.
+Instruksi format: ${format.brief}
+
+${extraBlocks(extra)}Kelima judul WAJIB pakai GAYA sudut/hook yang BENAR-BENAR beda satu sama lain, TAPI tetap dalam format di atas — bukan 5 variasi kalimat dari phrasing yang sama.
+
+Format JSON: {"titles": ["...", "...", "...", "...", "..."]}
+${onImageRuleInteraksi(lang)}
+Jawab HANYA dengan objek JSON itu, tanpa teks lain.`;
+}
+
+/** Dipanggil setelah user pilih judul — format yang SAMA (dikunci dari tahap 1) dipakai lagi di sini. */
+export function buildInteraksiCaptionForTitlePrompt(profile: BusinessProfile, format: InteraksiFormat, chosenTitle: string, lang?: Lang, extra?: string): string {
+  if (isEn(lang)) {
+    return `${persona(lang)}
+${outputLangDirective(lang)}
+Write the CAPTION + jawaban + image scene for this INTERACTIVE content, in English. The headline is ALREADY DECIDED (below, by the user) — do NOT change it.
+
+${profileBlock(profile, lang)}
+
+CONTENT FORMAT FOR THIS PIECE (MUST use this, DON'T switch to another format): ${format.label}.
+Format instruction: ${format.brief}
+
+${extraBlocks(extra)}HEADLINE ALREADY CHOSEN (do not repeat it verbatim in the caption, but the caption must clearly connect to and build on it, staying within the format above): "${chosenTitle}"
+
+For the caption WRITING STYLE, use: ${pickWritingStyle(lang)} (still consistent with the format & brand voice).
+
+JSON format: {"caption": "...", "jawaban": "...", "imageScene": "...", "fontId": "..."}
+${interaksiCaptionRules(lang)}
+jawaban = a SHORT note for the BUSINESS OWNER (NOT posted to customers): explain the answer/intent of this content, so you understand it & can reply to comments. For QUIZ/GUESS: clearly write the correct answer. Max 1-2 sentences, plain language.
+imageScene = 1-2 English sentences. ${format.scene} The scene MUST fill the ENTIRE frame from top to bottom (no empty/blank areas). Illustration, cartoon, or semi-realistic style is fine. NO text/letters/numbers/logos in the scene.
+${fontRule(lang)}
+Reply with ONLY the JSON object, no other text.`;
+  }
+  return `${persona(lang)}
+${outputLangDirective(lang)}
+Tulis CAPTION + jawaban + adegan gambar untuk konten INTERAKTIF ini, dalam Bahasa Indonesia. Judulnya SUDAH DITENTUKAN (di bawah, oleh user) — JANGAN diubah.
+
+${profileBlock(profile, lang)}
+
+FORMAT KONTEN KALI INI (WAJIB pakai ini, JANGAN diganti ke format lain): ${format.label}.
+Instruksi format: ${format.brief}
+
+${extraBlocks(extra)}JUDUL YANG SUDAH DIPILIH (jangan diulang persis di caption, tapi caption harus jelas nyambung & membangun dari sudut ini, tetap dalam format di atas): "${chosenTitle}"
+
+Untuk GAYA PENULISAN caption, pakai: ${pickWritingStyle(lang)} (tetap konsisten dengan format & nada brand).
+
+Format JSON: {"caption": "...", "jawaban": "...", "imageScene": "...", "fontId": "..."}
+${interaksiCaptionRules(lang)}
+jawaban = penjelasan SINGKAT khusus untuk PEMILIK BISNIS (TIDAK ikut diposting ke pelanggan): jelaskan jawaban/maksud konten ini, supaya kamu paham isinya & siap membalas komentar. Untuk KUIS/TEBAK: tulis jawaban benarnya dengan jelas. Maksimal 1-2 kalimat, bahasa gampang.
+imageScene = 1-2 kalimat Bahasa Indonesia. ${format.scene} Adegan WAJIB mengisi PENUH seluruh bingkai dari atas sampai bawah (tanpa area kosong/polos). Boleh gaya ilustrasi, kartun, atau semi-realistis. TANPA teks/huruf/angka/logo di dalam adegan.
+${fontRule(lang)}
+Jawab HANYA dengan objek JSON itu, tanpa teks lain.`;
 }
 
 export function buildGabungContentPrompt(profile: BusinessProfile, descriptions: string[], lang?: Lang, extra?: string): string {
