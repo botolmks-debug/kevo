@@ -139,6 +139,7 @@ export async function generateDemoContent(
     productDesc,
     LANG,
     DEMO_CALM_TITLE_NOTE + demoCategoryTitleNote(input.businessType),
+    undefined, // konsep — demo tidak pakai fitur Konsep, harus eksplisit undefined (BUKAN posisi ini yang dipakai forDemo)
     true, // forDemo — profil demo kosong, jangan kena topik yang butuh cerita/data personal usaha
   );
   const [contentRes, imgRes] = await Promise.all([
