@@ -202,7 +202,7 @@ export function Landing() {
           </Link>
           <div className="flex items-center gap-2">
             <LinkButton href="/login" variant="secondary" className="px-4 py-2 text-xs sm:text-sm">Masuk</LinkButton>
-            <LinkButton href="/signup" className="px-4 py-2 text-xs sm:text-sm">Coba Gratis</LinkButton>
+            <LinkButton href="/signup" className="px-4 py-2 text-xs sm:text-sm">Daftar</LinkButton>
           </div>
         </div>
       </header>
@@ -218,10 +218,14 @@ export function Landing() {
               Upload fotomu, dapat gambar + caption Instagram siap posting. Cukup dari satu foto—dibantu AI.
             </p>
             <div className="mt-7 flex flex-col items-center gap-3 sm:flex-row md:items-start">
-              <LinkButton href="/signup" className="w-full px-7 py-3.5 sm:w-auto">Coba 5 Konten Gratis</LinkButton>
+              {/* Diarahkan ke /coba (demo langsung, TANPA perlu bikin akun
+                  dulu) — beda dari tombol "Daftar" di nav atas yang ke
+                  /signup. cta-pulse (globals.css) = cincin cahaya berdenyut
+                  halus, biar mata pengunjung otomatis fokus ke sini duluan. */}
+              <LinkButton href="/coba" className="cta-pulse w-full scale-100 px-7 py-3.5 transition-transform hover:scale-105 sm:w-auto">Coba Gratis</LinkButton>
               <LinkButton href="#cara-kerja" variant="secondary" className="w-full px-7 py-3.5 sm:w-auto">Lihat cara kerjanya</LinkButton>
             </div>
-            <p className="mt-3 text-xs text-muted">5 token gratis + refill harian · Tanpa langganan</p>
+            <p className="mt-3 text-xs text-muted">👆 Coba langsung sekarang, tanpa perlu bikin akun dulu — 5 token gratis + refill harian · Tanpa langganan</p>
           </div>
           <HeroAnimation />
         </section>

@@ -107,3 +107,18 @@ h1, h2, h3 {
   font-family: "Poppins", var(--font-sans), sans-serif;
   letter-spacing: -0.01em;
 }
+
+/* Animasi "napas" halus buat tombol CTA utama (mis. "Coba Gratis" di hero) —
+   cincin cahaya yang membesar & memudar berulang, biar mata pengunjung
+   otomatis tertarik ke situ tanpa terasa mengganggu/norak. */
+@keyframes cta-pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(15, 168, 148, 0.55); }
+  70% { box-shadow: 0 0 0 14px rgba(15, 168, 148, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(15, 168, 148, 0); }
+}
+.cta-pulse {
+  animation: cta-pulse-ring 2.2s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cta-pulse { animation: none; }
+}
