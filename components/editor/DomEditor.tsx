@@ -365,11 +365,20 @@ export function DomEditor({
   // Ditangkap di onMouseDown (sebelum fokus pindah), dikembalikan lagi di
   // onChange (setelah user pilih warna) sebelum execCommand dijalankan.
   const savedRangeRef = useRef<{ key: string; range: Range } | null>(null);
+  // Simpan referensi <span> berwarna yang TERAKHIR dibuat oleh swatch —
+  // supaya kalau user klik swatch LAIN lagi tanpa menyeleksi ulang (ganti
+  // pikiran soal warna), klik kedua itu TETAP mengubah bagian yang sama
+  // (bukan diam saja krn savedRangeRef sudah "dipakai habis" di klik
+  // pertama). Direset tiap kali ada seleksi BARU yang tercatat (trackSelection)
+  // — supaya tidak salah "warnai ulang" bagian lama pas user sudah pindah
+  // menyeleksi bagian lain.
+  const lastColoredSpanRef = useRef<{ key: string; span: HTMLSpanElement } | null>(null);
   useEffect(() => {
     // Reset rekaman seleksi warna tiap kali PINDAH sesi edit (baik mulai
     // ngedit elemen baru maupun keluar dari mode edit) — cegah kepakainya
     // seleksi BASI dari teks/elemen sebelumnya yang sudah tidak relevan lagi.
     savedRangeRef.current = null;
+    lastColoredSpanRef.current = null;
     if (editingKey && editRef.current) {
       // styleWithCSS: bikin execCommand("foreColor", ...) hasilkan
       // <span style="color:..."> yang bersih, bukan tag <font color="...">
@@ -590,6 +599,7 @@ export function DomEditor({
     const range = sel.getRangeAt(0);
     if (!editRef.current.contains(range.commonAncestorContainer)) return;
     savedRangeRef.current = { key, range: range.cloneRange() };
+    lastColoredSpanRef.current = null; // ada seleksi BARU — jangan lagi "warnai ulang" span lama
   }
   /**
    * Terapkan warna dari SWATCH (bukan color-wheel) ke bagian teks yang
@@ -600,6 +610,17 @@ export function DomEditor({
    * apa-apa (tombol ini memang HANYA utk pewarnaan-per-seleksi).
    */
   function applySwatchColor(key: string, hex: string) {
+    // Kasus 1: user klik swatch KEDUA dst tanpa menyeleksi ulang (ganti
+    // pikiran soal warna) — tinggal update warna span yang SAMA, jangan
+    // diam saja (itu penyebab "kadang tidak berfungsi" yang dilaporkan).
+    if (lastColoredSpanRef.current && lastColoredSpanRef.current.key === key && editRef.current?.contains(lastColoredSpanRef.current.span)) {
+      lastColoredSpanRef.current.span.style.color = hex;
+      const html = sanitizeEditableHtml(editRef.current.innerHTML);
+      if (key.startsWith("slot-")) onTextChange?.(key.slice(5), html);
+      else if (key.startsWith("item-")) patchItem(key.slice(5), { text: html });
+      return;
+    }
+    // Kasus 2: ada seleksi BARU yang tercatat — proses seperti biasa.
     const saved = savedRangeRef.current;
     if (!saved || saved.key !== key || !editRef.current || editingKey !== key) return;
     try {
@@ -620,7 +641,8 @@ export function DomEditor({
       });
       span.appendChild(fragment);
       range.insertNode(span);
-      savedRangeRef.current = null; // seleksi ini sudah "dipakai" (Range lama tidak valid lagi setelah node dipindah)
+      savedRangeRef.current = null; // Range lama tidak valid lagi setelah node dipindah
+      lastColoredSpanRef.current = { key, span }; // simpan buat klik swatch berikutnya (kasus 1 di atas)
       const html = sanitizeEditableHtml(editRef.current.innerHTML);
       if (key.startsWith("slot-")) onTextChange?.(key.slice(5), html);
       else if (key.startsWith("item-")) patchItem(key.slice(5), { text: html });
@@ -938,6 +960,15 @@ export function DomEditor({
 
   return (
     <div>
+      {/* Toolbar + kanvas dibungkus STICKY — nempel di bawah header (yang
+          juga sticky, tinggi ~64px) saat panel kontrol di bawahnya di-scroll.
+          Sebelumnya user harus scroll naik-turun tiap ganti pengaturan buat
+          lihat hasilnya — sekarang hasilnya selalu kelihatan di layar. z-10
+          (di bawah header yang z-20) biar header tetap menang kalau ada
+          tumpang-tindih pas transisi scroll. bg-surface solid (bukan
+          transparan) supaya konten panel yang di-scroll di baliknya tidak
+          "tembus pandang". */}
+      <div className="sticky top-16 z-10 bg-surface pb-2">
       {/* toolbar: undo/redo + tambah elemen */}
       <div className="mx-auto mb-2 flex flex-wrap items-center gap-2" style={{ width: displayW }}>
         <button type="button" onClick={undo} disabled={histState.past.length === 0} title="Undo (Ctrl+Z)"
@@ -1230,6 +1261,7 @@ export function DomEditor({
           )}
         </div>
         <p className="mt-2 text-xs text-navy/50">Seret elemen langsung — nempel otomatis ke tengah/tepi. Dobel-klik teks = ketik langsung. Kotak hijau di pojok = ubah ukuran, ikon ↻ di pojok atas = putar. Panah = geser halus (Shift = cepat). Dobel-klik logo: terang/gelap. Tombol Delete/Backspace di keyboard = hapus/sembunyikan elemen yang lagi dipilih.</p>
+      </div>
       </div>
 
       {/* overlay foto */}
