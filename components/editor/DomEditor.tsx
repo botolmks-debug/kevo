@@ -1334,6 +1334,24 @@ export function DomEditor({
             </button>
           )}
 
+          {/* Ikon akses Overlay — SELALU muncul (bukan cuma pas klik area
+              kosong foto, yang kadang susah kena kalau foto ketutupan banyak
+              elemen lain) — sama pola dengan ikon matahari/bulan buat logo.
+              Ditaruh pojok kanan-atas kanvas, posisi tetap, tidak bentrok sama
+              elemen template manapun. data-noexport — tidak ikut ke-export. */}
+          {photo && (
+            <button type="button" data-noexport="1"
+              onClick={(e)=>{ e.stopPropagation(); setSelKey("photo"); }}
+              onPointerDown={(e)=>e.stopPropagation()}
+              title="Atur overlay foto (gelap atas/bawah/penuh)"
+              style={{ position:"absolute", right:8, top:8, width:32, height:32, zIndex:101,
+                borderRadius:9999, border: selKey === "photo" ? "2px solid #12B3A0" : "2px solid #ffffff",
+                background: selKey === "photo" ? "#12B3A0" : "rgba(0,0,0,0.45)", color:"#fff",
+                display:"flex", alignItems:"center", justifyContent:"center", fontSize:15, cursor:"pointer", touchAction:"manipulation" }}>
+              🎨
+            </button>
+          )}
+
           {/* garis bantu snap — data-noexport, dikontrol via ref (tanpa re-render) */}
           <div ref={guideVRef} data-noexport="1" style={{ position:"absolute", left:displayW/2-0.5, top:0, width:1, height:"100%", zIndex:98,
             borderLeft:"1.5px dashed #12B3A0", opacity:0, pointerEvents:"none", transition:"opacity 80ms" }} />
