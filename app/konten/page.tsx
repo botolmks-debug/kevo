@@ -341,7 +341,12 @@ export default function KontenPage() {
   // ganti versi di editor (dobel-klik logo / tombol Terang-Gelap).
   const logoDark = businessProfile?.logo ?? null;
   const logoLight = businessProfile?.logoLight ?? null;
-  const defaultLogoVariant: "dark" | "light" = logoLight ? "light" : "dark";
+  // Default SELALU logo gelap (sebelumnya ikut-ikutan pilih terang kalau
+  // logo terang tersedia) — kalau logo gelapnya sendiri ternyata tidak ada
+  // buat bisnis ini, activeLogo di bawah tetap otomatis jatuh ke logo
+  // terang sbg cadangan (logoDark ?? logoLight), jadi aman tidak ada logo
+  // hilang sama sekali.
+  const defaultLogoVariant: "dark" | "light" = "dark";
   const activeLogoVariant = overrides.logoVariant ?? defaultLogoVariant;
   const activeLogo = activeLogoVariant === "dark" ? (logoDark ?? logoLight) : (logoLight ?? logoDark);
   const templateBase = withLogoOverride(

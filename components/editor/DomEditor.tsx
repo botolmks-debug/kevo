@@ -410,7 +410,7 @@ function SelectionColorSwatches({ onPick }: { onPick: (hex: string) => void }) {
 
 export function DomEditor({
   layout, values, overrides, onOverridesChange, onTextChange, photo, logoUrl,
-  socials = [], businessName, logoVariant = "light", canToggleLogo, onLogoVariantChange, exportRef,
+  socials = [], businessName, logoVariant = "dark", canToggleLogo, onLogoVariantChange, exportRef,
 }: Props) {
   // Lebar kanvas RESPONSIF — sebelumnya DISPLAY_W konstan 340px, tidak pernah
   // mengecil di HP. Padding horizontal total di sekitar editor ternyata DUA
@@ -600,12 +600,15 @@ export function DomEditor({
   const DELIVERY_HEADING_H = 34 * dScale;
   const DELIVERY_HEADING_FONT = 28 * dScale;
   const deliveryIds = (overrides.delivery?.ids ?? []).filter((id) => DELIVERY_MAP[id]);
-  const deliveryLabel = overrides.delivery?.label ?? "Available on";
+  const deliveryLabel = overrides.delivery?.label ?? "Tersedia di";
+  const deliveryShowLabel = overrides.delivery?.showLabel ?? true;
   const deliveryDefaultY = Math.round(layout.canvas.height * 0.75);
   const deliveryX = overrides.delivery?.x ?? 60;
   const deliveryY = overrides.delivery?.y ?? deliveryDefaultY;
   const deliveryW = deliveryIds.length > 0 ? deliveryIds.length * CHIP_W + (deliveryIds.length - 1) * DELIVERY_GAP : 0;
-  const deliveryH = DELIVERY_HEADING_H + CHIP_H;
+  // Tinggi heading cuma dihitung kalau labelnya memang ditampilkan — biar
+  // badge-nya rapi naik ke atas (tidak ada jarak kosong) kalau label disembunyikan.
+  const deliveryH = (deliveryShowLabel ? DELIVERY_HEADING_H : 0) + CHIP_H;
 
   const bScale = overrides.badges?.scale ?? 1;
   const BADGE_H = CERT_BADGE_H * bScale;
@@ -629,7 +632,7 @@ export function DomEditor({
     const cur = overrides.delivery;
     const ids = cur?.ids ?? [];
     const next = ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
-    commit({ ...overrides, delivery: { ids: next, x: cur?.x ?? 60, y: cur?.y ?? deliveryDefaultY, label: cur?.label, scale: cur?.scale } });
+    commit({ ...overrides, delivery: { ids: next, x: cur?.x ?? 60, y: cur?.y ?? deliveryDefaultY, label: cur?.label, showLabel: cur?.showLabel, scale: cur?.scale } });
   }
   function toggleBadge(id: string) {
     const cur = overrides.badges;
@@ -809,7 +812,7 @@ export function DomEditor({
     } else if (kind === "logo") {
       onOverridesChange({ ...overrides, logo: { ...layout.logo, ...(overrides.logo ?? {}), x, y } });
     } else if (kind === "delivery") {
-      onOverridesChange({ ...overrides, delivery: { ids: deliveryIds, label: overrides.delivery?.label, scale: overrides.delivery?.scale, x, y } });
+      onOverridesChange({ ...overrides, delivery: { ids: deliveryIds, label: overrides.delivery?.label, showLabel: deliveryShowLabel, scale: overrides.delivery?.scale, x, y } });
     } else if (kind === "badges") {
       onOverridesChange({ ...overrides, badges: { ids: badgeIds, scale: overrides.badges?.scale, x, y } });
     }
@@ -1259,8 +1262,10 @@ export function DomEditor({
             <div ref={registerElem("delivery")}
               onPointerDown={(e)=>{ setSelKey("delivery"); startDrag(e,"delivery",deliveryX,deliveryY,"delivery",Math.max(deliveryW, 200),deliveryH); }}
               style={{ position:"absolute", left:deliveryX*scale, top:deliveryY*scale, cursor:"grab", ...fxStyle("delivery") }}>
-              <div style={{ fontFamily:"Inter", fontWeight:700, fontSize:DELIVERY_HEADING_FONT*scale, color:"#ffffff",
-                height:DELIVERY_HEADING_H*scale, whiteSpace:"nowrap", userSelect:"none" }}>{deliveryLabel}</div>
+              {deliveryShowLabel && (
+                <div style={{ fontFamily:"Inter", fontWeight:700, fontSize:DELIVERY_HEADING_FONT*scale, color:"#ffffff",
+                  height:DELIVERY_HEADING_H*scale, whiteSpace:"nowrap", userSelect:"none" }}>{deliveryLabel}</div>
+              )}
               <div style={{ display:"flex", flexDirection:"row", gap:DELIVERY_GAP*scale, width:deliveryW*scale }}>
                 {deliveryIds.map((id) => (
                   <img key={id} src={`/delivery/${id}.png`} alt="" crossOrigin="anonymous" draggable={false}
@@ -1311,6 +1316,22 @@ export function DomEditor({
               <img src={logoUrl} alt="" crossOrigin="anonymous" draggable={false}
                 style={{ width:"100%", height:"100%", objectFit:"contain", ...IMG_STYLE }} />
             </div>
+          )}
+          {/* Ikon matahari/bulan — cara TAMBAHAN (selain dobel-klik logo yang
+              sudah ada) buat ganti varian logo terang/gelap, muncul cuma saat
+              logo lagi dipilih. Matahari = logo TERANG lagi tampil (klik buat
+              ganti ke gelap), Bulan = logo GELAP lagi tampil (klik buat ganti
+              ke terang). data-noexport — ikon UI ini tidak ikut ke-export. */}
+          {logoUrl && canToggleLogo && selKey === "logo" && (
+            <button type="button" data-noexport="1"
+              onClick={(e)=>{ e.stopPropagation(); onLogoVariantChange?.(logoVariant==="light"?"dark":"light"); }}
+              onPointerDown={(e)=>e.stopPropagation()}
+              title={logoVariant==="light" ? "Logo terang aktif — klik buat ganti ke gelap" : "Logo gelap aktif — klik buat ganti ke terang"}
+              style={{ position:"absolute", left:lg.x*scale-10, top:lg.y*scale-10, width:28, height:28, zIndex:101,
+                borderRadius:9999, border:"2px solid #ffffff", background:"#12B3A0", color:"#fff",
+                display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, cursor:"pointer", touchAction:"manipulation" }}>
+              {logoVariant === "light" ? "☀️" : "🌙"}
+            </button>
           )}
 
           {/* garis bantu snap — data-noexport, dikontrol via ref (tanpa re-render) */}
@@ -1433,7 +1454,12 @@ export function DomEditor({
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
           <span className="font-semibold text-navy">Ukuran Pesan-antar:</span>
           <input type="range" min={50} max={200} value={Math.round(dScale*100)} title="Ukuran badge pesan-antar"
-            onChange={(e)=>commit({ ...overrides, delivery: { ids: deliveryIds, x: deliveryX, y: deliveryY, label: overrides.delivery?.label, scale: Number(e.target.value)/100 } })} />
+            onChange={(e)=>commit({ ...overrides, delivery: { ids: deliveryIds, x: deliveryX, y: deliveryY, label: overrides.delivery?.label, showLabel: deliveryShowLabel, scale: Number(e.target.value)/100 } })} />
+          <button type="button" title={`Teks "${deliveryLabel}" di atas badge`}
+            onClick={()=>commit({ ...overrides, delivery: { ids: deliveryIds, x: deliveryX, y: deliveryY, label: overrides.delivery?.label, scale: dScale, showLabel: !deliveryShowLabel } })}
+            className={`rounded-lg border px-2.5 py-1 font-medium ${deliveryShowLabel?"border-primary bg-primary/10 text-primary":"border-navy/15 text-navy/70"}`}>
+            {deliveryShowLabel ? `"${deliveryLabel}": Tampil` : `"${deliveryLabel}": Sembunyi`}
+          </button>
         </div>
       )}
       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">

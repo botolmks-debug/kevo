@@ -107,7 +107,7 @@ export type AspectRatio = "4:5" | "1:1" | "9:16";
  * persis lintas ketiga rasio (cuma beda box/font) supaya nilai form tidak
  * hilang saat user ganti rasio.
  */
-export type DeliveryBadges = { ids: string[]; x: number; y: number; label?: string; scale?: number; align?: "left" | "center" | "right" };
+export type DeliveryBadges = { ids: string[]; x: number; y: number; label?: string; showLabel?: boolean; scale?: number; align?: "left" | "center" | "right" };
 
 /** Badge sertifikasi produk Indonesia (Halal/SNI/BPOM) — tanpa heading. */
 export type CertBadgesLayout = { ids: string[]; x: number; y: number; scale?: number };
