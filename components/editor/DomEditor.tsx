@@ -287,6 +287,90 @@ function SliderToggle({ label, valueLabel, children }: { label: string; valueLab
   );
 }
 
+/**
+ * Panel kontrol jadi "bottom sheet" mengambang KHUSUS di HP (pola
+ * Google Maps/Canva/CapCut) — bisa ditarik naik (lebih besar, lihat semua
+ * kontrol) atau ditarik turun (kecil, kanvas kelihatan lebih banyak).
+ * SEBELUMNYA kanvas yang dibuat sticky supaya tetap kelihatan pas scroll ke
+ * panel — itu ternyata masalah baru di HP (kanvas besar + sticky = makan
+ * hampir semua layar, panelnya kepotong). Sekarang dibalik: panelnya yang
+ * "mengambang" & selalu bisa diakses TERLEPAS dari posisi scroll, kanvas
+ * cukup mengalir normal.
+ *
+ * Desktop (breakpoint sm: ke atas) TIDAK terpengaruh sama sekali — kembali
+ * jadi panel biasa yang mengalir di bawah kanvas seperti sebelum ada
+ * bottom-sheet ini (via kelas sm:static sm:h-auto yang mengalahkan style HP).
+ *
+ * Teknis penting: saat TIDAK sedang di-drag, tinggi diatur lewat KELAS
+ * Tailwind (h-[88px]/h-[50vh]/h-[85vh]) — supaya sm:h-auto bisa "menang" di
+ * desktop lewat cascade CSS biasa. Saat SEDANG di-drag, dipakai height
+ * inline (butuh update per-piksel real-time selagi jari bergerak) — tapi ini
+ * AMAN karena drag cuma bisa dipicu dari pegangan yang di-sembunyikan total
+ * di desktop (sm:hidden), jadi inline style itu tidak akan pernah aktif di
+ * desktop sama sekali.
+ */
+function BottomSheetPanel({ children }: { children: React.ReactNode }) {
+  type SheetState = "peek" | "half" | "full";
+  const [sheetState, setSheetState] = useState<SheetState>("half");
+  const [dragHeightPx, setDragHeightPx] = useState<number | null>(null); // null = pakai kelas CSS (tidak sedang drag)
+  const dragStartRef = useRef<{ startY: number; startHeightPx: number } | null>(null);
+
+  const PEEK_PX = 88;
+
+  function stateToPx(s: SheetState): number {
+    if (s === "peek") return PEEK_PX;
+    if (typeof window === "undefined") return 400; // fallback SSR — tidak pernah benar2 dipakai (drag cuma di client)
+    return s === "half" ? window.innerHeight * 0.5 : window.innerHeight * 0.85;
+  }
+
+  function onHandlePointerDown(e: React.PointerEvent) {
+    dragStartRef.current = { startY: e.clientY, startHeightPx: stateToPx(sheetState) };
+    setDragHeightPx(dragStartRef.current.startHeightPx);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+  function onHandlePointerMove(e: React.PointerEvent) {
+    if (!dragStartRef.current) return;
+    const dy = e.clientY - dragStartRef.current.startY; // geser ke ATAS = dy negatif = tinggi bertambah
+    const next = dragStartRef.current.startHeightPx - dy;
+    const min = PEEK_PX, max = window.innerHeight * 0.92;
+    setDragHeightPx(Math.min(max, Math.max(min, next)));
+  }
+  function onHandlePointerUp() {
+    if (!dragStartRef.current) return;
+    dragStartRef.current = null;
+    const h = dragHeightPx ?? PEEK_PX;
+    const half = window.innerHeight * 0.5, full = window.innerHeight * 0.85;
+    const candidates: [SheetState, number][] = [["peek", PEEK_PX], ["half", half], ["full", full]];
+    let nearest: SheetState = "half", best = Infinity;
+    for (const [s, v] of candidates) { const d = Math.abs(v - h); if (d < best) { best = d; nearest = s; } }
+    setSheetState(nearest);
+    setDragHeightPx(null); // balik ke kelas CSS — biar tetap benar kalau layar di-rotate/resize setelahnya
+  }
+
+  const restHeightClass = sheetState === "peek" ? "h-[88px]" : sheetState === "half" ? "h-[50vh]" : "h-[85vh]";
+
+  return (
+    <div
+      className={`fixed inset-x-0 bottom-0 z-40 flex flex-col rounded-t-2xl border-t border-line bg-surface shadow-[0_-6px_24px_rgba(0,0,0,0.15)] sm:static sm:z-auto sm:mt-3 sm:h-auto sm:rounded-xl sm:border sm:shadow-none ${
+        dragHeightPx === null ? `transition-[height] duration-200 ease-out ${restHeightClass}` : ""
+      }`}
+      style={dragHeightPx !== null ? { height: dragHeightPx } : undefined}>
+      {/* Pegangan tarik — CUMA tampil di HP (sm:hidden). Karena elemen ini
+          yang jadi satu-satunya pemicu drag, style inline di atas tidak
+          akan pernah aktif di desktop. */}
+      <div className="flex shrink-0 cursor-grab touch-none select-none flex-col items-center gap-1 py-2.5 active:cursor-grabbing sm:hidden"
+        onPointerDown={onHandlePointerDown} onPointerMove={onHandlePointerMove}
+        onPointerUp={onHandlePointerUp} onPointerCancel={onHandlePointerUp}>
+        <div className="h-1.5 w-12 rounded-full bg-navy/25" />
+        {sheetState === "peek" && <span className="text-[11px] text-navy/50">Tarik ke atas buat edit</span>}
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 sm:overflow-visible sm:px-0 sm:pb-0">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // Palet lebih luas (24 warna) drpd percobaan swatch pertama (10 warna) —
 // user minta lebih banyak pilihan drpd terlalu terbatas, sambil tetap
 // menghindari dialog color-wheel native yang rapuh utk pewarnaan-per-seleksi.
@@ -962,15 +1046,14 @@ export function DomEditor({
 
   return (
     <div>
-      {/* Toolbar + kanvas dibungkus STICKY — nempel di bawah header (yang
-          juga sticky, tinggi ~64px) saat panel kontrol di bawahnya di-scroll.
-          Sebelumnya user harus scroll naik-turun tiap ganti pengaturan buat
-          lihat hasilnya — sekarang hasilnya selalu kelihatan di layar. z-10
-          (di bawah header yang z-20) biar header tetap menang kalau ada
-          tumpang-tindih pas transisi scroll. bg-surface solid (bukan
-          transparan) supaya konten panel yang di-scroll di baliknya tidak
-          "tembus pandang". */}
-      <div className="sticky top-16 z-10 bg-surface pb-2">
+      {/* Toolbar + kanvas TIDAK PERLU lagi sticky — sebelumnya dibuat sticky
+          biar tetap kelihatan pas scroll ke panel kontrol, tapi itu bikin
+          masalah baru di HP (preview besar + sticky = makan hampir semua
+          layar, panelnya jadi kepotong/susah diakses). Sekarang panelnya
+          sendiri yang jadi "bottom sheet" mengambang & selalu bisa diakses
+          (lihat BottomSheetPanel di bawah) — jadi kanvas cukup mengalir
+          normal seperti biasa. */}
+      <div>
       {/* toolbar: undo/redo + tambah elemen */}
       <div className="mx-auto mb-2 flex flex-wrap items-center gap-2" style={{ width: displayW }}>
         <button type="button" onClick={undo} disabled={histState.past.length === 0} title="Undo (Ctrl+Z)"
@@ -1069,6 +1152,15 @@ export function DomEditor({
                   stageRef.current?.focus();
                   startDrag(e,"slot",slot.box.x,slot.box.y,k,slot.box.width,slot.box.height,slot.id);
                 }}
+                // Jalur CADANGAN buat masuk mode edit — deteksi dobel-tap
+                // manual di atas (berbasis jarak waktu antar pointerdown)
+                // kadang tidak konsisten di simulasi sentuhan Chrome DevTools
+                // (mode "Responsive"/emulasi HP di browser desktop), karena
+                // itu cuma menerjemahkan klik mouse jadi sentuhan, bukan
+                // sentuhan sungguhan. onDoubleClick ini event BAWAAN browser
+                // yang lebih standar & konsisten dipicu di kedua kasus (HP
+                // sungguhan maupun emulasi DevTools).
+                onDoubleClick={(e)=>{ e.stopPropagation(); setEditingKey(`slot-${slot.id}`); }}
                 style={{ position:"absolute", left:slot.box.x*scale, top:slot.box.y*scale, width:slot.box.width*scale, height:slot.box.height*scale,
                   display:"flex", alignItems:"flex-start", justifyContent:justify, cursor:"grab", ...fxStyle(`slot-${slot.id}`) }}>
                 {editingKey === `slot-${slot.id}` ? (
@@ -1081,7 +1173,15 @@ export function DomEditor({
                     style={{ fontFamily:`"${slot.fontFamily}"`, fontSize:fitted*scale, fontWeight:slot.fontWeight ?? 400,
                       color:slot.color, textAlign:slot.align, lineHeight:1, textShadow:buildTextShadow(slot,scale), ...buildOutlineStyle(slot,scale), whiteSpace:"pre-wrap",
                       ...textStyleExtras(slot),
-                      outline:"none", cursor:"text", minWidth:20 }}
+                      // touchAction "manipulation" (BUKAN "none" bawaan stage
+                      // di atasnya) — WAJIB, supaya gestur seleksi teks NATIVE
+                      // browser di HP (dobel-tap pilih 1 kata, tarik handle
+                      // buat perluas ke beberapa kata) tetap jalan normal saat
+                      // sedang mengetik. touch-action:"none" di level stage
+                      // (buat drag-geser elemen) ikut mematikan SEMUA gestur
+                      // sentuh bawaan di elemen anak kalau tidak di-override
+                      // di sini — termasuk gestur seleksi teks itu sendiri.
+                      touchAction:"manipulation", outline:"none", cursor:"text", minWidth:20 }}
                     dangerouslySetInnerHTML={{ __html: value }} />
                 ) : (
                   <div style={{ fontFamily:`"${slot.fontFamily}"`, fontSize:fitted*scale, fontWeight:slot.fontWeight ?? 400,
@@ -1110,6 +1210,8 @@ export function DomEditor({
                 stageRef.current?.focus();
                 startDrag(e,"item",it.x,it.y,k,it.w,it.h,it.id);
               }}
+              // Jalur cadangan (lihat komentar sejenis di slot text di atas)
+              onDoubleClick={(e)=>{ if (it.kind === "text") { e.stopPropagation(); setEditingKey(`item-${it.id}`); } }}
               style={{ position:"absolute", left:it.x*scale, top:it.y*scale, width:it.w*scale, height:it.h*scale, cursor:"grab", ...fxStyle(`item-${it.id}`) }}>
               {it.kind === "text" ? (
                 editingKey === `item-${it.id}` ? (
@@ -1123,7 +1225,7 @@ export function DomEditor({
                       color:it.color ?? "#ffffff", lineHeight:1.1, whiteSpace:"pre-wrap", textAlign:it.align ?? "left", width:"100%",
                       textShadow: buildTextShadow(it, scale), ...buildOutlineStyle(it, scale),
                       ...textStyleExtras(it),
-                      outline:"none", cursor:"text", minWidth:20 }}
+                      touchAction:"manipulation", outline:"none", cursor:"text", minWidth:20 }}
                     dangerouslySetInnerHTML={{ __html: it.text ?? "" }} />
                 ) : (
                   <div style={{ fontFamily:`"${it.fontFamily ?? "Inter"}"`, fontSize:(it.fontSize ?? 64)*scale, fontWeight:it.fontWeight ?? 800,
@@ -1263,10 +1365,12 @@ export function DomEditor({
             </div>
           )}
         </div>
-        <p className="mt-2 text-xs text-navy/50">Klik elemen apa pun (teks, foto, logo, sosmed) buat munculkan pengaturannya di bawah. Seret elemen langsung — nempel otomatis ke tengah/tepi. Dobel-klik teks = ketik langsung. Kotak hijau di pojok = ubah ukuran, ikon ↻ di pojok atas = putar. Panah = geser halus (Shift = cepat). Dobel-klik logo: terang/gelap. Tombol Delete/Backspace di keyboard = hapus/sembunyikan elemen yang lagi dipilih.</p>
+        <p className="mt-2 text-xs text-navy/50 sm:hidden">Klik elemen apa pun (teks, foto, logo, sosmed) buat munculkan pengaturannya di panel bawah. Tarik pegangan di atas panel buat perbesar/perkecil. Seret elemen langsung — nempel otomatis ke tengah/tepi. Dobel-klik teks = ketik langsung. Panah = geser halus (Shift = cepat). Tombol Delete/Backspace di keyboard = hapus/sembunyikan elemen yang lagi dipilih.</p>
+        <p className="mt-2 hidden text-xs text-navy/50 sm:block">Klik elemen apa pun (teks, foto, logo, sosmed) buat munculkan pengaturannya di bawah. Seret elemen langsung — nempel otomatis ke tengah/tepi. Dobel-klik teks = ketik langsung. Kotak hijau di pojok = ubah ukuran, ikon ↻ di pojok atas = putar. Panah = geser halus (Shift = cepat). Dobel-klik logo: terang/gelap. Tombol Delete/Backspace di keyboard = hapus/sembunyikan elemen yang lagi dipilih.</p>
       </div>
       </div>
 
+      <BottomSheetPanel>
       {/* Overlay foto — SEKARANG kontekstual: cuma muncul kalau user klik area
           foto kosong di kanvas (selKey === "photo"), bukan selalu nongol. */}
       {photo && selKey === "photo" && (
@@ -1743,6 +1847,7 @@ export function DomEditor({
           </div>
         )}
       </div>
+      </BottomSheetPanel>
     </div>
   );
 }
