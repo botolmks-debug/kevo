@@ -247,7 +247,11 @@ function ShapeView({ it, scale }: { it: FreeItem; scale: number }) {
       {it.shapeType === "arrow-block" && <polygon points="0,30 55,30 55,5 100,50 55,95 55,70 0,70" fill={fill} {...strokeProps} />}
       {it.shapeType === "arrow-curve" && (
         <>
-          <path d="M12,88 C12,28 50,12 90,12" fill="none" stroke={fill} strokeWidth={8}
+          {/* Ketebalan garis panah SEBELUMNYA hardcode 8 (tidak bisa diatur) —
+              sekarang ambil dari it.strokeWidth (default 8 kalau belum
+              pernah diatur), dikontrol lewat slider "Ketebalan panah" di
+              panel (lihat kontrol shape di bawah). */}
+          <path d="M12,88 C12,28 50,12 90,12" fill="none" stroke={fill} strokeWidth={it.strokeWidth || 8}
             strokeLinecap="round" vectorEffect="non-scaling-stroke" />
           <polygon points="76,2 100,12 80,28" fill={fill} {...strokeProps} />
         </>
@@ -1862,22 +1866,37 @@ export function DomEditor({
                 className="h-10 w-12 shrink-0 rounded border border-navy/15 sm:h-8 sm:w-9" />
             </label>
             <div className="flex items-center gap-2">
-              <label className="flex shrink-0 items-center gap-2 font-medium text-navy/70">
-                <input type="checkbox" checked={(selItem.strokeWidth ?? 0) > 0}
-                  onChange={(e)=>patchItem(selItem.id, { strokeWidth: e.target.checked ? 3 : 0, stroke: selItem.stroke ?? "#000000" })}
-                  className="h-5 w-5 sm:h-4 sm:w-4" />
-                Garis tepi
-              </label>
-              {(selItem.strokeWidth ?? 0) > 0 && (
+              {selItem.shapeType === "arrow-curve" ? (
+                // Panah Lengkung: strokeWidth di sini artinya KETEBALAN GARIS
+                // panahnya sendiri (bukan garis tepi/border di sekeliling
+                // bentuk isi seperti shape lain) — makanya kontrolnya beda,
+                // slider langsung tanpa checkbox on/off (ketebalannya memang
+                // selalu relevan, tidak ada mode "tanpa garis" buat panah).
+                <SliderToggle label="Ketebalan panah" valueLabel={`${selItem.strokeWidth || 8}`}>
+                  <input type="range" min={2} max={24} value={selItem.strokeWidth || 8}
+                    onChange={(e)=>patchItem(selItem.id, { strokeWidth: Number(e.target.value) })}
+                    className="h-6 w-full accent-primary sm:h-auto sm:w-24" />
+                </SliderToggle>
+              ) : (
                 <>
-                  <input type="color" value={selItem.stroke ?? "#000000"}
-                    onChange={(e)=>patchItem(selItem.id, { stroke: e.target.value })}
-                    className="h-10 w-12 shrink-0 rounded border border-navy/15 sm:h-8 sm:w-9" />
-                  <SliderToggle label="Tebal" valueLabel={`${selItem.strokeWidth ?? 0}`}>
-                    <input type="range" min={1} max={20} value={selItem.strokeWidth ?? 0}
-                      onChange={(e)=>patchItem(selItem.id, { strokeWidth: Number(e.target.value) })}
-                      className="h-6 w-full accent-primary sm:h-auto sm:w-24" />
-                  </SliderToggle>
+                  <label className="flex shrink-0 items-center gap-2 font-medium text-navy/70">
+                    <input type="checkbox" checked={(selItem.strokeWidth ?? 0) > 0}
+                      onChange={(e)=>patchItem(selItem.id, { strokeWidth: e.target.checked ? 3 : 0, stroke: selItem.stroke ?? "#000000" })}
+                      className="h-5 w-5 sm:h-4 sm:w-4" />
+                    Garis tepi
+                  </label>
+                  {(selItem.strokeWidth ?? 0) > 0 && (
+                    <>
+                      <input type="color" value={selItem.stroke ?? "#000000"}
+                        onChange={(e)=>patchItem(selItem.id, { stroke: e.target.value })}
+                        className="h-10 w-12 shrink-0 rounded border border-navy/15 sm:h-8 sm:w-9" />
+                      <SliderToggle label="Tebal" valueLabel={`${selItem.strokeWidth ?? 0}`}>
+                        <input type="range" min={1} max={20} value={selItem.strokeWidth ?? 0}
+                          onChange={(e)=>patchItem(selItem.id, { strokeWidth: Number(e.target.value) })}
+                          className="h-6 w-full accent-primary sm:h-auto sm:w-24" />
+                      </SliderToggle>
+                    </>
+                  )}
                 </>
               )}
             </div>
