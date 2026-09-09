@@ -354,7 +354,9 @@ export function DomEditor({
   const displayH = layout.canvas.height * scale;
   const slots = textSlots(layout);
   // selKey: "slot-<id>" | "logo" | "footer" | "delivery" | "badges" | "item-<id>" | ""
-  const [selKey, setSelKey] = useState<string>(slots[0] ? `slot-${slots[0].id}` : "");
+  // Panel kosong secara default (tidak auto-pilih Judul) — kontrol baru
+  // muncul begitu user KLIK sesuatu di kanvas, bukan langsung penuh sejak awal.
+  const [selKey, setSelKey] = useState<string>("");
   // Dobel-klik teks → ketik langsung di kanvas (contentEditable, commit saat blur/Enter)
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [shapeMenuOpen, setShapeMenuOpen] = useState(false);
@@ -653,7 +655,7 @@ export function DomEditor({
   }
   function deleteItem(id: string) {
     commit({ ...overrides, items: items.filter((it) => it.id !== id) });
-    setSelKey(slots[0] ? `slot-${slots[0].id}` : "");
+    setSelKey(""); // kembali ke panel kosong, bukan auto-pilih Judul
   }
 
   // ----- tambah elemen bebas -----
@@ -953,7 +955,7 @@ export function DomEditor({
     selSlot ? (selSlot.label ?? selSlot.id)
     : selItem ? (selItem.kind === "text" ? "Teks tambahan" : selItem.kind === "shape" ? "Bentuk" : "Gambar tambahan")
     : selKey === "logo" ? "Logo" : selKey === "footer" ? "Sosmed" : selKey === "delivery" ? "Pesan-antar"
-    : selKey === "badges" ? "Sertifikasi" : "";
+    : selKey === "badges" ? "Sertifikasi" : selKey === "photo" ? "Foto latar" : "";
 
   const IMG_STYLE: React.CSSProperties = { pointerEvents: "none", userSelect: "none" };
   const histState = histRef.current;
@@ -1016,6 +1018,7 @@ export function DomEditor({
       <div className="mx-auto" style={{ width: displayW }}>
         <div ref={(el) => { stageRef.current = el; (exportRef as React.MutableRefObject<HTMLDivElement | null>).current = el; }}
           onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
+          onPointerDown={(e)=>{ if (e.target === e.currentTarget) setSelKey("photo"); }} // klik area kosong (bukan kena elemen lain) = pilih "Foto latar", munculkan kontrol Overlay
           onKeyDown={onKeyDown} tabIndex={0}
           style={{ position:"relative", width:displayW, height:displayH, borderRadius:0, overflow:"hidden", background:"#111", touchAction:"none", outline:"none" }}>
 
@@ -1260,12 +1263,13 @@ export function DomEditor({
             </div>
           )}
         </div>
-        <p className="mt-2 text-xs text-navy/50">Seret elemen langsung — nempel otomatis ke tengah/tepi. Dobel-klik teks = ketik langsung. Kotak hijau di pojok = ubah ukuran, ikon ↻ di pojok atas = putar. Panah = geser halus (Shift = cepat). Dobel-klik logo: terang/gelap. Tombol Delete/Backspace di keyboard = hapus/sembunyikan elemen yang lagi dipilih.</p>
+        <p className="mt-2 text-xs text-navy/50">Klik elemen apa pun (teks, foto, logo, sosmed) buat munculkan pengaturannya di bawah. Seret elemen langsung — nempel otomatis ke tengah/tepi. Dobel-klik teks = ketik langsung. Kotak hijau di pojok = ubah ukuran, ikon ↻ di pojok atas = putar. Panah = geser halus (Shift = cepat). Dobel-klik logo: terang/gelap. Tombol Delete/Backspace di keyboard = hapus/sembunyikan elemen yang lagi dipilih.</p>
       </div>
       </div>
 
-      {/* overlay foto */}
-      {photo && (
+      {/* Overlay foto — SEKARANG kontekstual: cuma muncul kalau user klik area
+          foto kosong di kanvas (selKey === "photo"), bukan selalu nongol. */}
+      {photo && selKey === "photo" && (
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
           <span className="font-semibold text-navy">Overlay foto:</span>
           {([["none","Tanpa"],["bottom","Gelap bawah"],["top","Gelap atas"],["solid","Penuh"]] as const).map(([t, label]) => (
@@ -1287,8 +1291,8 @@ export function DomEditor({
         </div>
       )}
 
-      {/* footer sosmed: arah + ukuran */}
-      {(visSocials.length > 0 || businessName) && (
+      {/* Sosmed — kontekstual: cuma muncul kalau footer di kanvas diklik/dipilih */}
+      {(visSocials.length > 0 || businessName) && selKey === "footer" && (
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
           <span className="font-semibold text-navy">Sosmed:</span>
           <button type="button" onClick={()=>commit({ ...overrides, footer: { x: fl.x, y: fl.y, ...(overrides.footer ?? {}), direction: "row" } })}
@@ -1308,7 +1312,9 @@ export function DomEditor({
         </div>
       )}
 
-      {/* toggle badge pesan-antar + sertifikasi */}
+      {/* toggle badge pesan-antar + sertifikasi — TETAP SELALU KELIHATAN
+          (ini yang menentukan elemen ADA atau tidak di kanvas, beda dari
+          kontrol styling-nya yang cuma relevan setelah elemen itu dipilih). */}
       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
         <span className="font-semibold text-navy">Pesan-antar:</span>
         {DELIVERY_PLATFORMS.map((p) => (
@@ -1317,11 +1323,15 @@ export function DomEditor({
             {p.label}
           </button>
         ))}
-        {deliveryIds.length > 0 && (
+      </div>
+      {/* Ukuran Pesan-antar — kontekstual, muncul setelah elemennya dipilih di kanvas */}
+      {deliveryIds.length > 0 && selKey === "delivery" && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+          <span className="font-semibold text-navy">Ukuran Pesan-antar:</span>
           <input type="range" min={50} max={200} value={Math.round(dScale*100)} title="Ukuran badge pesan-antar"
             onChange={(e)=>commit({ ...overrides, delivery: { ids: deliveryIds, x: deliveryX, y: deliveryY, label: overrides.delivery?.label, scale: Number(e.target.value)/100 } })} />
-        )}
-      </div>
+        </div>
+      )}
       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
         <span className="font-semibold text-navy">Sertifikasi:</span>
         {CERT_BADGES.map((b) => (
@@ -1330,15 +1340,23 @@ export function DomEditor({
             {b.label}
           </button>
         ))}
-        {badgeIds.length > 0 && (
+      </div>
+      {/* Ukuran Sertifikasi — kontekstual, muncul setelah elemennya dipilih di kanvas */}
+      {badgeIds.length > 0 && selKey === "badges" && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+          <span className="font-semibold text-navy">Ukuran Sertifikasi:</span>
           <input type="range" min={50} max={200} value={Math.round(bScale*100)} title="Ukuran badge sertifikasi"
             onChange={(e)=>commit({ ...overrides, badges: { ids: badgeIds, x: badgesX, y: badgesY, scale: Number(e.target.value)/100 } })} />
-        )}
-      </div>
+        </div>
+      )}
 
       {/* pemilih elemen */}
       <div className="mt-3 rounded-xl border border-navy/10 p-3">
         <div className="mb-2 flex flex-wrap gap-2">
+          {photo && (
+            <button type="button" onClick={()=>setSelKey("photo")}
+              className={`rounded-full px-3.5 py-2 sm:px-3 sm:py-1 text-xs font-semibold ${selKey==="photo"?"bg-primary text-white":"bg-navy/10 text-navy"}`}>Foto</button>
+          )}
           {slots.map((s) => (
             <button key={s.id} type="button" onClick={()=>setSelKey(`slot-${s.id}`)}
               className={`rounded-full px-3.5 py-2 sm:px-3 sm:py-1 text-xs font-semibold ${selKey===`slot-${s.id}`?"bg-primary text-white":getFx(`slot-${s.id}`).hidden?"bg-navy/5 text-navy/40 italic":"bg-navy/10 text-navy"}`}>
@@ -1372,7 +1390,7 @@ export function DomEditor({
         {/* kontrol umum: opacity + rotasi + layer (semua elemen).
             MOBILE: satu kontrol per baris, penuh lebar, target sentuh besar.
             sm ke atas: kembali ke baris ringkas seperti versi desktop lama. */}
-        {selKey && (
+        {selKey && selKey !== "photo" && (
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-2 text-xs">
             <span className="font-semibold text-navy">{selLabel}</span>
             <SliderToggle label="Transparansi" valueLabel={`${Math.round((selFx.opacity ?? 1)*100)}%`}>
@@ -1482,68 +1500,77 @@ export function DomEditor({
                 className={`flex-1 rounded-lg border px-2.5 py-2.5 underline sm:flex-none sm:py-1 ${selSlot.underline ? "border-primary bg-primary/10 text-primary" : "border-navy/15 text-navy/70"}`}>U</button>
             </div>
 
-            <div className="mt-3 flex flex-col gap-2.5 sm:mt-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 text-xs">
-              <SliderToggle label="Tilt X (perspective)" valueLabel={`${selSlot.tiltX ?? 0}°`}>
-                <input type="range" min={-45} max={45} value={selSlot.tiltX ?? 0}
-                  onChange={(e)=>patchSlot(selSlot.id, { tiltX: Number(e.target.value) })}
-                  className="h-6 w-full accent-primary" />
-              </SliderToggle>
-              <SliderToggle label="Tilt Y (perspective)" valueLabel={`${selSlot.tiltY ?? 0}°`}>
-                <input type="range" min={-45} max={45} value={selSlot.tiltY ?? 0}
-                  onChange={(e)=>patchSlot(selSlot.id, { tiltY: Number(e.target.value) })}
-                  className="h-6 w-full accent-primary" />
-              </SliderToggle>
-              {(selSlot.tiltX || selSlot.tiltY) ? (
-                <button type="button" onClick={()=>patchSlot(selSlot.id, { tiltX: 0, tiltY: 0 })}
-                  className="shrink-0 rounded border border-navy/15 px-2.5 py-1.5 text-navy/60">Reset tilt</button>
-              ) : null}
-            </div>
+            {/* Tilt/Shadow/Outline dikelompokkan jadi 1 tombol buka-tutup —
+                biar tidak menambah panjang panel kalau memang tidak dipakai
+                (kebanyakan konten tidak butuh efek ini tiap saat). */}
+            <div className="mt-3 sm:mt-2">
+              <SliderToggle label="Efek Lanjutan" valueLabel={[selSlot.tiltX || selSlot.tiltY ? "Tilt" : "", selSlot.shadow ? "Shadow" : "", selSlot.outline?.width ? "Outline" : ""].filter(Boolean).join(" + ") || undefined}>
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 text-xs">
+                    <SliderToggle label="Tilt X (perspective)" valueLabel={`${selSlot.tiltX ?? 0}°`}>
+                      <input type="range" min={-45} max={45} value={selSlot.tiltX ?? 0}
+                        onChange={(e)=>patchSlot(selSlot.id, { tiltX: Number(e.target.value) })}
+                        className="h-6 w-full accent-primary" />
+                    </SliderToggle>
+                    <SliderToggle label="Tilt Y (perspective)" valueLabel={`${selSlot.tiltY ?? 0}°`}>
+                      <input type="range" min={-45} max={45} value={selSlot.tiltY ?? 0}
+                        onChange={(e)=>patchSlot(selSlot.id, { tiltY: Number(e.target.value) })}
+                        className="h-6 w-full accent-primary" />
+                    </SliderToggle>
+                    {(selSlot.tiltX || selSlot.tiltY) ? (
+                      <button type="button" onClick={()=>patchSlot(selSlot.id, { tiltX: 0, tiltY: 0 })}
+                        className="shrink-0 rounded border border-navy/15 px-2.5 py-1.5 text-navy/60">Reset tilt</button>
+                    ) : null}
+                  </div>
 
-            <div className="mt-3 flex flex-col gap-2.5 sm:mt-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 text-xs">
-              <label className="flex items-center gap-2 font-medium text-navy/70">
-                <input type="checkbox" checked={!!selSlot.shadow}
-                  onChange={(e)=>patchSlot(selSlot.id, { shadow: e.target.checked ? { blur: 8, color: "#000000", opacity: 0.6 } : null })}
-                  className="h-5 w-5 sm:h-4 sm:w-4" />
-                Shadow
-              </label>
-              {selSlot.shadow && (
-                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-                  <SliderToggle label="Blur" valueLabel={`${selSlot.shadow.blur}`}>
-                    <input type="range" min={0} max={40} value={selSlot.shadow.blur} title="Blur"
-                      onChange={(e)=>patchSlot(selSlot.id, { shadow: { ...selSlot.shadow!, blur: Number(e.target.value) } })}
-                      className="h-6 w-full accent-primary sm:h-auto sm:w-24" />
-                  </SliderToggle>
-                  <input type="color" value={selSlot.shadow.color}
-                    onChange={(e)=>patchSlot(selSlot.id, { shadow: { ...selSlot.shadow!, color: e.target.value } })}
-                    className="h-10 w-12 shrink-0 rounded border border-navy/15 sm:h-7 sm:w-8" />
-                  <SliderToggle label="Opasitas" valueLabel={`${Math.round(selSlot.shadow.opacity*100)}%`}>
-                    <input type="range" min={10} max={100} value={Math.round(selSlot.shadow.opacity*100)} title="Opasitas"
-                      onChange={(e)=>patchSlot(selSlot.id, { shadow: { ...selSlot.shadow!, opacity: Number(e.target.value)/100 } })}
-                      className="h-6 w-full accent-primary sm:h-auto sm:w-24" />
-                  </SliderToggle>
-                </div>
-              )}
-            </div>
+                  <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 text-xs">
+                    <label className="flex items-center gap-2 font-medium text-navy/70">
+                      <input type="checkbox" checked={!!selSlot.shadow}
+                        onChange={(e)=>patchSlot(selSlot.id, { shadow: e.target.checked ? { blur: 8, color: "#000000", opacity: 0.6 } : null })}
+                        className="h-5 w-5 sm:h-4 sm:w-4" />
+                      Shadow
+                    </label>
+                    {selSlot.shadow && (
+                      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+                        <SliderToggle label="Blur" valueLabel={`${selSlot.shadow.blur}`}>
+                          <input type="range" min={0} max={40} value={selSlot.shadow.blur} title="Blur"
+                            onChange={(e)=>patchSlot(selSlot.id, { shadow: { ...selSlot.shadow!, blur: Number(e.target.value) } })}
+                            className="h-6 w-full accent-primary sm:h-auto sm:w-24" />
+                        </SliderToggle>
+                        <input type="color" value={selSlot.shadow.color}
+                          onChange={(e)=>patchSlot(selSlot.id, { shadow: { ...selSlot.shadow!, color: e.target.value } })}
+                          className="h-10 w-12 shrink-0 rounded border border-navy/15 sm:h-7 sm:w-8" />
+                        <SliderToggle label="Opasitas" valueLabel={`${Math.round(selSlot.shadow.opacity*100)}%`}>
+                          <input type="range" min={10} max={100} value={Math.round(selSlot.shadow.opacity*100)} title="Opasitas"
+                            onChange={(e)=>patchSlot(selSlot.id, { shadow: { ...selSlot.shadow!, opacity: Number(e.target.value)/100 } })}
+                            className="h-6 w-full accent-primary sm:h-auto sm:w-24" />
+                        </SliderToggle>
+                      </div>
+                    )}
+                  </div>
 
-            <div className="mt-3 flex flex-col gap-2.5 sm:mt-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 text-xs">
-              <label className="flex items-center gap-2 font-medium text-navy/70">
-                <input type="checkbox" checked={!!(selSlot.outline && selSlot.outline.width > 0)}
-                  onChange={(e)=>patchSlot(selSlot.id, { outline: e.target.checked ? { width: 3, color: "#000000" } : null })}
-                  className="h-5 w-5 sm:h-4 sm:w-4" />
-                Outline
-              </label>
-              {selSlot.outline && selSlot.outline.width > 0 && (
-                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-                  <SliderToggle label="Tebal" valueLabel={`${selSlot.outline.width}`}>
-                    <input type="range" min={1} max={10} value={selSlot.outline.width} title="Tebal"
-                      onChange={(e)=>patchSlot(selSlot.id, { outline: { ...selSlot.outline!, width: Number(e.target.value) } })}
-                      className="h-6 w-full accent-primary sm:h-auto sm:w-24" />
-                  </SliderToggle>
-                  <input type="color" value={selSlot.outline.color}
-                    onChange={(e)=>patchSlot(selSlot.id, { outline: { ...selSlot.outline!, color: e.target.value } })}
-                    className="h-10 w-12 shrink-0 rounded border border-navy/15 sm:h-7 sm:w-8" />
+                  <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 text-xs">
+                    <label className="flex items-center gap-2 font-medium text-navy/70">
+                      <input type="checkbox" checked={!!(selSlot.outline && selSlot.outline.width > 0)}
+                        onChange={(e)=>patchSlot(selSlot.id, { outline: e.target.checked ? { width: 3, color: "#000000" } : null })}
+                        className="h-5 w-5 sm:h-4 sm:w-4" />
+                      Outline
+                    </label>
+                    {selSlot.outline && selSlot.outline.width > 0 && (
+                      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+                        <SliderToggle label="Tebal" valueLabel={`${selSlot.outline.width}`}>
+                          <input type="range" min={1} max={10} value={selSlot.outline.width} title="Tebal"
+                            onChange={(e)=>patchSlot(selSlot.id, { outline: { ...selSlot.outline!, width: Number(e.target.value) } })}
+                            className="h-6 w-full accent-primary sm:h-auto sm:w-24" />
+                        </SliderToggle>
+                        <input type="color" value={selSlot.outline.color}
+                          onChange={(e)=>patchSlot(selSlot.id, { outline: { ...selSlot.outline!, color: e.target.value } })}
+                          className="h-10 w-12 shrink-0 rounded border border-navy/15 sm:h-7 sm:w-8" />
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
+              </SliderToggle>
             </div>
           </>
         )}
@@ -1602,68 +1629,74 @@ export function DomEditor({
                 className={`flex-1 rounded-lg border px-2.5 py-2.5 underline sm:flex-none sm:py-1 ${selItem.underline ? "border-primary bg-primary/10 text-primary" : "border-navy/15 text-navy/70"}`}>U</button>
             </div>
 
-            <div className="mt-3 flex flex-col gap-2.5 sm:mt-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 text-xs">
-              <SliderToggle label="Tilt X (perspective)" valueLabel={`${selItem.tiltX ?? 0}°`}>
-                <input type="range" min={-45} max={45} value={selItem.tiltX ?? 0}
-                  onChange={(e)=>patchItem(selItem.id, { tiltX: Number(e.target.value) })}
-                  className="h-6 w-full accent-primary" />
-              </SliderToggle>
-              <SliderToggle label="Tilt Y (perspective)" valueLabel={`${selItem.tiltY ?? 0}°`}>
-                <input type="range" min={-45} max={45} value={selItem.tiltY ?? 0}
-                  onChange={(e)=>patchItem(selItem.id, { tiltY: Number(e.target.value) })}
-                  className="h-6 w-full accent-primary" />
-              </SliderToggle>
-              {(selItem.tiltX || selItem.tiltY) ? (
-                <button type="button" onClick={()=>patchItem(selItem.id, { tiltX: 0, tiltY: 0 })}
-                  className="shrink-0 rounded border border-navy/15 px-2.5 py-1.5 text-navy/60">Reset tilt</button>
-              ) : null}
-            </div>
+            <div className="mt-3 sm:mt-2">
+              <SliderToggle label="Efek Lanjutan" valueLabel={[selItem.tiltX || selItem.tiltY ? "Tilt" : "", selItem.shadow ? "Shadow" : "", selItem.outline?.width ? "Outline" : ""].filter(Boolean).join(" + ") || undefined}>
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 text-xs">
+                    <SliderToggle label="Tilt X (perspective)" valueLabel={`${selItem.tiltX ?? 0}°`}>
+                      <input type="range" min={-45} max={45} value={selItem.tiltX ?? 0}
+                        onChange={(e)=>patchItem(selItem.id, { tiltX: Number(e.target.value) })}
+                        className="h-6 w-full accent-primary" />
+                    </SliderToggle>
+                    <SliderToggle label="Tilt Y (perspective)" valueLabel={`${selItem.tiltY ?? 0}°`}>
+                      <input type="range" min={-45} max={45} value={selItem.tiltY ?? 0}
+                        onChange={(e)=>patchItem(selItem.id, { tiltY: Number(e.target.value) })}
+                        className="h-6 w-full accent-primary" />
+                    </SliderToggle>
+                    {(selItem.tiltX || selItem.tiltY) ? (
+                      <button type="button" onClick={()=>patchItem(selItem.id, { tiltX: 0, tiltY: 0 })}
+                        className="shrink-0 rounded border border-navy/15 px-2.5 py-1.5 text-navy/60">Reset tilt</button>
+                    ) : null}
+                  </div>
 
-            <div className="mt-3 flex flex-col gap-2.5 sm:mt-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 text-xs">
-              <label className="flex items-center gap-2 font-medium text-navy/70">
-                <input type="checkbox" checked={!!selItem.shadow}
-                  onChange={(e)=>patchItem(selItem.id, { shadow: e.target.checked ? { blur: 8, color: "#000000", opacity: 0.6 } : null })}
-                  className="h-5 w-5 sm:h-4 sm:w-4" />
-                Shadow
-              </label>
-              {selItem.shadow && (
-                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-                  <SliderToggle label="Blur" valueLabel={`${selItem.shadow.blur}`}>
-                    <input type="range" min={0} max={40} value={selItem.shadow.blur} title="Blur"
-                      onChange={(e)=>patchItem(selItem.id, { shadow: { ...selItem.shadow!, blur: Number(e.target.value) } })}
-                      className="h-6 w-full accent-primary sm:h-auto sm:w-24" />
-                  </SliderToggle>
-                  <input type="color" value={selItem.shadow.color}
-                    onChange={(e)=>patchItem(selItem.id, { shadow: { ...selItem.shadow!, color: e.target.value } })}
-                    className="h-10 w-12 shrink-0 rounded border border-navy/15 sm:h-7 sm:w-8" />
-                  <SliderToggle label="Opasitas" valueLabel={`${Math.round(selItem.shadow.opacity*100)}%`}>
-                    <input type="range" min={10} max={100} value={Math.round(selItem.shadow.opacity*100)} title="Opasitas"
-                      onChange={(e)=>patchItem(selItem.id, { shadow: { ...selItem.shadow!, opacity: Number(e.target.value)/100 } })}
-                      className="h-6 w-full accent-primary sm:h-auto sm:w-24" />
-                  </SliderToggle>
-                </div>
-              )}
-            </div>
+                  <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 text-xs">
+                    <label className="flex items-center gap-2 font-medium text-navy/70">
+                      <input type="checkbox" checked={!!selItem.shadow}
+                        onChange={(e)=>patchItem(selItem.id, { shadow: e.target.checked ? { blur: 8, color: "#000000", opacity: 0.6 } : null })}
+                        className="h-5 w-5 sm:h-4 sm:w-4" />
+                      Shadow
+                    </label>
+                    {selItem.shadow && (
+                      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+                        <SliderToggle label="Blur" valueLabel={`${selItem.shadow.blur}`}>
+                          <input type="range" min={0} max={40} value={selItem.shadow.blur} title="Blur"
+                            onChange={(e)=>patchItem(selItem.id, { shadow: { ...selItem.shadow!, blur: Number(e.target.value) } })}
+                            className="h-6 w-full accent-primary sm:h-auto sm:w-24" />
+                        </SliderToggle>
+                        <input type="color" value={selItem.shadow.color}
+                          onChange={(e)=>patchItem(selItem.id, { shadow: { ...selItem.shadow!, color: e.target.value } })}
+                          className="h-10 w-12 shrink-0 rounded border border-navy/15 sm:h-7 sm:w-8" />
+                        <SliderToggle label="Opasitas" valueLabel={`${Math.round(selItem.shadow.opacity*100)}%`}>
+                          <input type="range" min={10} max={100} value={Math.round(selItem.shadow.opacity*100)} title="Opasitas"
+                            onChange={(e)=>patchItem(selItem.id, { shadow: { ...selItem.shadow!, opacity: Number(e.target.value)/100 } })}
+                            className="h-6 w-full accent-primary sm:h-auto sm:w-24" />
+                        </SliderToggle>
+                      </div>
+                    )}
+                  </div>
 
-            <div className="mt-3 flex flex-col gap-2.5 sm:mt-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 text-xs">
-              <label className="flex items-center gap-2 font-medium text-navy/70">
-                <input type="checkbox" checked={!!(selItem.outline && selItem.outline.width > 0)}
-                  onChange={(e)=>patchItem(selItem.id, { outline: e.target.checked ? { width: 3, color: "#000000" } : null })}
-                  className="h-5 w-5 sm:h-4 sm:w-4" />
-                Outline
-              </label>
-              {selItem.outline && selItem.outline.width > 0 && (
-                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-                  <SliderToggle label="Tebal" valueLabel={`${selItem.outline.width}`}>
-                    <input type="range" min={1} max={10} value={selItem.outline.width} title="Tebal"
-                      onChange={(e)=>patchItem(selItem.id, { outline: { ...selItem.outline!, width: Number(e.target.value) } })}
-                      className="h-6 w-full accent-primary sm:h-auto sm:w-24" />
-                  </SliderToggle>
-                  <input type="color" value={selItem.outline.color}
-                    onChange={(e)=>patchItem(selItem.id, { outline: { ...selItem.outline!, color: e.target.value } })}
-                    className="h-10 w-12 shrink-0 rounded border border-navy/15 sm:h-7 sm:w-8" />
+                  <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 text-xs">
+                    <label className="flex items-center gap-2 font-medium text-navy/70">
+                      <input type="checkbox" checked={!!(selItem.outline && selItem.outline.width > 0)}
+                        onChange={(e)=>patchItem(selItem.id, { outline: e.target.checked ? { width: 3, color: "#000000" } : null })}
+                        className="h-5 w-5 sm:h-4 sm:w-4" />
+                      Outline
+                    </label>
+                    {selItem.outline && selItem.outline.width > 0 && (
+                      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+                        <SliderToggle label="Tebal" valueLabel={`${selItem.outline.width}`}>
+                          <input type="range" min={1} max={10} value={selItem.outline.width} title="Tebal"
+                            onChange={(e)=>patchItem(selItem.id, { outline: { ...selItem.outline!, width: Number(e.target.value) } })}
+                            className="h-6 w-full accent-primary sm:h-auto sm:w-24" />
+                        </SliderToggle>
+                        <input type="color" value={selItem.outline.color}
+                          onChange={(e)=>patchItem(selItem.id, { outline: { ...selItem.outline!, color: e.target.value } })}
+                          className="h-10 w-12 shrink-0 rounded border border-navy/15 sm:h-7 sm:w-8" />
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
+              </SliderToggle>
             </div>
           </>
         )}
