@@ -20,6 +20,7 @@ import { publicImageUrl } from "@/lib/supabase/images";
 import { FONT_OPTIONS } from "@/lib/templates/fonts";
 import type { AspectRatio } from "@/lib/templates/types";
 import { randomUUID } from "crypto";
+import { sanitizeTitle } from "@/lib/ai/sanitizeTitle";
 
 export const runtime = "nodejs";
 // Butuh waktu ekstra: 1x panggilan search berita + 1x generate teks + 1x
@@ -104,6 +105,8 @@ export async function POST(request: NextRequest) {
   if (!content.onImageText || !content.caption) {
     return fail("AI mengembalikan format konten tidak lengkap. Coba lagi.", 502);
   }
+  // Jaring pengaman: rapikan "--"/"—" yang mungkin masih diselipkan AI walau prompt sudah melarang.
+  content.onImageText = sanitizeTitle(content.onImageText);
   const fontOption = content.fontId ? FONT_OPTIONS.find((f) => f.id === content.fontId) : null;
 
   // ── 3) Gambar suasana berita (BUKAN foto orang asli dari berita) ─────────

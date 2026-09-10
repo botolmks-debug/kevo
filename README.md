@@ -1,69 +1,70 @@
-# Keposting Pricing — v2 (FIX untuk Landing.tsx yang asli)
+# Update — Perbaikan 24 Error TypeScript Lama (Pre-existing)
 
-## Yang berubah dari v1
+Ini paket khusus untuk 24 error tsc yang muncul di screenshot-mu — SEMUANYA
+di file yang tidak pernah saya sentuh sebelum sesi pembersihan ini (terbukti
+lewat git status, tidak ada di daftar modified/untracked sebelumnya).
 
-- **PricingSection.tsx** diperbaiki: pakai design system asli Landing kamu
-  (`text-navy`, `text-primary`, `text-muted`, `<Card>`, `<LinkButton>`),
-  bukan Tailwind generic `text-teal-600`. Warnanya sekarang match halaman.
-- **Landing.tsx** sudah dimodifikasi lengkap dan siap tempel:
-  - Import `PricingSection` ditambahkan
-  - `<PricingSection />` diletakkan tepat di bawah section "Coba gratis, tanpa risiko"
-    dan sebelum FAQ (posisi persis yang direkomendasikan)
-  - Kalimat "Top-up berbayar akan aktif dalam beberapa minggu..." dihapus
-  - Jawaban FAQ "Berapa harganya?" di-update sebutkan 3 paket + harga
-
-## Cara pakai
-
-### 1. Timpa 2 file ini
-
+## File YANG DI-CTRL+A-REPLACE (12 file)
 ```
-components/PricingSection.tsx           ← TIMPA (yang sudah ke-push kemarin)
-components/marketing/Landing.tsx        ← TIMPA
-```
-
-Buka di VS Code → Ctrl+A → paste → Ctrl+S.
-
-### 2. Pastikan `lib/payment/packages.ts` sudah versi baru
-
-Yang dari zip kemarin. Kalau sudah ke-push, tidak perlu diapa-apakan.
-
-### 3. Commit & push
-
-```bash
-git add .
-git commit -m "Fix PricingSection styling & pasang di Landing"
-git push
+__tests__/autoContentPrompt.test.ts
+__tests__/captionPrompt.test.ts
+__tests__/scenePrompt.test.ts
+__tests__/businessProfile.test.ts
+__tests__/supabaseBusinessProfile.test.ts
+__tests__/businessLogoRemoveBackgroundRoute.test.ts
+__tests__/businessLogoRoute.test.ts
+app/auth/confirm/route.ts
+app/video/cerita/page.tsx
+app/video/page.tsx
+app/videocerita/page.tsx
+app/videocerita/singkat/page.tsx
 ```
 
-### 4. Cek di https://www.keposting.com
+## Ringkasan perbaikan per kategori
 
-Setelah Vercel selesai deploy (~1–2 menit), refresh landing page.
-Urutan section yang akan terlihat:
+1. **Mock profil bisnis di test kurang field** (`customerTypes`, `logoLight`)
+   — field ini ditambahkan ke tipe `BusinessProfile` di masa lalu, tapi
+   beberapa file test lama tidak pernah diupdate. Tinggal tambah field yang
+   hilang ke object literal mock-nya.
 
+2. **`POST()`/`DELETE()` dipanggil tanpa argumen di test** — route
+   `business-logo` dan `business-logo/remove-background` sudah diupgrade
+   untuk butuh `request` (baca body/URL), tapi test lama masih manggil
+   fungsinya tanpa argumen. Ditambahkan helper `mockRequest()`/
+   `mockDeleteRequest()` kecil di masing-masing file test.
+
+3. **Parameter implicit `any`** di `app/auth/confirm/route.ts` — 2 tempat
+   destructuring (`{ name, value, options }` dan `{ name, value }`) belum
+   punya anotasi tipe eksplisit. Ditambahkan tipe manual.
+
+4. **Import ffmpeg dinamis (`webpackIgnore`) bikin `tsc` bingung** — 4 file
+   video yang sengaja pakai `import(/* webpackIgnore: true */ "...")` untuk
+   load ffmpeg.wasm saat runtime (bukan di-bundle). `tsc` tetap coba resolve
+   tipe-nya dan gagal. Ditambahkan `// @ts-expect-error` tepat di atas baris
+   string-nya (posisi ini penting — sempat saya taruh salah tempat di
+   percobaan pertama, sekarang sudah benar).
+
+## PENTING — verifikasi di komputermu sendiri
+Sandbox saya TIDAK punya `node_modules` project ini terpasang (react, vitest,
+@supabase/supabase-js, dll semuanya "Cannot find module" di sisi saya) —
+jadi saya tidak bisa 100% memastikan hasil akhirnya bersih total tanpa kamu
+jalankan sendiri:
+
+```powershell
+npx tsc --noEmit
 ```
-Hero → Trust bar → Masalah → Cara kerja → Fitur → Per jenis usaha
-→ Coba gratis, tanpa risiko
-→ Harga top-up token  🆕 (3 kartu)
-→ Pertanyaan umum (FAQ dengan jawaban harga baru)
-→ CTA penutup → Footer
-```
 
-### 5. Kabari Midtrans
+Kalau MASIH ada error setelah pasang 12 file ini, kemungkinan besar itu
+error BARU yang baru kelihatan setelah 24 yang lama dibereskan (pola ini
+sudah terjadi 1x tadi — `logoLight` ketahuan setelah `customerTypes`
+dibereskan duluan) — kirim saya screenshot/teks errornya, saya lanjutkan.
 
-Chat support di dashboard atau email support@midtrans.com:
-
-> "Halo, akun Merchant [Nama Bisnis / Merchant ID] pengajuan aktivasi
-> masih dalam review. Saya sudah memperbarui website https://www.keposting.com
-> dengan informasi harga produk yang jelas (3 paket top-up token).
-> Mohon review dapat dilanjutkan. Terima kasih."
-
-## Bersih-bersih (opsional)
-
-Folder `keposting-pricing/` di root proyek (dari zip pertama)
-adalah duplikat yang tidak dipakai. Boleh dihapus di VS Code lalu commit lagi:
-
-```bash
-git rm -r keposting-pricing
-git commit -m "Hapus folder duplikat keposting-pricing"
+## Setelah bersih total
+Baru lanjut ke urutan push yang sudah dibahas sebelumnya:
+```powershell
+git status
+git diff --stat
+git add -A
+git commit -m "Perbaikan judul, cleanup Supabase, ganti ikon, edit profil bisnis, onboarding, animasi, dan 24 error TypeScript lama"
 git push
 ```

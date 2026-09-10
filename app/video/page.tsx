@@ -78,6 +78,7 @@ export default function VideoPage() {
       // ffmpeg.wasm single-thread (tanpa SharedArrayBuffer) dari CDN —
       // webpackIgnore supaya Next tidak mencoba mem-bundle URL eksternal.
       const mod = (await import(
+        // @ts-expect-error - path runtime-only (webpackIgnore), tsc tidak bisa resolve tipe modulnya
         /* webpackIgnore: true */ "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js"
       )) as { FFmpeg: new () => {
         load: (o: { coreURL: string; wasmURL: string; classWorkerURL?: string }) => Promise<void>;

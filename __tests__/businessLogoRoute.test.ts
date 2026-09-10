@@ -26,6 +26,12 @@ vi.mock("@/lib/supabase/serviceRole", () => ({
 
 import { POST, PATCH, DELETE } from "@/app/api/business-logo/route";
 
+// DELETE butuh request.url (buat baca query "variant") sejak diperbaiki
+// penuh — helper ini kasih request tiruan minimal.
+function mockDeleteRequest(url = "http://localhost/api/business-logo"): NextRequest {
+  return { url } as unknown as NextRequest;
+}
+
 const ORIGINAL_ENV = { ...process.env };
 
 function withSupabaseEnv() {
@@ -160,7 +166,7 @@ describe("DELETE /api/business-logo", () => {
   it("returns 503 without creating a service-role client when the key is missing", async () => {
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    const res = await DELETE();
+    const res = await DELETE(mockDeleteRequest());
     const data = await res.json();
 
     expect(res.status).toBe(503);
@@ -173,7 +179,7 @@ describe("DELETE /api/business-logo", () => {
     withSupabaseEnv();
     deleteLogoMock.mockResolvedValue({ ok: true });
 
-    const res = await DELETE();
+    const res = await DELETE(mockDeleteRequest());
     const data = await res.json();
 
     expect(res.status).toBe(200);
@@ -185,7 +191,7 @@ describe("DELETE /api/business-logo", () => {
     withSupabaseEnv();
     deleteLogoMock.mockResolvedValue({ ok: false, error: "Gagal menghapus logo. Coba lagi." });
 
-    const res = await DELETE();
+    const res = await DELETE(mockDeleteRequest());
     const data = await res.json();
 
     expect(res.status).toBe(502);

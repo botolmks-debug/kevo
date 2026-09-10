@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/serviceRole";
-import { consumeToken, refundToken, isAdmin } from "@/lib/supabase/tokens";
+import { consumeToken, refundToken, consumeTokens, isAdmin } from "@/lib/supabase/tokens";
 import { checkSupabaseEnvPresence } from "@/lib/env";
 import { loadBusinessProfile } from "@/lib/supabase/businessProfile";
 import { listImages, publicImageUrl, type ImageRow } from "@/lib/supabase/images";
@@ -23,6 +23,11 @@ import { editImage, generateImage, composeProducts, editImageWithReference } fro
 import { generateJsonContent } from "@/lib/ai/geminiJson";
 import { notesPromptBlock } from "@/lib/ai/checkinPrompt";
 import { getRecentCaptions, buildAntiRepetisiBlock } from "@/lib/ai/antiRepetisi";
+import { sanitizeTitle } from "@/lib/ai/sanitizeTitle";
+import { runFullDesignPipeline } from "@/lib/ai/fullDesignPipeline";
+import { traceFullDesign } from "@/lib/ai/fullDesignTracing";
+import { callGeminiVisionForLayout } from "@/lib/ai/geminiVisionText";
+import type { Template } from "@/lib/templates/types";
 import { buildMomenBlock } from "@/lib/ai/momenKalender";
 import {
   buildGeneralContentPrompt,
@@ -95,7 +100,7 @@ export async function GET() {
 const VALID_TEMA = ["hook", "edukasi", "produk", "promo"] as const;
 type ContentTema = (typeof VALID_TEMA)[number];
 
-type RequestBody = { jenis: GeneratedContentJenis; ratio: AspectRatio; imageId?: string; imageIds?: string[]; language?: "id" | "en"; referenceDataUri?: string; tema?: ContentTema; konsep?: string; lockedTitle?: string; produkDescOverride?: string; formatLabel?: string };
+type RequestBody = { jenis: GeneratedContentJenis; ratio: AspectRatio; imageId?: string; imageIds?: string[]; language?: "id" | "en"; referenceDataUri?: string; tema?: ContentTema; konsep?: string; lockedTitle?: string; produkDescOverride?: string; formatLabel?: string; useArtDirector?: boolean; useTracing?: boolean };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -116,6 +121,8 @@ function isValidBody(body: unknown): body is RequestBody {
   if (body.lockedTitle !== undefined && (typeof body.lockedTitle !== "string" || body.lockedTitle.length > 200)) return false;
   if (body.produkDescOverride !== undefined && typeof body.produkDescOverride !== "string") return false;
   if (body.formatLabel !== undefined && typeof body.formatLabel !== "string") return false;
+  if (body.useArtDirector !== undefined && typeof body.useArtDirector !== "boolean") return false;
+  if (body.useTracing !== undefined && typeof body.useTracing !== "boolean") return false;
   return true;
 }
 
@@ -358,6 +365,9 @@ export async function POST(request: NextRequest) {
       return fail("AI mengembalikan format konten tidak lengkap. Coba lagi.", 502);
     }
     content = contentResult.data;
+    // Jaring pengaman: judul AI (bukan judul kunci yg dipilih user) bisa saja
+    // masih menyelipkan "--"/"—" walau prompt sudah melarang — rapikan di sini.
+    content.onImageText = sanitizeTitle(content.onImageText);
   }
   const fontOption = content.fontId ? FONT_OPTIONS.find((f) => f.id === content.fontId) : null;
 
@@ -461,19 +471,104 @@ export async function POST(request: NextRequest) {
   }
 
   // ── Render gambar final (dengan overlay judul + logo + sosmed) ───────────
-  const baseTemplate = body.jenis === "interaksi" ? interaksiTemplate : polosTemplate;
+  const useArtDirector = body.jenis === "produk" && !isGabung && body.useArtDirector === true;
+  const useTracing = useArtDirector && body.useTracing === true;
   const socials = buildFooterSocials(profile);
-  const withFooter = socials.length > 0
-    ? withFooterOverride(baseTemplate, profile.business.name, socials)
-    : baseTemplate;
-  const templateToRender = withLogoOverride(withFooter, profile.logo);
+
+  let templateToRender: Template;
+  let renderValues: Record<string, string>;
+  let artDirectorItems: import("@/lib/editor/layoutOverrides").FreeItem[] | undefined;
+
+  if (useArtDirector) {
+    const mimeMatch = imageDataUri.match(/^data:(image\/\w+);base64,/);
+    const photoMimeType = mimeMatch?.[1] || "image/png";
+    const photoBase64 = imageDataUri.replace(/^data:image\/\w+;base64,/, "");
+
+    const design = await runFullDesignPipeline({
+      profile,
+      productDescription: produkDesc,
+      photoBase64,
+      photoMimeType,
+      ratio: body.ratio,
+      lang: body.language === "en" ? "en" : "id",
+      chosenHeadline: content.onImageText,
+      callGeminiVision: callGeminiVisionForLayout,
+    });
+
+    if (!design.ok) {
+      // Best-effort: gagal desain lengkap -> JANGAN gagalkan seluruh generate,
+      // fallback ke jalur lama (foto biasa + judul overlay Satori) supaya user
+      // tetap dapat hasil, bukan error kosong.
+      console.error("[useArtDirector] fullDesignPipeline gagal, fallback ke template lama:", design.error);
+      const baseTemplateFallback = body.jenis === "interaksi" ? interaksiTemplate : polosTemplate;
+      const withFooterFallback = socials.length > 0
+        ? withFooterOverride(baseTemplateFallback, profile.business.name, socials)
+        : baseTemplateFallback;
+      templateToRender = withLogoOverride(withFooterFallback, profile.logo);
+      renderValues = { photo: imageDataUri, caption: content.onImageText };
+    } else {
+      // 1 token tambahan — desain lengkap = 1-2x panggilan Gemini image ekstra
+      // (generate + retry kalau typo) + 1x vision validasi. Best-effort,
+      // TIDAK menggagalkan hasil yang sudah jadi kalau potong token gagal.
+      try {
+        await consumeTokens(supabase, user.id, 1, user.email, "Full Design AI");
+      } catch {
+        // best-effort
+      }
+      if (!design.validationPassed) {
+        console.warn("[useArtDirector] hasil dipakai TANPA lolos validasi ejaan (retry sudah habis)");
+      }
+
+      let finalTemplate = design.template;
+      let finalValues = design.values;
+
+      if (useTracing) {
+        // EKSPERIMENTAL — lihat lib/ai/fullDesignTracing.ts untuk penjelasan
+        // lengkap & batasannya. Best-effort total: gagal tracing TIDAK
+        // menggagalkan apa pun, cuma jatuh balik ke gambar dgn teks terbakar.
+        const tracing = await traceFullDesign({
+          designDataUri: design.finalPhotoDataUri,
+          ratio: body.ratio,
+          lang: body.language === "en" ? "en" : "id",
+          callGeminiVision: callGeminiVisionForLayout,
+        });
+
+        if (tracing.traced) {
+          finalValues = { photo: tracing.cleanPhotoDataUri };
+          artDirectorItems = tracing.items;
+          // Token tambahan KEDUA — 1x hapus-teks (Gemini image) + 1x deteksi
+          // (Gemini vision). Cuma dipotong kalau tracing BENAR-BENAR berhasil.
+          try {
+            await consumeTokens(supabase, user.id, 1, user.email, "Full Design Tracing");
+          } catch {
+            // best-effort
+          }
+        } else {
+          console.warn("[useTracing] tracing gagal, hasil dipakai APA ADANYA (teks masih terbakar, tidak bisa diedit)");
+        }
+      }
+
+      const withFooterAD = socials.length > 0
+        ? withFooterOverride(finalTemplate, profile.business.name, socials)
+        : finalTemplate;
+      templateToRender = withLogoOverride(withFooterAD, profile.logo);
+      renderValues = finalValues;
+    }
+  } else {
+    const baseTemplate = body.jenis === "interaksi" ? interaksiTemplate : polosTemplate;
+    const withFooter = socials.length > 0
+      ? withFooterOverride(baseTemplate, profile.business.name, socials)
+      : baseTemplate;
+    templateToRender = withLogoOverride(withFooter, profile.logo);
+    renderValues = { photo: imageDataUri, caption: content.onImageText };
+  }
 
   let pngBuffer: Buffer;
   try {
     const { renderTemplate } = await import("@/lib/render/renderTemplate");
     pngBuffer = await renderTemplate({
       template: templateToRender,
-      values: { photo: imageDataUri, caption: content.onImageText },
+      values: renderValues,
       ratio: body.ratio,
     });
  } catch (error) {
@@ -481,7 +576,7 @@ export async function POST(request: NextRequest) {
       businessId: user.id,
       route: "generate-auto",
       error,
-      metadata: { step: "render_template", jenis: body.jenis, ratio: body.ratio },
+      metadata: { step: "render_template", jenis: body.jenis, ratio: body.ratio, useArtDirector },
     });
     return fail(error instanceof Error ? error.message : "Gagal merender konten.", 500);
   }
@@ -518,6 +613,16 @@ export async function POST(request: NextRequest) {
       createdAt: row.created_at,
       fontId: fontOption?.id ?? null,
       jawaban: content.jawaban ?? null,
+      // Editor DOM (client) SEBELUMNYA selalu membangun ulang template sendiri
+      // dari polosTemplate/interaksiTemplate (lihat AutoGenerate.tsx) — kalau
+      // Art Director dipakai, template ASLI yang dirender server (lengkap
+      // dengan slot subjudul+badge) HARUS dikirim balik, atau editor akan
+      // menampilkan versi tanpa badge (template lama) walau PNG hasil generate
+      // sebenarnya sudah benar.
+      usedArtDirector: useArtDirector,
+      artDirectorTemplate: useArtDirector ? templateToRender : undefined,
+      artDirectorValues: useArtDirector ? renderValues : undefined,
+      artDirectorItems: artDirectorItems && artDirectorItems.length > 0 ? artDirectorItems : undefined,
     },
   });
 }

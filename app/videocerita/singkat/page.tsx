@@ -210,6 +210,7 @@ export default function VideoCeritaSingkatPage() {
   async function loadFfmpeg() {
     if (ffmpegRef.current) return ffmpegRef.current;
     const mod = await import(
+      // @ts-expect-error - path runtime-only (webpackIgnore), tsc tidak bisa resolve tipe modulnya
       /* webpackIgnore: true */ "/ffmpeg/lib/index.js"
     );
     const ffmpeg = new mod.FFmpeg();

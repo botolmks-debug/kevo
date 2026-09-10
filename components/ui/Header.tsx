@@ -23,6 +23,7 @@ const navLinks: {
   { href: "/gambar", key: "nav.gambar" },
   { href: "/konten", key: "nav.editKonten" },
   { href: "/jadwal", key: "nav.jadwal" },
+  { href: "/onboarding?edit=1", key: "nav.profilBisnis", match: "/onboarding" },
 ];
 // Menu Dashboard DIHAPUS dari nav — klik logo Keposting sudah mengarah ke /dashboard.
 

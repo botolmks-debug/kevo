@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { LinkButton } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -170,7 +171,7 @@ function Step({ n, title, desc }: { n: number; title: string; desc: string }) {
 function Feature({ icon, title, desc }: { icon: string; title: string; desc: string }) {
   return (
     <Card className="p-5">
-      <div className="text-2xl">{icon}</div>
+      <Image src={icon} alt="" width={40} height={40} className="h-10 w-10" />
       <h3 className="mt-3 font-semibold text-navy">{title}</h3>
       <p className="mt-1 text-sm text-muted">{desc}</p>
     </Card>
@@ -264,12 +265,12 @@ export function Landing() {
         <section className="mx-auto max-w-6xl px-5 py-16">
           <h2 className="text-center text-2xl font-bold text-navy sm:text-3xl">Semua yang kamu butuh untuk konten harian</h2>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Feature icon="🖼️" title="Konten dari foto" desc="Ubah foto produk biasa jadi konten yang layak posting." />
-            <Feature icon="✍️" title="Judul & caption otomatis" desc="Lengkap dengan hashtag yang relevan untuk usahamu." />
-            <Feature icon="📐" title="Banyak ukuran" desc="Feed 4:5, Story 9:16, dan Square 1:1—sekali klik." />
-            <Feature icon="🧩" title="Gabung beberapa produk" desc="Satukan sampai 5 produk jadi satu konten rapi." />
-            <Feature icon="🗓️" title="Jadwal posting" desc="Atur konten untuk beberapa hari ke depan sekaligus." />
-            <Feature icon="🎨" title="Tetap bisa diedit" desc="Geser teks, ganti ukuran, sesuaikan sebelum simpan." />
+            <Feature icon="/icon-cover/6.png" title="Konten dari foto" desc="Ubah foto produk biasa jadi konten yang layak posting." />
+            <Feature icon="/icon-cover/1.png" title="Judul & caption otomatis" desc="Lengkap dengan hashtag yang relevan untuk usahamu." />
+            <Feature icon="/icon-cover/5.png" title="Banyak ukuran" desc="Feed 4:5, Story 9:16, dan Square 1:1—sekali klik." />
+            <Feature icon="/icon-cover/4.png" title="Gabung beberapa produk" desc="Satukan sampai 5 produk jadi satu konten rapi." />
+            <Feature icon="/icon-cover/3.png" title="Jadwal posting" desc="Atur konten untuk beberapa hari ke depan sekaligus." />
+            <Feature icon="/icon-cover/2.png" title="Tetap bisa diedit" desc="Geser teks, ganti ukuran, sesuaikan sebelum simpan." />
           </div>
         </section>
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildBusinessProfile, toggleSocialSelection } from "@/lib/onboarding/businessProfile";
+import { buildBusinessProfile, toggleSocialSelection, type CustomerType } from "@/lib/onboarding/businessProfile";
 
 const draft = {
   business: { name: "Klinik Sehat", industry: "Klinik", age: "3 tahun", location: "Bandung" },
@@ -8,6 +8,7 @@ const draft = {
     flagshipProduct: "Medical check-up",
     priceRange: "Rp100rb-500rb",
     targetCustomer: "Keluarga muda",
+    customerTypes: ["b2c"] as CustomerType[],
     customerProblem: "Susah dapat jadwal cepat",
   },
   positioning: {

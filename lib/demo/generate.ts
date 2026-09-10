@@ -17,6 +17,7 @@ import { editImage } from "@/lib/ai/geminiImage";
 import { generateJsonContent } from "@/lib/ai/geminiJson";
 import { buildProdukContentPrompt } from "@/lib/ai/autoContentPrompt";
 import { describeProductImage } from "@/lib/ai/describeImage";
+import { sanitizeTitle } from "@/lib/ai/sanitizeTitle";
 import {
   buildScenePrompt,
   buildFoodPrompt,
@@ -154,7 +155,8 @@ export async function generateDemoContent(
 
   if (!contentRes.ok) throw new Error(contentRes.error || "gagal membuat teks");
   const data = contentRes.data as { onImageText?: string; caption?: string };
-  const onImageText = String(data.onImageText || "").trim();
+  // Jaring pengaman: rapikan "--"/"—" yang mungkin masih diselipkan AI walau prompt sudah melarang.
+  const onImageText = sanitizeTitle(String(data.onImageText || "").trim());
   const caption = String(data.caption || "").trim();
   if (!onImageText || !caption) throw new Error("format teks tidak lengkap");
 
@@ -168,7 +170,10 @@ export async function generateDemoContent(
   const bgBuffer = Buffer.from(bgBase64, "base64");
   const upBg = await svc.storage
     .from(DEMO_BUCKET)
-    .upload(`${demoId}-bg.png`, bgBuffer, { contentType: "image/png" });
+    // cacheControl 1 tahun: file demo tidak pernah berubah setelah dibuat,
+    // jadi CDN Supabase boleh simpan lama & tidak perlu tarik ulang dari
+    // origin tiap kali diakses — mengurangi Cached Egress (lihat audit quota).
+    .upload(`${demoId}-bg.png`, bgBuffer, { contentType: "image/png", cacheControl: "31536000" });
   if (upBg.error) throw new Error("gagal menyimpan background: " + upBg.error.message);
 
   // 4) Render overlay teks + logo via dynamic import (sharp tidak crash module)
@@ -185,7 +190,7 @@ export async function generateDemoContent(
     });
     const up = await svc.storage
       .from(DEMO_BUCKET)
-      .upload(`${demoId}.png`, pngBuffer, { contentType: "image/png" });
+      .upload(`${demoId}.png`, pngBuffer, { contentType: "image/png", cacheControl: "31536000" });
     if (up.error) throw new Error(up.error.message);
     const { data: pub } = svc.storage.from(DEMO_BUCKET).getPublicUrl(`${demoId}.png`);
     resultUrl = pub.publicUrl;

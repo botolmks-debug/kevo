@@ -17,6 +17,7 @@ const profile: BusinessProfile = {
     flagshipProduct: "Medical check-up",
     priceRange: "Rp100rb-500rb",
     targetCustomer: "Keluarga muda",
+    customerTypes: ["b2c"],
     customerProblem: "Susah dapat jadwal cepat",
   },
   positioning: {
@@ -32,6 +33,7 @@ const profile: BusinessProfile = {
   },
   story: "Berdiri sejak 2021...",
   logo: null,
+  logoLight: null,
 };
 
 const writeRow = {
@@ -44,6 +46,7 @@ const writeRow = {
   flagship_product: "Medical check-up",
   price_range: "Rp100rb-500rb",
   target_customer: "Keluarga muda",
+  customer_types: ["b2c"],
   customer_problem: "Susah dapat jadwal cepat",
   differentiator: "Dokter berpengalaman",
   content_goals: ["jualan", "edukasi"],
@@ -59,6 +62,8 @@ const row: BusinessProfileRow = {
   ...writeRow,
   logo_storage_path: null,
   logo_position: "top-left",
+  logo_light_storage_path: null,
+  logo_light_position: "bottom-right",
 };
 
 function mockClient(chain: Record<string, unknown>): SupabaseClient {

@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/Input";
 import { CanvasEditor } from "@/components/editor/CanvasEditor";
 import { DomEditor } from "@/components/editor/DomEditor";
 import * as htmlToImage from "html-to-image";
-import { applyEditorOverrides, type EditorOverrides } from "@/lib/editor/layoutOverrides";
+import { applyEditorOverrides, type EditorOverrides, type FreeItem } from "@/lib/editor/layoutOverrides";
 import type { ImageUsage } from "@/lib/images/categories";
 import type { BusinessProfile } from "@/lib/onboarding/businessProfile";
 import { buildFooterSocials } from "@/lib/onboarding/profileStorage";
@@ -20,7 +20,7 @@ import { withLogoOverride } from "@/app/generate/withLogoOverride";
 import type { GeneratedContentJenis } from "@/lib/supabase/generatedContent";
 import { polosTemplate } from "@/lib/templates/polos";
 import { interaksiTemplate } from "@/lib/templates/interaksi";
-import type { AspectRatio } from "@/lib/templates/types";
+import type { AspectRatio, Template } from "@/lib/templates/types";
 import { FONT_OPTIONS } from "@/lib/templates/fonts";
 import { shareContent } from "@/lib/share";
 import { ReferenceTermsModal, hasAcceptedReferenceTerms } from "@/components/generate-otomatis/ReferenceTermsModal";
@@ -46,6 +46,12 @@ type GeneratedItem = {
   ratio: AspectRatio;
   status: string;
   createdAt: string;
+  // Art Director (eksperimental) — kalau ada, editor DOM WAJIB pakai template
+  // ini (bukan rekonstruksi polos/interaksi) supaya subjudul+badge ikut tampil.
+  usedArtDirector?: boolean;
+  artDirectorTemplate?: Template;
+  artDirectorValues?: Record<string, string>;
+  artDirectorItems?: FreeItem[];
 };
 
 type Status = "idle" | "loading" | "error" | "success";
@@ -100,6 +106,12 @@ async function fetchWithAuthRetry(input: string, init?: RequestInit): Promise<Re
 
 export type ContentTema = "hook" | "edukasi" | "produk" | "promo";
 
+// Fitur Art Director (Desain Lengkap AI + Tracing) DISEMBUNYIKAN dari UI
+// sementara (10 Sep 2026) — validasi ejaan masih sering false-positive/gagal,
+// belum stabil untuk user umum. Kode & backend TETAP UTUH, tinggal balik ke
+// `true` kapan saja setelah lebih matang, tanpa perlu tulis ulang apa pun.
+const SHOW_ART_DIRECTOR_UI = false;
+
 export function AutoGenerate() {
   const [jenis, setJenis] = useState<GeneratedContentJenis | "referensi" | "carousel">("produk");
   const [tema, setTema] = useState<ContentTema | null>(null); // pilihan tema konten (judul+deskripsi+gambar)
@@ -128,6 +140,8 @@ export function AutoGenerate() {
   const [sharing, setSharing] = useState(false);
   // Editor DOM v4 (default) — toggle ke editor lama tetap tersedia.
   const [domMode, setDomMode] = useState(true);
+  const [useArtDirector, setUseArtDirector] = useState(false);
+  const [useTracing, setUseTracing] = useState(false);
   const domRef = useRef<HTMLDivElement | null>(null);
   const [sharedBlob, setSharedBlob] = useState<Blob | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -326,6 +340,10 @@ export function AutoGenerate() {
                 // Format Interaksi (Kuis/Edukasi/dst) yang dikunci dari tahap
                 // /titles — WAJIB dipakai ulang PERSIS sama di tahap ini.
                 formatLabel: locked?.formatLabel,
+                // AI Art Director (eksperimental) — cuma efektif utk jenis "produk"
+                // dgn 1 foto (bukan gabung); route.ts yang menyaring sisanya.
+                useArtDirector: (jenis === "produk" || jenis === "referensi") ? useArtDirector : undefined,
+                useTracing: (jenis === "produk" || jenis === "referensi") && useArtDirector ? useTracing : undefined,
               }),
             });
       let res = await doPost();
@@ -343,10 +361,22 @@ export function AutoGenerate() {
       setResult(item);
       setSharedBlob(null);
       // Editor pakai gambar BERSIH (backgroundDataUri) supaya tidak dobel overlay.
-      setEditValues({ photo: item.backgroundDataUri ?? item.imageUrl, caption: item.onImageText });
+      // Kalau Art Director dipakai, sertakan juga subjudul+badge supaya editor
+      // (DOM) bisa menampilkan & mengedit slot-slot tambahan itu.
+      setEditValues({
+        photo: item.backgroundDataUri ?? item.imageUrl,
+        caption: item.onImageText,
+        ...(item.usedArtDirector && item.artDirectorValues ? item.artDirectorValues : {}),
+      });
       const fontId = (data.item as any).fontId;
       const fontMatch = fontId ? FONT_OPTIONS.find((f) => f.id === fontId) : null;
-      setEditorOverrides({ slots: fontMatch ? { caption: { fontFamily: fontMatch.family } } : {} });
+      setEditorOverrides({
+        slots: fontMatch ? { caption: { fontFamily: fontMatch.family } } : {},
+        // Badge (ikon+label) Art Director masuk sebagai elemen bebas ("+Gambar"/"+Teks")
+        // yang SUDAH bisa digeser/diubah ukuran lewat editor DOM yang sudah ada —
+        // tidak perlu kode editor baru sama sekali.
+        items: item.usedArtDirector && item.artDirectorItems ? item.artDirectorItems : [],
+      });
       setGenerateStatus("success");
       await loadHistory();
     } catch (error) {
@@ -423,7 +453,13 @@ export function AutoGenerate() {
   const activeLogo = activeLogoVariant === "dark" ? (logoDark ?? logoLight) : (logoLight ?? logoDark);
   // Editor pakai template sesuai jenis konten (sama dgn render server):
   // interaksi = ilustrasi penuh tanpa scrim; lainnya = polos (ada scrim).
-  const autoBaseTemplate = result?.jenis === "interaksi" ? interaksiTemplate : polosTemplate;
+  // KECUALI kalau Art Director dipakai — template ASLI dari server (lengkap
+  // subjudul+badge) dipakai LANGSUNG, bukan direkonstruksi dari polos/interaksi
+  // (rekonstruksi lama tidak tahu apa-apa soal slot Art Director → badge hilang).
+  const autoBaseTemplate =
+    result?.usedArtDirector && result.artDirectorTemplate
+      ? result.artDirectorTemplate
+      : result?.jenis === "interaksi" ? interaksiTemplate : polosTemplate;
   const editTemplateBase = withLogoOverride(
     footerOverride && footerOverride.socials.length > 0
       ? withFooterOverride(autoBaseTemplate, footerOverride.businessName, footerOverride.socials)
@@ -542,7 +578,7 @@ export function AutoGenerate() {
                 key={opt.value}
                 type="button"
                 onClick={() => setJenis(opt.value)}
-                className={`relative flex flex-col items-start gap-1 rounded-2xl border p-4 text-left transition ${
+                className={`relative flex flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.98] active:shadow-sm ${
                   active
                     ? isBerita
                       ? "border-transparent bg-gradient-to-br from-primary/15 via-primary/5 to-amber-100/40 ring-2 ring-primary/30"
@@ -606,7 +642,7 @@ export function AutoGenerate() {
                   type="button"
                   onClick={() => setTema((v) => (v === opt.value ? null : opt.value))}
                   aria-pressed={active}
-                  className={`flex items-start gap-3 rounded-2xl border p-3.5 text-left transition ${
+                  className={`flex items-start gap-3 rounded-2xl border p-3.5 text-left transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.98] active:shadow-sm ${
                     active
                       ? "border-primary bg-primary/5 ring-2 ring-primary/20"
                       : "border-line hover:border-primary/40 hover:bg-navy/[0.02]"
@@ -765,6 +801,45 @@ export function AutoGenerate() {
       </div>
 
       <div className="flex flex-col gap-1.5">
+        {SHOW_ART_DIRECTOR_UI && (jenis === "produk" || jenis === "referensi") ? (
+          <>
+          <label className="flex cursor-pointer items-start gap-2 rounded-2xl border border-line bg-navy/[0.02] px-3 py-2 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5 accent-primary"
+              checked={useArtDirector}
+              onChange={(e) => {
+                setUseArtDirector(e.target.checked);
+                if (!e.target.checked) setUseTracing(false); // tracing cuma relevan kalau desain lengkap aktif
+              }}
+            />
+            <span>
+              <span className="font-medium text-navy">{L("Coba Desain Lengkap AI (eksperimental)", "Try Full AI Design (experimental)")}</span>
+              <br />
+              <span className="text-xs text-navy/50">
+                {L("AI mendesain judul+subjudul+highlight langsung di gambar (dicek ejaannya otomatis). Hasilnya SATU gambar jadi, teksnya tidak bisa digeser/diedit lagi. Kena +1 token tambahan.", "AI designs headline+subheadline+highlights directly into the image (spelling auto-checked). Result is ONE finished image, text can't be repositioned/edited afterward. Costs +1 extra token.")}
+              </span>
+            </span>
+          </label>
+          {useArtDirector ? (
+            <label className="ml-6 flex cursor-pointer items-start gap-2 rounded-2xl border border-dashed border-line bg-navy/[0.02] px-3 py-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5 accent-primary"
+                checked={useTracing}
+                onChange={(e) => setUseTracing(e.target.checked)}
+              />
+              <span>
+                <span className="font-medium text-navy">{L("+ Coba jadikan teksnya bisa diedit (super eksperimental)", "+ Try making the text editable (super experimental)")}</span>
+                <br />
+                <span className="text-xs text-navy/50">
+                  {L("AI coba pisahkan teks jadi elemen yang bisa digeser — belum ada jaminan hasil rapi, bisa saja meleset posisinya. Kena +1 token LAGI (di luar token Desain Lengkap).", "AI tries to separate the text into a draggable element — no guarantee of a clean result, position may be off. Costs +1 MORE token (on top of the Full Design token).")}
+                </span>
+              </span>
+            </label>
+          ) : null}
+          </>
+        ) : null}
         <Button type="button" variant="cta" onClick={() => handleGenerate()} disabled={isGenerating} className="w-fit">
           {isGenerating
             ? (jenis === "berita" ? L("Mencari berita & membuat konten...", "Searching news & generating...") : L("Sedang membuat...", "Generating..."))

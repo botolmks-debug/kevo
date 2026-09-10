@@ -60,6 +60,7 @@ const DICT: Record<string, Entry> = {
   "nav.panduan": { id: "Panduan", en: "Guide" },
   "nav.keluar": { id: "Keluar", en: "Log out" },
   "nav.gambar": { id: "Upload Gambar", en: "Upload Image" },
+  "nav.profilBisnis": { id: "Profil Bisnis", en: "Business Profile" },
   "buat.tab.otomatis": { id: "Otomatis", en: "Auto" },
   "buat.tab.manual": { id: "Manual", en: "Manual" },
   "gambar.continue": { id: "Lanjut Buat Konten →", en: "Continue to Create →" },

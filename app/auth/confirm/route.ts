@@ -32,9 +32,9 @@ export async function GET(request: NextRequest) {
     {
       cookies: {
         getAll() { return cookieStore.getAll(); },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
           cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
+            cookieStore.set(name, value, options as Parameters<typeof cookieStore.set>[2])
           );
         },
       },
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
   // Untuk reset-password: copy semua cookie (termasuk sesi Supabase)
   // ke dalam response redirect supaya /reset-password bisa updateUser.
   const response = NextResponse.redirect(redirectUrl);
-  cookieStore.getAll().forEach(({ name, value }) => {
+  cookieStore.getAll().forEach(({ name, value }: { name: string; value: string }) => {
     response.cookies.set(name, value);
   });
   return response;

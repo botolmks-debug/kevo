@@ -198,6 +198,7 @@ export default function VideoCeritaPage() {
     // Worker bisa langsung dibuat dari path biasa.
     console.log("[ffmpeg] mulai import modul ffmpeg (self-hosted)...");
     const mod = (await import(
+      // @ts-expect-error - path runtime-only (webpackIgnore), tsc tidak bisa resolve tipe modulnya
       /* webpackIgnore: true */ "/ffmpeg/lib/index.js"
     )) as { FFmpeg: new () => {
       load: (o: { coreURL: string; wasmURL: string; classWorkerURL?: string }) => Promise<void>;

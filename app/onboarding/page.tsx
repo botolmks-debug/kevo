@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, Suspense, useState } from "react";
 import { OnboardingWelcome } from "@/components/onboarding/OnboardingWelcome";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input, Textarea } from "@/components/ui/Input";
 import {
   buildBusinessProfile,
   toggleSocialSelection,
+  type BusinessProfile,
   type ContentGoal,
   type CustomerType,
   type ToneOfVoice,
@@ -68,32 +69,25 @@ function validateStep(
   lang: Lang,
 ): string | null {
   const L = (id: string, en: string) => (lang === "en" ? en : id);
+  // HANYA 3 field yang benar-benar wajib: nama, jenis usaha, produk utama.
+  // Semua field lain (lokasi, target pelanggan, pembeda, tone, CTA, cerita,
+  // sosmed, dll) OPSIONAL — bisa dilewati & diisi belakangan lewat
+  // pengaturan profil bisnis, supaya onboarding tidak terasa seperti sensus
+  // (keluhan user 10 Sep 2026). Field yang dikosongkan tetap tersimpan
+  // sebagai string kosong — sudah aman secara tipe (lihat BusinessProfile).
   switch (step) {
     case 1:
       if (!business.name.trim()) return L("Nama bisnis wajib diisi.", "Business name is required.");
       if (!business.industry.trim()) return L("Jenis usaha wajib diisi.", "Business type is required.");
-      if (!business.location.trim()) return L("Lokasi wajib diisi.", "Location is required.");
       return null;
     case 2:
       if (!offering.mainProducts.trim()) return L("Produk/jasa utama wajib diisi.", "Main product/service is required.");
-      if (!offering.targetCustomer.trim()) return L("Target pelanggan wajib diisi.", "Target customers are required.");
-      if (!offering.customerTypes.length) return L("Pilih minimal 1 tipe pelanggan (B2C/B2B).", "Pick at least 1 customer type (B2C/B2B).");
-      if (!offering.customerProblem.trim()) return L("Masalah pelanggan yang dipecahkan wajib diisi.", "The customer problem you solve is required.");
       return null;
     case 3:
-      if (!positioning.differentiator.trim()) return L("Keunggulan/pembeda wajib diisi.", "Your edge / differentiator is required.");
-      if (positioning.contentGoals.length === 0) return L("Pilih minimal satu tujuan konten.", "Pick at least one content goal.");
-      if (!positioning.tone) return L("Pilih nada komunikasi yang diinginkan.", "Pick your preferred tone of voice.");
-      if (!positioning.cta.trim()) return L("CTA/cara memesan wajib diisi.", "CTA / how to order is required.");
       return null;
-    case 4: {
-      const filledSocials = SOCIAL_PLATFORMS.filter((p) => (socialValues[p.id] ?? "").trim().length > 0);
-      if (filledSocials.length === 0) return L("Isi minimal satu akun sosial media.", "Fill in at least one social media account.");
-      if (selectedSocialIds.length === 0) return L("Centang minimal satu sosial media untuk ditampilkan di konten.", "Check at least one social account to show on content.");
+    case 4:
       return null;
-    }
     case 5:
-      if (!story.trim()) return L("Cerita usaha wajib diisi — ini membantu AI membuat konten yang lebih personal.", "Your story is required — it helps the AI create more personal content.");
       return null;
     default:
       return null;
@@ -101,6 +95,14 @@ function validateStep(
 }
 
 export default function OnboardingPage() {
+  return (
+    <Suspense fallback={null}>
+      <OnboardingForm />
+    </Suspense>
+  );
+}
+
+function OnboardingForm() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -140,6 +142,51 @@ export default function OnboardingPage() {
   const [story, setStory] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const searchParams = useSearchParams();
+
+  // Mode edit ("Profil Bisnis" di navbar, ?edit=1): muat profil YANG SUDAH
+  // ADA supaya form terisi lagi, bukan kosong — user bisa lengkapi field
+  // yang tadinya dilewati saat onboarding pertama, atau ubah yang sudah ada.
+  useEffect(() => {
+    if (searchParams.get("edit") !== "1") return;
+    setIsEditMode(true);
+    setIsLoadingProfile(true);
+    fetch("/api/business-profile")
+      .then((res) => res.json())
+      .then((data: { profile?: BusinessProfile | null }) => {
+        const p = data?.profile;
+        if (!p) return; // belum ada profil tersimpan -> form tetap kosong, wajar utk user yg belum onboarding
+        setBusiness({ name: p.business.name, industry: p.business.industry, age: p.business.age, location: p.business.location });
+        setIndustryOther(!INDUSTRIES.some((i) => i.value === p.business.industry) && p.business.industry.trim().length > 0);
+        setOffering({
+          mainProducts: p.offering.mainProducts,
+          flagshipProduct: p.offering.flagshipProduct,
+          priceRange: p.offering.priceRange,
+          targetCustomer: p.offering.targetCustomer,
+          customerTypes: p.offering.customerTypes,
+          customerProblem: p.offering.customerProblem,
+        });
+        setPositioning({
+          differentiator: p.positioning.differentiator,
+          contentGoals: p.positioning.contentGoals,
+          tone: p.positioning.tone,
+          cta: p.positioning.cta,
+          avoid: p.positioning.avoid,
+        });
+        const values: Record<string, string> = {};
+        for (const entry of p.socials.entries) values[entry.platformId] = entry.value;
+        setSocialValues(values);
+        setSelectedSocialIds(p.socials.selectedPlatformIds);
+        setStory(p.story);
+      })
+      .catch(() => {
+        // best-effort — kalau gagal muat, form tetap kosong, user masih bisa isi manual
+      })
+      .finally(() => setIsLoadingProfile(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function onIndustrySelect(v: string) {
     if (v === "__other__") {
@@ -215,7 +262,7 @@ export default function OnboardingPage() {
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error ?? L("Gagal menyimpan profil bisnis.", "Failed to save business profile."));
-      router.push("/gambar"); // user baru: langsung ke Upload Produk (alur baru 14 Agu)
+      router.push(isEditMode ? "/dashboard" : "/gambar"); // edit: balik ke dashboard; user baru: lanjut Upload Produk (alur baru 14 Agu)
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : L("Gagal menyimpan profil bisnis.", "Failed to save business profile."));
     } finally {
@@ -240,8 +287,20 @@ export default function OnboardingPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-6 px-6 py-12">
       {/* Popup sambutan: jelaskan TUJUAN pertanyaan onboarding (komponen sudah
-          lama dibuat tapi belum pernah di-mount — akar bug "popup tidak muncul") */}
-      <OnboardingWelcome />
+          lama dibuat tapi belum pernah di-mount — akar bug "popup tidak muncul").
+          Tidak relevan lagi kalau user cuma mau EDIT profil yang sudah ada. */}
+      {!isEditMode ? <OnboardingWelcome /> : null}
+      {isLoadingProfile ? (
+        <Card className="flex items-center justify-center py-12 text-sm text-navy/50">
+          {L("Memuat profil bisnis...", "Loading business profile...")}
+        </Card>
+      ) : (
+      <>
+      {isEditMode ? (
+        <p className="text-sm text-navy/60">
+          {L("Mengedit profil bisnis yang sudah ada — lengkapi atau ubah bagian mana pun, lalu simpan.", "Editing your existing business profile — fill in or change any part, then save.")}
+        </p>
+      ) : null}
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <p className="text-sm font-medium text-primary">{L("Langkah", "Step")} {step}/{TOTAL_STEPS}</p>
@@ -286,7 +345,7 @@ export default function OnboardingPage() {
                 onChange={(e) => setBusiness((b) => ({ ...b, industry: e.target.value }))}
                 placeholder={L("mis. Event organizer, laundry", "e.g. Event organizer, laundry")} />
             ) : null}
-            <Input label={L("Lokasi / area layanan *", "Location / service area *")} value={business.location}
+            <Input label={L("Lokasi / area layanan (opsional)", "Location / service area (optional)")} value={business.location}
               onChange={(e) => setBusiness((b) => ({ ...b, location: e.target.value }))}
               placeholder={L("mis. Bandung dan sekitarnya", "e.g. Bandung and surrounding areas")} />
           </>
@@ -298,11 +357,11 @@ export default function OnboardingPage() {
             <Input label={L("Produk/jasa utama *", "Main product/service *")} value={offering.mainProducts}
               onChange={(e) => setOffering((o) => ({ ...o, mainProducts: e.target.value }))}
               placeholder={L("mis. Konsultasi umum, medical check-up", "e.g. General consultation, medical check-up")} />
-            <Input label={L("Target pelanggan *", "Target customers *")} value={offering.targetCustomer}
+            <Input label={L("Target pelanggan (opsional)", "Target customers (optional)")} value={offering.targetCustomer}
               onChange={(e) => setOffering((o) => ({ ...o, targetCustomer: e.target.value }))}
               placeholder={L("mis. Keluarga muda usia 25-40 tahun", "e.g. Young families aged 25-40")} />
             <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-navy">{L("Target pelanggan kamu lebih ke * (boleh pilih lebih dari satu)", "Your target customers are mostly * (pick one or more)")}</span>
+              <span className="text-sm font-medium text-navy">{L("Target pelanggan kamu lebih ke (opsional, boleh pilih lebih dari satu)", "Your target customers are mostly (optional, pick one or more)")}</span>
               <div className="flex flex-col gap-2">
                 {CUSTOMER_TYPES.map((ct) => (
                   <label key={ct.id} className="flex items-start gap-2 text-sm text-navy">
@@ -316,7 +375,7 @@ export default function OnboardingPage() {
                 ))}
               </div>
             </div>
-            <Textarea label={L("Masalah pelanggan yang bisnis ini pecahkan *", "The customer problem this business solves *")} value={offering.customerProblem}
+            <Textarea label={L("Masalah pelanggan yang bisnis ini pecahkan (opsional)", "The customer problem this business solves (optional)")} value={offering.customerProblem}
               onChange={(e) => setOffering((o) => ({ ...o, customerProblem: e.target.value }))}
               placeholder={L("mis. Susah dapat jadwal periksa cepat tanpa antre lama", "e.g. Hard to get a quick appointment without long queues")} />
           </>
@@ -325,11 +384,11 @@ export default function OnboardingPage() {
         {step === 3 ? (
           <>
             <h1 className="text-xl font-bold text-navy">{L("Pembeda & gaya pesan", "Differentiator & messaging")}</h1>
-            <Textarea label={L("Keunggulan / pembeda dari pesaing *", "Your edge / what sets you apart from competitors *")} value={positioning.differentiator}
+            <Textarea label={L("Keunggulan / pembeda dari pesaing (opsional)", "Your edge / what sets you apart from competitors (optional)")} value={positioning.differentiator}
               onChange={(e) => setPositioning((p) => ({ ...p, differentiator: e.target.value }))}
               placeholder={L("mis. Dokter berpengalaman, hasil lab keluar hari yang sama", "e.g. Experienced doctors, same-day lab results")} />
             <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-navy">{L("Tujuan utama konten * (boleh lebih dari satu)", "Main content goals * (pick one or more)")}</span>
+              <span className="text-sm font-medium text-navy">{L("Tujuan utama konten (opsional, boleh lebih dari satu)", "Main content goals (optional, pick one or more)")}</span>
               <div className="flex flex-wrap gap-3">
                 {CONTENT_GOALS.map((goal) => (
                   <label key={goal.id} className="flex items-center gap-2 text-sm text-navy">
@@ -341,7 +400,7 @@ export default function OnboardingPage() {
               </div>
             </div>
             <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-navy">{L("Nada komunikasi yang diinginkan *", "Preferred tone of voice *")}</span>
+              <span className="text-sm font-medium text-navy">{L("Nada komunikasi yang diinginkan (opsional)", "Preferred tone of voice (optional)")}</span>
               <div className="flex flex-wrap gap-3">
                 {TONES.map((tone) => (
                   <label key={tone.id} className="flex items-center gap-2 text-sm text-navy">
@@ -352,7 +411,7 @@ export default function OnboardingPage() {
                 ))}
               </div>
             </div>
-            <Textarea label={L("Ajakan (CTA) yang biasa dipakai + cara menghubungi *", "Your usual call to action (CTA) + how to reach you *")} value={positioning.cta}
+            <Textarea label={L("Ajakan (CTA) yang biasa dipakai + cara menghubungi (opsional)", "Your usual call to action (CTA) + how to reach you (optional)")} value={positioning.cta}
               onChange={(e) => setPositioning((p) => ({ ...p, cta: e.target.value }))}
               placeholder={L("mis. 'Daftar sekarang', pesan lewat WhatsApp", "e.g. 'Sign up now', order via WhatsApp")} />
             <div className="flex flex-col gap-1.5">
@@ -376,9 +435,9 @@ export default function OnboardingPage() {
 
         {step === 4 ? (
           <>
-            <h1 className="text-xl font-bold text-navy">{L("Sosial media", "Social media")}</h1>
+            <h1 className="text-xl font-bold text-navy">{L("Sosial media (opsional)", "Social media (optional)")}</h1>
             <p className="text-sm text-navy/60">
-              {L("Isi minimal satu akun, lalu centang mana yang ingin tampil di konten", "Fill at least one account, then check which ones to show on your content")} ({L("maks", "max")} {MAX_SELECTED_SOCIALS}).{" "}
+              {L("Boleh dilewati dan diisi nanti. Kalau diisi, centang mana yang ingin tampil di konten", "Can be skipped and filled in later. If filled, check which ones to show on your content")} ({L("maks", "max")} {MAX_SELECTED_SOCIALS}).{" "}
               {L("Dipilih", "Selected")}: {selectedSocialIds.length}/{MAX_SELECTED_SOCIALS}.
             </p>
             <div className="flex flex-col gap-3">
@@ -407,8 +466,8 @@ export default function OnboardingPage() {
 
         {step === 5 ? (
           <>
-            <h1 className="text-xl font-bold text-navy">{L("Cerita usaha", "Your story")}</h1>
-            <Textarea label={L("Ceritakan usahamu sedetail mungkin *", "Tell your story in as much detail as possible *")} value={story}
+            <h1 className="text-xl font-bold text-navy">{L("Cerita usaha (opsional)", "Your story (optional)")}</h1>
+            <Textarea label={L("Ceritakan usahamu sedetail mungkin (opsional)", "Tell your story in as much detail as possible (optional)")} value={story}
               onChange={(e) => setStory(e.target.value)}
               placeholder={L("Awal mula, nilai yang dipegang, apa yang bikin bangga, dan apa pun yang penting kami tahu. Makin detail, makin bagus kontennya.", "How it started, the values you hold, what makes you proud, and anything important we should know. The more detail, the better the content.")}
               className="min-h-40" />
@@ -436,6 +495,8 @@ export default function OnboardingPage() {
           </Button>
         </div>
       </Card>
+      </>
+      )}
     </main>
   );
 }

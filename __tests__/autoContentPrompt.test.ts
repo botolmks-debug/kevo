@@ -13,6 +13,7 @@ const profile: BusinessProfile = {
     flagshipProduct: "Kopi Susu Senja",
     priceRange: "15rb-30rb",
     targetCustomer: "Anak muda dan pekerja kantoran",
+    customerTypes: ["b2c"],
     customerProblem: "Susah cari kedai kopi yang nyaman buat kerja",
   },
   positioning: {
@@ -25,6 +26,7 @@ const profile: BusinessProfile = {
   socials: { entries: [], selectedPlatformIds: [] },
   story: "",
   logo: null,
+  logoLight: null,
 };
 
 describe("buildProdukContentPrompt", () => {

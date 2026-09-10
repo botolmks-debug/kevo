@@ -9,6 +9,7 @@ const profile: BusinessProfile = {
     flagshipProduct: "Vending machine kopi",
     priceRange: "-",
     targetCustomer: "Kantor modern dan coworking space anak muda",
+    customerTypes: ["b2b"],
     customerProblem: "-",
   },
   positioning: {
@@ -21,6 +22,7 @@ const profile: BusinessProfile = {
   socials: { entries: [], selectedPlatformIds: [] },
   story: "",
   logo: null,
+  logoLight: null,
 };
 
 describe("buildScenePrompt", () => {

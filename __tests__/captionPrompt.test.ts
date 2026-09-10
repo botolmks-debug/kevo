@@ -9,6 +9,7 @@ const profile: BusinessProfile = {
     flagshipProduct: "Medical check-up",
     priceRange: "Rp100rb-500rb",
     targetCustomer: "Keluarga muda",
+    customerTypes: ["b2c"],
     customerProblem: "Susah dapat jadwal cepat",
   },
   positioning: {
@@ -21,6 +22,7 @@ const profile: BusinessProfile = {
   socials: { entries: [], selectedPlatformIds: [] },
   story: "Berdiri sejak 2021...",
   logo: null,
+  logoLight: null,
 };
 
 describe("buildCaptionPrompt", () => {

@@ -6,6 +6,7 @@ import { loadBusinessProfile } from "@/lib/supabase/businessProfile";
 import { listImages, type ImageRow } from "@/lib/supabase/images";
 import { logError } from "@/lib/monitoring/errorLog";
 import { describeProductImage } from "@/lib/ai/describeImage";
+import { sanitizeTitles } from "@/lib/ai/sanitizeTitle";
 import {
   buildProdukTitlesPrompt,
   buildGeneralTitlesPrompt,
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
     const data = result.data as { titles?: unknown };
     const titles = Array.isArray(data.titles) ? data.titles.filter((t): t is string => typeof t === "string" && t.trim().length > 0) : [];
     if (titles.length === 0) return fail("AI tidak mengembalikan pilihan judul yang valid. Coba lagi.", 502);
-    return NextResponse.json({ titles });
+    return NextResponse.json({ titles: sanitizeTitles(titles) });
   }
 
   // ── INTERAKSI — format (Kuis/Edukasi/Tips/dst) di-pick SEKALI di sini,
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
     const data = result.data as { titles?: unknown };
     const titles = Array.isArray(data.titles) ? data.titles.filter((t): t is string => typeof t === "string" && t.trim().length > 0) : [];
     if (titles.length === 0) return fail("AI tidak mengembalikan pilihan judul yang valid. Coba lagi.", 502);
-    return NextResponse.json({ titles, formatLabel: format.label });
+    return NextResponse.json({ titles: sanitizeTitles(titles), formatLabel: format.label });
   }
 
   // ── PRODUK (& Referensi, dikonversi jadi "produk" oleh client) — butuh foto ──
@@ -148,5 +149,5 @@ export async function POST(request: NextRequest) {
   const titles = Array.isArray(data.titles) ? data.titles.filter((t): t is string => typeof t === "string" && t.trim().length > 0) : [];
   if (titles.length === 0) return fail("AI tidak mengembalikan pilihan judul yang valid. Coba lagi.", 502);
 
-  return NextResponse.json({ titles, produkDesc });
+  return NextResponse.json({ titles: sanitizeTitles(titles), produkDesc });
 }

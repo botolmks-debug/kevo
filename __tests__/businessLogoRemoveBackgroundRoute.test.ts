@@ -14,6 +14,14 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import { POST } from "@/app/api/business-logo/remove-background/route";
+import type { NextRequest } from "next/server";
+
+// Route ini butuh body JSON (field "variant") sejak diperbaiki penuh —
+// helper ini kasih request tiruan minimal supaya test tetap valid tanpa
+// perlu bikin Request sungguhan tiap panggilan.
+function mockRequest(body: unknown = {}): NextRequest {
+  return { json: async () => body } as unknown as NextRequest;
+}
 
 const ORIGINAL_ENV = { ...process.env };
 
@@ -36,7 +44,7 @@ describe("POST /api/business-logo/remove-background", () => {
   it("returns 503 without touching supabase when env is missing", async () => {
     delete process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-    const res = await POST();
+    const res = await POST(mockRequest());
 
     expect(res.status).toBe(503);
     expect(removeLogoBackgroundMock).not.toHaveBeenCalled();
@@ -46,7 +54,7 @@ describe("POST /api/business-logo/remove-background", () => {
     withSupabaseEnv();
     removeLogoBackgroundMock.mockResolvedValue({ ok: true, url: "https://cdn.example/dev/logo/clean.png" });
 
-    const res = await POST();
+    const res = await POST(mockRequest());
     const data = await res.json();
 
     expect(res.status).toBe(200);
@@ -58,7 +66,7 @@ describe("POST /api/business-logo/remove-background", () => {
     withSupabaseEnv();
     removeLogoBackgroundMock.mockResolvedValue({ ok: false, error: "Belum ada logo untuk dihapus background-nya." });
 
-    const res = await POST();
+    const res = await POST(mockRequest());
     const data = await res.json();
 
     expect(res.status).toBe(502);
