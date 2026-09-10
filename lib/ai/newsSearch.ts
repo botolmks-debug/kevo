@@ -35,13 +35,42 @@ function todayContext(lang?: Lang): string {
     : `TANGGAL HARI INI ADALAH ${iso}. Pakai ini sebagai acuan "baru" — JANGAN mengandalkan ingatan pelatihanmu soal berita yang "terasa baru", karena data pelatihanmu punya batas waktu dan bisa bikin berita lama terasa baru buatmu. Cerita cuma valid kalau BENAR-BENAR terjadi dalam 1-2 bulan terakhir dihitung mundur dari ${iso}. Kalau tidak ketemu yang benar-benar sebaru itu, cari yang lebih luas tapi akui itu terus terang — JANGAN sajikan berita lama yang sudah umum diketahui (mis. rilis produk dari setahun lebih lalu) seolah baru saja terjadi.`;
 }
 
-function buildInstruction(industry: string, mainProducts: string, lang?: Lang, avoidTopics?: string[]): string {
+function buildInstruction(industry: string, mainProducts: string, lang?: Lang, avoidTopics?: string[], concept?: string): string {
   const avoidBlockEn = avoidTopics && avoidTopics.length > 0
     ? `\n\nALREADY COVERED — find a DIFFERENT story, do NOT pick the same topic again (even a new angle on it):\n${avoidTopics.map((t, i) => `${i + 1}. ${t}`).join("\n")}`
     : "";
   const avoidBlockId = avoidTopics && avoidTopics.length > 0
     ? `\n\nSUDAH PERNAH DIBAHAS — cari cerita yang BEDA, JANGAN ambil topik yang sama lagi (walau dari sudut baru):\n${avoidTopics.map((t, i) => `${i + 1}. ${t}`).join("\n")}`
     : "";
+
+  // Kalau user kasih topik spesifik (mis. "ChatGPT Astra"), cari BERITA ITU
+  // PERSIS — bukan lagi bebas pilih dari industri. Industri tetap disebut
+  // supaya AI tahu sudut pandang/angle yang relevan buat bisnis user kalau
+  // topiknya agak di luar bidang mereka (mis. bisnis kuliner bahas AI).
+  if (concept && concept.trim()) {
+    return lang === "en"
+      ? `${todayContext(lang)}
+
+Search specifically for RECENT news about: "${concept.trim()}"
+Business context (for framing/angle only, NOT for picking a different topic): a small business in the "${industry}" industry (products/services: ${mainProducts || "-"}).${avoidBlockEn}
+
+Find the most recent, accurate news specifically about the topic above. If the business's industry is unrelated to this topic, that's fine — just find the news as asked; the framing/reaction can still tie back to the business owner's perspective later in a separate step.
+
+Reply in this exact plain-text format (no JSON, no markdown):
+SOURCE: <publication/site name, e.g. "Reuters" — write "unknown" if unclear>
+SUMMARY: <3-5 sentences summarizing the story IN YOUR OWN WORDS — do not quote the article verbatim. Include the key fact/number/twist that makes it interesting, AND make sure the summary clearly names the specific subject (product/company/person/topic) — not just a vague takeaway.>`
+      : `${todayContext(lang)}
+
+Cari berita TERBARU secara spesifik soal: "${concept.trim()}"
+Konteks bisnis (HANYA untuk framing/sudut pandang nanti, BUKAN untuk ganti topik): usaha kecil di industri "${industry}" (produk/layanan: ${mainProducts || "-"}).${avoidBlockId}
+
+Cari berita paling baru dan akurat soal topik di atas. Kalau industri bisnisnya tidak nyambung sama topik ini, tidak masalah — tetap cari beritanya sesuai yang diminta; framing/reaksinya bisa tetap dikaitkan ke sudut pandang pemilik usaha di langkah terpisah nanti.
+
+Jawab dalam format teks biasa PERSIS seperti ini (JANGAN JSON, JANGAN markdown):
+SOURCE: <nama media/situs, mis. "Detik" — tulis "tidak diketahui" kalau tidak jelas>
+SUMMARY: <3-5 kalimat merangkum ceritanya DENGAN KATA-KATA SENDIRI — jangan mengutip artikelnya persis. Sertakan fakta/angka/kejutan utama yang bikin ceritanya menarik, DAN pastikan ringkasannya menyebut jelas subjek spesifiknya (produk/perusahaan/orang/topik) — bukan cuma kesimpulan yang kabur.>`;
+  }
+
   return lang === "en"
     ? `${todayContext(lang)}
 
@@ -70,11 +99,11 @@ function parseNewsText(text: string): { summary: string; sourceName: string | nu
 }
 
 /** Jalur UTAMA — Gemini Google Search grounding. */
-async function searchWithGemini(industry: string, mainProducts: string, lang?: Lang, avoidTopics?: string[]): Promise<NewsSearchResult> {
+async function searchWithGemini(industry: string, mainProducts: string, lang?: Lang, avoidTopics?: string[], concept?: string): Promise<NewsSearchResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return { ok: false, error: "GEMINI_API_KEY belum diisi." };
 
-  const instruction = buildInstruction(industry, mainProducts, lang, avoidTopics);
+  const instruction = buildInstruction(industry, mainProducts, lang, avoidTopics, concept);
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
@@ -110,11 +139,11 @@ async function searchWithGemini(industry: string, mainProducts: string, lang?: L
  * biasa — tool pencarian web cuma tersedia di endpoint /v1/responses).
  * Dipakai kalau jalur Gemini di atas gagal total.
  */
-async function searchWithOpenAI(industry: string, mainProducts: string, lang?: Lang, avoidTopics?: string[]): Promise<NewsSearchResult> {
+async function searchWithOpenAI(industry: string, mainProducts: string, lang?: Lang, avoidTopics?: string[], concept?: string): Promise<NewsSearchResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return { ok: false, error: "OPENAI_API_KEY belum diisi." };
 
-  const instruction = buildInstruction(industry, mainProducts, lang, avoidTopics);
+  const instruction = buildInstruction(industry, mainProducts, lang, avoidTopics, concept);
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
@@ -179,11 +208,12 @@ export async function searchIndustryNews(
   mainProducts: string,
   lang?: Lang,
   avoidTopics?: string[],
+  concept?: string,
 ): Promise<NewsSearchResult> {
-  const primary = await searchWithGemini(industry, mainProducts, lang, avoidTopics);
+  const primary = await searchWithGemini(industry, mainProducts, lang, avoidTopics, concept);
   if (primary.ok) return primary;
 
   if (!process.env.OPENAI_API_KEY) return primary; // tidak ada cadangan yang bisa dicoba
   console.warn("Gemini news search gagal (" + primary.error + "), mencoba fallback OpenAI...");
-  return searchWithOpenAI(industry, mainProducts, lang, avoidTopics);
+  return searchWithOpenAI(industry, mainProducts, lang, avoidTopics, concept);
 }

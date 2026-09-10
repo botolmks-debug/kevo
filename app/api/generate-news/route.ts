@@ -34,7 +34,7 @@ const BUCKET = "user-images";
 /** Sama seperti generate-auto: 1 token per generate (1 gambar + 1 teks). */
 export const NEWS_TOKEN_COST = 1;
 
-type RequestBody = { ratio?: AspectRatio; language?: "id" | "en" };
+type RequestBody = { ratio?: AspectRatio; language?: "id" | "en"; konsep?: string };
 
 function dataUriToBuffer(dataUri: string): Buffer {
   const base64 = dataUri.split(",")[1] ?? "";
@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
   }
   const ratio: AspectRatio = body.ratio && VALID_RATIOS.includes(body.ratio) ? body.ratio : "4:5";
   const language = body.language === "en" ? "en" : "id";
+  const konsep = typeof body.konsep === "string" ? body.konsep.trim().slice(0, 200) : "";
 
   const profileResult = await loadBusinessProfile(supabase, user.id);
   if (!profileResult.ok) return NextResponse.json({ error: profileResult.error }, { status: 502 });
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
   // AI tidak ambil topik yang sama berulang (kejadian nyata: 3x generate
   // berturut-turut semua soal "Google Pics").
   const avoidTopics = await getRecentNewsTitles(supabase, user.id);
-  const news = await searchIndustryNews(profile.business.industry, profile.offering.mainProducts, language, avoidTopics);
+  const news = await searchIndustryNews(profile.business.industry, profile.offering.mainProducts, language, avoidTopics, konsep || undefined);
   if (!news.ok) return fail(news.error, 502);
 
   // ── 2) Judul + caption + deskripsi adegan (JSON) ─────────────────────────

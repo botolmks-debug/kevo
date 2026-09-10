@@ -319,6 +319,7 @@ export function AutoGenerate() {
               body: JSON.stringify({
                 ratio: ratioArg && RATIO_OPTIONS.some((o) => o.value === ratioArg) ? ratioArg : ratio,
                 language: getLang(),
+                konsep: konsep.trim() || undefined,
               }),
             })
           : fetch("/api/generate-auto", {
@@ -604,23 +605,32 @@ export function AutoGenerate() {
         </div>
       </div>
 
-      {jenis === "produk" || jenis === "referensi" ? (
+      {jenis === "produk" || jenis === "referensi" || jenis === "berita" ? (
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium text-navy">
-            {L("Konsep (opsional)", "Concept (optional)")}
+            {jenis === "berita"
+              ? L("Cari berita tentang topik tertentu (opsional)", "Search news about a specific topic (optional)")
+              : L("Konsep (opsional)", "Concept (optional)")}
           </span>
           <textarea
             value={konsep}
             onChange={(e) => setKonsep(e.target.value)}
-            placeholder={L(
-              "Tulis arahan bebas kalau ada ide spesifik (mis. \"suasana pagi hari, nuansa hangat, buat yang lagi buru-buru berangkat kerja\"). Kosongkan kalau mau AI tentukan sendiri dari data produk & bisnismu.",
-              "Write a free-form direction if you have a specific idea (e.g. \"morning vibe, warm mood, for people rushing to work\"). Leave empty to let AI decide from your product & business data.",
-            )}
+            placeholder={
+              jenis === "berita"
+                ? L(
+                    "Tulis topik spesifik yang mau dibahas, mis. \"ChatGPT Astra\" atau \"kenaikan harga BBM\" — AI akan cari berita soal itu. Kosongkan kalau mau AI pilih sendiri berita seputar industrimu.",
+                    "Write a specific topic to cover, e.g. \"ChatGPT Astra\" — AI will search for news about it. Leave empty to let AI pick news from your industry on its own.",
+                  )
+                : L(
+                    "Tulis arahan bebas kalau ada ide spesifik (mis. \"suasana pagi hari, nuansa hangat, buat yang lagi buru-buru berangkat kerja\"). Kosongkan kalau mau AI tentukan sendiri dari data produk & bisnismu.",
+                    "Write a free-form direction if you have a specific idea (e.g. \"morning vibe, warm mood, for people rushing to work\"). Leave empty to let AI decide from your product & business data.",
+                  )
+            }
             rows={2}
             maxLength={500}
             className="w-full rounded-xl border border-line px-3.5 py-2.5 text-sm text-navy placeholder:text-navy/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
-          {konsep.trim() ? (
+          {konsep.trim() && jenis !== "berita" ? (
             <span className="text-xs text-primary/80">
               {L("Konsep ini akan diutamakan — mengalahkan Tema di bawah kalau bertentangan.", "This concept takes priority — it overrides the Theme below if they conflict.")}
             </span>
