@@ -23,7 +23,7 @@ import { interaksiTemplate } from "@/lib/templates/interaksi";
 import type { AspectRatio, Template } from "@/lib/templates/types";
 import { FONT_OPTIONS } from "@/lib/templates/fonts";
 import { shareContent } from "@/lib/share";
-import { ReferenceTermsModal, hasAcceptedReferenceTerms } from "@/components/generate-otomatis/ReferenceTermsModal";
+import { ReferenceTermsModal } from "@/components/generate-otomatis/ReferenceTermsModal";
 import { CarouselAuto } from "@/components/generate-otomatis/CarouselAuto";
 import { EmptyGalleryNotice } from "@/components/ui/EmptyGalleryNotice";
 
@@ -157,6 +157,13 @@ export function AutoGenerate() {
   // Modal T&C fitur Referensi — muncul saat user pertama kali generate dengan jenis "referensi"
   const [showReferenceModal, setShowReferenceModal] = useState(false);
   const pendingRatioRef = useRef<AspectRatio | undefined>(undefined);
+  // Modal T&C Referensi harus muncul SETIAP KALI generate (bukan cuma sekali
+  // seumur browser) — flag ini HANYA dipakai untuk melewati modal pada
+  // panggilan handleGenerate KEDUA (dipicu otomatis setelah user menekan
+  // "Lanjut Generate" di modal), supaya tidak infinite loop. Direset segera
+  // setelah dipakai, jadi generate BERIKUTNYA (klik tombol lagi) tetap
+  // memicu modal dari awal.
+  const skipReferenceModalOnceRef = useRef(false);
 
   async function loadHistory() {
     setHistoryError(null);
@@ -255,12 +262,16 @@ export function AutoGenerate() {
       setGenerateError(L("Unggah 1 gambar referensi dulu.", "Upload 1 reference image first."));
       return;
     }
-    // Cek T&C fitur Referensi — kalau belum accept, tampilkan modal dan tunggu
-    if (jenis === "referensi" && !hasAcceptedReferenceTerms()) {
+    // Modal T&C fitur Referensi — WAJIB tampil SETIAP KALI generate dengan
+    // referensi (bukan cuma sekali seumur browser — perbaikan atas laporan
+    // user 12 Sep 2026). skipReferenceModalOnceRef cuma true sesaat setelah
+    // user menekan "Lanjut Generate" di modal (lihat onConfirm di bawah).
+    if (jenis === "referensi" && !skipReferenceModalOnceRef.current) {
       pendingRatioRef.current = ratioArg;
       setShowReferenceModal(true);
       return;
     }
+    skipReferenceModalOnceRef.current = false; // reset — generate KLIK BERIKUTNYA tetap wajib lewat modal lagi
     // "Dari Foto" (produk), "Referensi", "General", & "Interaksi" TANPA
     // judul terkunci — ambil 5 pilihan judul dulu, tampilkan popup, JANGAN
     // lanjut generate gambar sampai user pilih satu. Referensi numpang infra
@@ -1029,7 +1040,7 @@ export function AutoGenerate() {
           setShowReferenceModal(false);
           const pendingRatio = pendingRatioRef.current;
           pendingRatioRef.current = undefined;
-          // Trigger ulang generate — sekarang hasAcceptedReferenceTerms() akan true
+          skipReferenceModalOnceRef.current = true; // izinkan LEWATI modal khusus untuk panggilan generate ini saja
           void handleGenerate(pendingRatio);
         }}
       />

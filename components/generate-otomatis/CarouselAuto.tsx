@@ -21,7 +21,16 @@ type Slide = { title: string; desc: string };
 
 /** Harga fitur Carousel (label tombol) — server pakai konstanta yang sama. */
 const CAROUSEL_TOKEN_COST = 4;
-const SLIDE_COUNT = 4;
+// Mode eksperimental (Cerita Berantai & Panorama) DISEMBUNYIKAN sementara
+// dari UI atas permintaan user (9 Sep 2026) — set true untuk tampilkan lagi.
+// Kode & state-nya TIDAK dihapus, cuma UI-nya. Prompt storytelling di
+// buildCarouselPrompt() TETAP aktif untuk mode normal (tidak terikat flag ini).
+const SHOW_CAROUSEL_EXPERIMENTS = false;
+// SLIDE_COUNT_DEFAULT = mode normal & cerita berantai (4 slide). Mode
+// Panorama SEKARANG 3 slide (bukan 4) — lihat `slideCount` di dalam
+// komponen, dihitung dari state `panorama4`.
+const SLIDE_COUNT_DEFAULT = 4;
+const SLIDE_COUNT_PANORAMA = 3;
 
 // Preset warna overlay: brand Keposting + pilihan umum yang aman untuk teks putih.
 const COLOR_PRESETS = [
@@ -106,6 +115,9 @@ export function CarouselAuto({
 
   // Tema opsional dari user — judul/deskripsi/caption akan mengikuti tema ini.
   const [theme, setTheme] = useState("");
+  const [chainedStory, setChainedStory] = useState(false); // eksperimental: cerita berantai (slide 2&3 pakai slide sebelumnya sbg referensi)
+  const [panorama4, setPanorama4] = useState(false); // eksperimental: 1 panorama dipotong jadi 3 slide
+  const slideCount = panorama4 ? SLIDE_COUNT_PANORAMA : SLIDE_COUNT_DEFAULT;
   const [overlayColor, setOverlayColor] = useState("#0fb6a6");
   const [overlayOpacity, setOverlayOpacity] = useState(80);
 
@@ -124,14 +136,14 @@ export function CarouselAuto({
 
   const [activeSlide, setActiveSlide] = useState(0);
   const [overridesPerSlide, setOverridesPerSlide] = useState<EditorOverrides[]>(
-    Array.from({ length: SLIDE_COUNT }, () => ({ slots: {} })),
+    Array.from({ length: slideCount }, () => ({ slots: {} })),
   );
   // Edit teks langsung di kanvas, per slide (values = satu sumber kebenaran).
   const [valuesPerSlide, setValuesPerSlide] = useState<Record<string, string>[]>(
-    Array.from({ length: SLIDE_COUNT }, () => ({})),
+    Array.from({ length: slideCount }, () => ({})),
   );
   const [savedIds, setSavedIds] = useState<(string | null)[]>(
-    Array.from({ length: SLIDE_COUNT }, () => null),
+    Array.from({ length: slideCount }, () => null),
   );
 
   const [saveStatus, setSaveStatus] = useState<Status>("idle");
@@ -168,14 +180,14 @@ export function CarouselAuto({
       const res = await fetch("/api/generate-carousel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageId: picked.id, imageDescription: picked.description ?? "", theme, language: getLang() }),
+        body: JSON.stringify({ imageId: picked.id, imageDescription: picked.description ?? "", theme, language: getLang(), chainedStory, panorama4 }),
       });
       const d = await res.json().catch(() => null);
       if (!res.ok) throw new Error(d?.error ?? "Gagal generate carousel.");
 
       const gotSlides = (d?.slides ?? []) as Slide[];
       const aiImages = (d?.imageDataUris ?? []) as string[];
-      if (gotSlides.length !== SLIDE_COUNT || aiImages.length !== 3 || aiImages.some((x) => !x)) {
+      if (gotSlides.length !== slideCount || aiImages.length !== slideCount - 1 || aiImages.some((x) => !x)) {
         throw new Error("Hasil AI tidak lengkap. Coba lagi.");
       }
 
@@ -186,9 +198,9 @@ export function CarouselAuto({
       const slide4 = typeof d?.lastSlideImageDataUri === "string" ? d.lastSlideImageDataUri : picked.publicUrl;
       setRawSrcs([...aiImages, slide4]);
       // Reset state editor untuk carousel baru.
-      setOverridesPerSlide(Array.from({ length: SLIDE_COUNT }, () => ({ slots: {} })));
-      setValuesPerSlide(Array.from({ length: SLIDE_COUNT }, () => ({})));
-      setSavedIds(Array.from({ length: SLIDE_COUNT }, () => null));
+      setOverridesPerSlide(Array.from({ length: slideCount }, () => ({ slots: {} })));
+      setValuesPerSlide(Array.from({ length: slideCount }, () => ({})));
+      setSavedIds(Array.from({ length: slideCount }, () => null));
       setActiveSlide(0);
       setGenStatus("success");
     } catch (e) {
@@ -209,7 +221,7 @@ export function CarouselAuto({
   const logoLight = businessProfile?.logoLight ?? null;
   const defaultLogoVariant: "dark" | "light" = logoLight ? "light" : "dark";
 
-  const ready = slides !== null && backgrounds.length === SLIDE_COUNT;
+  const ready = slides !== null && backgrounds.length === slideCount;
 
   function slideValues(i: number): Record<string, string> {
     const base: Record<string, string> = {
@@ -232,7 +244,7 @@ export function CarouselAuto({
     const newSavedIds = [...savedIds];
     try {
       // Berurutan (bukan paralel) supaya server render tidak kebanjiran.
-      for (let i = 0; i < SLIDE_COUNT; i++) {
+      for (let i = 0; i < slideCount; i++) {
         setSaveProgress(i + 1);
         const ov = overridesPerSlide[i];
         const variant = ov.logoVariant ?? defaultLogoVariant;
@@ -347,6 +359,59 @@ export function CarouselAuto({
         </p>
       </Card>
 
+      {SHOW_CAROUSEL_EXPERIMENTS ? (
+      <Card className="flex flex-col gap-2">
+        <h3 className="text-sm font-semibold text-navy">Mode eksperimental (opsional)</h3>
+        <label className="flex cursor-pointer items-start gap-2 text-sm">
+          <input
+            type="radio"
+            name="carouselExperiment"
+            className="mt-0.5 accent-primary"
+            checked={!chainedStory && !panorama4}
+            onChange={() => { setChainedStory(false); setPanorama4(false); }}
+          />
+          <span className="text-navy">Tanpa eksperimen (default) — 3 foto independen paralel, slide 4 = foto produk aslimu</span>
+        </label>
+        <label className="flex cursor-pointer items-start gap-2 text-sm">
+          <input
+            type="radio"
+            name="carouselExperiment"
+            className="mt-0.5 accent-primary"
+            checked={chainedStory}
+            onChange={() => { setChainedStory(true); setPanorama4(false); }}
+          />
+          <span>
+            <span className="font-medium text-navy">Cerita berantai</span>
+            <br />
+            <span className="text-xs text-navy/50">
+              Tiap slide tetap foto utuh & bermakna sendiri — slide 2 digenerate dengan foto slide 1 sebagai
+              referensi, slide 3 dengan foto slide 2, supaya orang/tempat/kondisinya konsisten. Slide 4 tetap foto
+              produk aslimu. Prosesnya lebih lambat (gambar dibuat berurutan).
+            </span>
+          </span>
+        </label>
+        <label className="flex cursor-pointer items-start gap-2 text-sm">
+          <input
+            type="radio"
+            name="carouselExperiment"
+            className="mt-0.5 accent-primary"
+            checked={panorama4}
+            onChange={() => { setPanorama4(true); setChainedStory(false); }}
+          />
+          <span>
+            <span className="font-medium text-navy">Panorama (3 slide kotak)</span>
+            <br />
+            <span className="text-xs text-navy/50">
+              1 foto panorama lebar berisi 3 momen cerita sekaligus, dipotong jadi 3 slide KOTAK (1:1) — bukan 4
+              potret 4:5 seperti sebelumnya. Foto produk aslimu ditempel ke bagian ke-3 setelah panorama jadi. Kalau
+              server menerima ukuran khusus (3240x1080), hasilnya pas sempurna tanpa bilah kosong; kalau tidak, ada
+              fallback yang sedikit memberi bilah warna di sisi kiri-kanan.
+            </span>
+          </span>
+        </label>
+      </Card>
+      ) : null}
+
       <Card className="flex flex-col gap-3">
         <h3 className="text-sm font-semibold text-navy">Overlay Warna</h3>
         <div className="flex flex-wrap items-center gap-2">
@@ -413,7 +478,7 @@ export function CarouselAuto({
       {ready ? (
         <>
           <div className="flex items-center gap-2">
-            {Array.from({ length: SLIDE_COUNT }, (_, i) => (
+            {Array.from({ length: slideCount }, (_, i) => (
               <button
                 key={i}
                 type="button"
@@ -423,7 +488,7 @@ export function CarouselAuto({
                 }`}
               >
                 Slide {i + 1}
-                {i === SLIDE_COUNT - 1 ? " (fotomu)" : ""}
+                {i === slideCount - 1 ? " (fotomu)" : ""}
                 {savedIds[i] ? " ✓" : ""}
               </button>
             ))}

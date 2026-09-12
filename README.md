@@ -1,70 +1,45 @@
-# Update — Perbaikan 24 Error TypeScript Lama (Pre-existing)
+# Update — Panorama Dibagi 2 (bukan 3) — Signifikan Kurangi Bantalan
 
-Ini paket khusus untuk 24 error tsc yang muncul di screenshot-mu — SEMUANYA
-di file yang tidak pernah saya sentuh sebelum sesi pembersihan ini (terbukti
-lewat git status, tidak ada di daftar modified/untracked sebelumnya).
-
-## File YANG DI-CTRL+A-REPLACE (12 file)
+## File YANG DI-CTRL+A-REPLACE
 ```
-__tests__/autoContentPrompt.test.ts
-__tests__/captionPrompt.test.ts
-__tests__/scenePrompt.test.ts
-__tests__/businessProfile.test.ts
-__tests__/supabaseBusinessProfile.test.ts
-__tests__/businessLogoRemoveBackgroundRoute.test.ts
-__tests__/businessLogoRoute.test.ts
-app/auth/confirm/route.ts
-app/video/cerita/page.tsx
-app/video/page.tsx
-app/videocerita/page.tsx
-app/videocerita/singkat/page.tsx
+lib/ai/carouselPrompt.ts
+lib/images/splitPanorama.ts
+app/api/generate-carousel/route.ts
 ```
+(splitPanorama.ts ditulis ulang total - timpa penuh.)
+(CarouselAuto.tsx TIDAK berubah dari paket sebelumnya - jumlah slide tetap
+3 total, cuma cara membaginya yang berubah di balik layar.)
 
-## Ringkasan perbaikan per kategori
+## Kenapa balik ke bagi 2 (bukan 3)
+Screenshot yang kamu kirim menunjukkan bantalan masih ada - artinya ukuran
+custom "3240x1080" kemungkinan besar DITOLAK server, jatuh ke fallback
+resmi "1536x1024". Saya hitung ulang matematikanya untuk skenario fallback
+ini khusus:
+- Dibagi 3 (versi sebelumnya): cuma 50% sisi kotak terisi konten
+- Dibagi 2 (versi ini): 75% sisi kotak terisi konten - JAUH lebih baik
 
-1. **Mock profil bisnis di test kurang field** (`customerTypes`, `logoLight`)
-   — field ini ditambahkan ke tipe `BusinessProfile` di masa lalu, tapi
-   beberapa file test lama tidak pernah diupdate. Tinggal tambah field yang
-   hilang ke object literal mock-nya.
+## Perubahan desain
+Slide ke-3 (produk) SEKARANG TIDAK LAGI diambil dari "bagian panorama yang
+disisakan kosong" (pendekatan lama, butuh instruksi rumit ke AI). Sekarang
+dibuat lewat langkah TERPISAH yang PERSIS SAMA dengan mode carousel lain
+(foto produk asli + bagian terakhir panorama sebagai referensi gaya) -
+lebih sederhana, reuse kode yang sudah ada, dan MEMBEBASKAN panorama untuk
+cuma perlu 2 bagian (bukan 3), yang secara matematis jauh lebih
+menguntungkan kalau fallback yang terpakai.
 
-2. **`POST()`/`DELETE()` dipanggil tanpa argumen di test** — route
-   `business-logo` dan `business-logo/remove-background` sudah diupgrade
-   untuk butuh `request` (baca body/URL), tapi test lama masih manggil
-   fungsinya tanpa argumen. Ditambahkan helper `mockRequest()`/
-   `mockDeleteRequest()` kecil di masing-masing file test.
+## Bonus: kasus ukuran custom BERHASIL juga lebih baik sekarang
+Kalau server ternyata MENERIMA "3240x1080": dibagi 2 = 1620px per bagian,
+SEDIKIT lebih lebar dari kotak 1080 - sekarang di-crop dikit (bukan
+disusutkan/pad seperti bug yang saya perbaiki di kode ini juga), hasilnya
+tetap resolusi penuh dengan potongan minor di kiri-kanan. Jauh lebih baik
+daripada skenario dibagi 3 (yang kalau custom size berhasil pun bagi 3
+sudah pas, tapi kalau GAGAL jadi buruk - bagi 2 lebih tahan-banting di
+kedua skenario).
 
-3. **Parameter implicit `any`** di `app/auth/confirm/route.ts` — 2 tempat
-   destructuring (`{ name, value, options }` dan `{ name, value }`) belum
-   punya anotasi tipe eksplisit. Ditambahkan tipe manual.
-
-4. **Import ffmpeg dinamis (`webpackIgnore`) bikin `tsc` bingung** — 4 file
-   video yang sengaja pakai `import(/* webpackIgnore: true */ "...")` untuk
-   load ffmpeg.wasm saat runtime (bukan di-bundle). `tsc` tetap coba resolve
-   tipe-nya dan gagal. Ditambahkan `// @ts-expect-error` tepat di atas baris
-   string-nya (posisi ini penting — sempat saya taruh salah tempat di
-   percobaan pertama, sekarang sudah benar).
-
-## PENTING — verifikasi di komputermu sendiri
-Sandbox saya TIDAK punya `node_modules` project ini terpasang (react, vitest,
-@supabase/supabase-js, dll semuanya "Cannot find module" di sisi saya) —
-jadi saya tidak bisa 100% memastikan hasil akhirnya bersih total tanpa kamu
-jalankan sendiri:
-
-```powershell
-npx tsc --noEmit
-```
-
-Kalau MASIH ada error setelah pasang 12 file ini, kemungkinan besar itu
-error BARU yang baru kelihatan setelah 24 yang lama dibereskan (pola ini
-sudah terjadi 1x tadi — `logoLight` ketahuan setelah `customerTypes`
-dibereskan duluan) — kirim saya screenshot/teks errornya, saya lanjutkan.
-
-## Setelah bersih total
-Baru lanjut ke urutan push yang sudah dibahas sebelumnya:
-```powershell
-git status
-git diff --stat
-git add -A
-git commit -m "Perbaikan judul, cleanup Supabase, ganti ikon, edit profil bisnis, onboarding, animasi, dan 24 error TypeScript lama"
-git push
-```
+## Yang perlu kamu tes
+1. npx tsc --noEmit - sudah bersih.
+2. Generate ulang mode Panorama - bandingkan langsung ke screenshot yang
+   kamu kirim: apakah bantalannya sekarang jelas lebih tipis (mendekati
+   proporsi 75% konten vs sebelumnya 50%)?
+3. Cek produk di slide 3 masih muncul benar (logika edit-nya sekarang
+   generic/sama seperti mode lain, harusnya tidak berubah perilakunya).

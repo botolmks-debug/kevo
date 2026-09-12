@@ -32,7 +32,7 @@ export default async function DashboardPage() {
       <main className="mx-auto flex max-w-4xl flex-col gap-8 px-6 py-10">
         <header className="flex items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-bold text-navy">{t("dash.greeting", lang)} {namaBisnis} 👋</h1>
+            <h1 className="text-2xl font-bold text-navy">{t("dash.greeting", lang)} {namaBisnis}</h1>
             <p className="text-navy/60">{t("dash.subtitle", lang)}</p>
           </div>
           <ContentReminderBell />

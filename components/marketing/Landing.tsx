@@ -226,7 +226,7 @@ export function Landing() {
               <LinkButton href="/coba" className="cta-pulse w-full scale-100 px-7 py-3.5 transition-transform hover:scale-105 sm:w-auto">Coba Gratis</LinkButton>
               <LinkButton href="#cara-kerja" variant="secondary" className="w-full px-7 py-3.5 sm:w-auto">Lihat cara kerjanya</LinkButton>
             </div>
-            <p className="mt-3 text-xs text-muted">👆 Coba langsung sekarang, tanpa perlu bikin akun dulu — 5 token gratis + refill harian · Tanpa langganan</p>
+            <p className="mt-3 text-xs text-muted">Coba langsung sekarang, tanpa perlu bikin akun dulu — 5 token gratis + refill harian · Tanpa langganan</p>
           </div>
           <HeroAnimation />
         </section>
@@ -234,10 +234,10 @@ export function Landing() {
         {/* ── Trust bar ── */}
         <section className="border-y border-line bg-white/60">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-2 px-5 py-4 text-sm text-muted">
-            <span>✨ Konten dari 1 foto</span>
-            <span>⚡ Jadi dalam hitungan menit</span>
-            <span>📱 Feed, Story, & Square</span>
-            <span>✍️ Caption + hashtag otomatis</span>
+            <span>Konten dari 1 foto</span>
+            <span>Jadi dalam hitungan menit</span>
+            <span>Feed, Story, & Square</span>
+            <span>Caption + hashtag otomatis</span>
           </div>
         </section>
 
