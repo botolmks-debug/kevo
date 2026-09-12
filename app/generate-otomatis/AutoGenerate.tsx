@@ -262,11 +262,15 @@ export function AutoGenerate() {
       setGenerateError(L("Unggah 1 gambar referensi dulu.", "Upload 1 reference image first."));
       return;
     }
-    // Modal T&C fitur Referensi — WAJIB tampil SETIAP KALI generate dengan
-    // referensi (bukan cuma sekali seumur browser — perbaikan atas laporan
-    // user 12 Sep 2026). skipReferenceModalOnceRef cuma true sesaat setelah
-    // user menekan "Lanjut Generate" di modal (lihat onConfirm di bawah).
-    if (jenis === "referensi" && !skipReferenceModalOnceRef.current) {
+    // Modal T&C fitur Referensi — WAJIB tampil SETIAP KALI user mulai generate
+    // baru dengan referensi (perbaikan atas laporan user 12 Sep 2026), TAPI
+    // HANYA di 2 panggilan PERTAMA (klik tombol awal + lanjutan otomatis
+    // setelah confirm modal) — BUKAN di panggilan KETIGA (setelah user pilih
+    // 1 dari 5 judul, `locked` terisi). Penanda `!locked` ini krusial: tanpa
+    // itu, modal ikut ke-trigger ulang tiap kali user pilih judul (bug
+    // "looping" yang dilaporkan — root cause: alur pilih-judul ternyata
+    // memanggil handleGenerate() lagi, bukan cuma sekali seperti dugaan awal).
+    if (jenis === "referensi" && !locked && !skipReferenceModalOnceRef.current) {
       pendingRatioRef.current = ratioArg;
       setShowReferenceModal(true);
       return;
