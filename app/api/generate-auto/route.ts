@@ -440,7 +440,15 @@ export async function POST(request: NextRequest) {
         referenceBase64: refMatch[2],
         referenceMime: refMatch[1],
         aspectRatio: body.ratio,
-        prompt: buildReferencePrompt(profile, produkDesc.trim() ? produkDesc : undefined, body.language) + temaImageNote + konsepImageNote,
+        // PENTING: konsepImageNote SENGAJA TIDAK diikutkan di sini (beda dari
+        // jalur non-referensi di atas) — permintaan user 12 Sep 2026: untuk
+        // Referensi, gambar WAJIB tetap ikut komposisi/mood foto referensi +
+        // produk asli, konsep tertulis HANYA boleh memengaruhi judul & caption
+        // (sudah ditangani lewat konsepDecisionBlock di titles/caption).
+        // konsepImageNote sebelumnya bisa suruh AI "abaikan produk, gambarkan
+        // situasi lain" kalau konsepnya situasi berdiri sendiri — itu langsung
+        // bentrok dengan tujuan inti fitur Referensi.
+        prompt: buildReferencePrompt(profile, produkDesc.trim() ? produkDesc : undefined, body.language) + temaImageNote,
       });
     } else {
       result = await editImage({ imageBase64, mimeType, aspectRatio: body.ratio, prompt });
