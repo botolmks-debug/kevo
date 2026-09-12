@@ -70,7 +70,9 @@ export async function uploadLogo(
   }
 
   const storagePath = `${businessId}/${LOGO_FOLDER[variant]}/${randomUUID()}.${fileExtension(input.file.name)}`;
-  const { error: uploadError } = await client.storage.from(BUCKET).upload(storagePath, input.file);
+  const { error: uploadError } = await client.storage.from(BUCKET).upload(storagePath, input.file, {
+    cacheControl: "31536000",
+  });
   if (uploadError) {
     console.error(`uploadLogo (storage) failed: ${describeSupabaseError(uploadError)}`);
     return { ok: false, error: "Gagal mengunggah logo. Coba lagi." };
@@ -170,6 +172,7 @@ export async function removeLogoBackground(
   const storagePath = `${businessId}/${LOGO_FOLDER[variant]}/${randomUUID()}.png`;
   const { error: uploadError } = await client.storage.from(BUCKET).upload(storagePath, processedBuffer, {
     contentType: "image/png",
+    cacheControl: "31536000",
   });
   if (uploadError) {
     console.error(`removeLogoBackground (upload) failed: ${describeSupabaseError(uploadError)}`);

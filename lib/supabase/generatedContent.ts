@@ -1,9 +1,35 @@
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import sharp from "sharp";
 import type { AspectRatio } from "@/lib/templates/types";
 import { BUCKET } from "./images";
 import { DEV_BUSINESS_ID } from "./devBusiness";
 import { describeSupabaseError } from "./logError";
+
+// Cache 1 tahun — hasil generate final tidak pernah berubah setelah tersimpan
+// (re-save = upload BARU ke path yang SAMA, isinya tetap konten "definitif"
+// pada momen itu). Ini akar perbaikan Cached Egress bucket utama (sebelumnya
+// tidak di-set sama sekali = default Supabase cuma cache singkat, tiap kali
+// dibuka ulang di riwayat/Instagram/dsb dihitung egress baru terus-menerus).
+const LONG_CACHE_CONTROL = "31536000";
+// Kualitas JPEG — foto AI (bukan grafis bertepi tajam/perlu transparansi)
+// jauh lebih hemat sebagai JPEG daripada PNG, tanpa beda kualitas kelihatan
+// di kualitas setinggi ini. Dipilih 92 (bukan lebih rendah) supaya AMAN,
+// sama sekali tidak mengurangi hasil yang dilihat/diunduh user.
+const JPEG_QUALITY = 92;
+
+/** Konversi buffer PNG (hasil render Satori) ke JPEG kualitas tinggi sebelum
+ * disimpan permanen — murni penghematan storage/egress, TIDAK mengurangi apa
+ * yang user lihat/unduh (bedanya tidak kasat mata di kualitas 92). */
+async function toStorageJpeg(pngBuffer: Buffer): Promise<Buffer> {
+  try {
+    return await sharp(pngBuffer).flatten({ background: "#ffffff" }).jpeg({ quality: JPEG_QUALITY }).toBuffer();
+  } catch {
+    // best-effort — kalau konversi gagal (buffer aneh dsb), simpan PNG asli
+    // apa adanya daripada gagal total menyimpan konten user.
+    return pngBuffer;
+  }
+}
 
 export type GeneratedContentJenis = "produk" | "general" | "interaksi" | "video_cerita" | "berita";
 export type GeneratedContentStatus = "draft" | "selesai";
@@ -118,7 +144,8 @@ export async function insertGeneratedContent(
   storageClient: SupabaseClient = client,
 ): Promise<InsertGeneratedContentResult> {
   const businessId = input.businessId ?? DEV_BUSINESS_ID;
-  const storagePath = `${businessId}/generated/${randomUUID()}.png`;
+  const storagePath = `${businessId}/generated/${randomUUID()}.jpg`;
+  const uploadBuffer = await toStorageJpeg(input.pngBuffer);
 
   // FIFO cap 60: buang konten terlama dulu kalau kuota user sudah penuh.
   // Pakai storageClient (service-role dari route) supaya delete lolos RLS.
@@ -129,8 +156,9 @@ export async function insertGeneratedContent(
   // kalau percobaan sebelumnya sempat separuh jalan.
   let uploadError: unknown = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
-    const res = await storageClient.storage.from(BUCKET).upload(storagePath, input.pngBuffer, {
-      contentType: "image/png",
+    const res = await storageClient.storage.from(BUCKET).upload(storagePath, uploadBuffer, {
+      contentType: "image/jpeg",
+      cacheControl: LONG_CACHE_CONTROL,
       upsert: true,
     });
     uploadError = res.error;
@@ -196,6 +224,7 @@ export async function insertVideoGeneratedContent(
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     const res = await storageClient.storage.from(BUCKET).upload(storagePath, input.videoBuffer, {
       contentType: "video/mp4",
+      cacheControl: LONG_CACHE_CONTROL,
       upsert: true,
     });
     uploadError = res.error;
@@ -260,10 +289,12 @@ export async function updateGeneratedContent(
     return { ok: false, error: "Konten tidak ditemukan." };
   }
 
+  const uploadBuffer = await toStorageJpeg(input.pngBuffer);
   const { error: uploadError } = await client.storage
     .from(BUCKET)
-    .upload((existing as { storage_path: string }).storage_path, input.pngBuffer, {
-      contentType: "image/png",
+    .upload((existing as { storage_path: string }).storage_path, uploadBuffer, {
+      contentType: "image/jpeg",
+      cacheControl: LONG_CACHE_CONTROL,
       upsert: true,
     });
   if (uploadError) {

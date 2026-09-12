@@ -60,7 +60,9 @@ export async function uploadImage(
   const businessId = input.businessId ?? DEV_BUSINESS_ID;
   const storagePath = `${businessId}/${randomUUID()}.${fileExtension(input.file.name)}`;
 
-  const { error: uploadError } = await client.storage.from(BUCKET).upload(storagePath, input.file);
+  const { error: uploadError } = await client.storage.from(BUCKET).upload(storagePath, input.file, {
+    cacheControl: "31536000",
+  });
   if (uploadError) {
     console.error(`uploadImage (storage) failed: ${describeSupabaseError(uploadError)}`);
     return { ok: false, error: "Gagal mengunggah gambar. Coba lagi." };
