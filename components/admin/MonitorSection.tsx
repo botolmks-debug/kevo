@@ -98,7 +98,8 @@ export default function MonitorSection() {
 
   useEffect(() => {
     fetchData();
-    const t = setInterval(fetchData, 60000);
+    // Auto-refresh setiap 2 jam (dikurangi dari 1 menit untuk hemat egress Supabase)
+    const t = setInterval(fetchData, 2 * 60 * 60 * 1000);
     return () => clearInterval(t);
   }, []);
 
@@ -131,7 +132,7 @@ export default function MonitorSection() {
         <div>
           <h2 className="text-lg font-bold text-slate-900">Monitoring</h2>
           <p className="text-xs text-slate-500">
-            Diperbarui: {formatTime(data.timestamp)} · auto-refresh 60 detik
+            Diperbarui: {formatTime(data.timestamp)} · auto-refresh 2 jam
           </p>
         </div>
         <button

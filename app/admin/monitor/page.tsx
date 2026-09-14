@@ -55,8 +55,8 @@ export default function AdminMonitorPage() {
 
   useEffect(() => {
     fetchData();
-    // Auto-refresh setiap 60 detik
-    const t = setInterval(fetchData, 60000);
+    // Auto-refresh setiap 2 jam (dikurangi dari 1 menit untuk hemat egress Supabase)
+    const t = setInterval(fetchData, 2 * 60 * 60 * 1000);
     return () => clearInterval(t);
   }, []);
 
