@@ -3,7 +3,16 @@ import { editOpenAIImage, generateOpenAIImage } from "@/lib/ai/openaiImage";
 
 export type GeminiImageResult = { ok: true; dataUri: string } | { ok: false; error: string };
 
-export const GEMINI_IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || "gemini-2.5-flash-image";
+// EKSPERIMEN (12 Sep 2026): dicoba pakai Nano Banana Pro (gemini-3-pro-image-preview)
+// sebagai default SEMENTARA — tujuan: tes apakah kemampuan konsistensi
+// multi-gambar-referensi native model ini bisa selesaikan masalah
+// "kontinuitas antar slide carousel" yang lama diperjuangkan pakai akal-akalan
+// (panorama/cerita-berantai). Biayanya ~3.4x lebih mahal dari model lama
+// (gemini-2.5-flash-image, yang pensiun 2 Okt 2026 & jadi HARUS diganti
+// walau tidak dites ini) — kalau hasil tesnya bagus tapi biayanya kurang
+// sepadan, override ke "gemini-3.1-flash-image-preview" (Nano Banana 2, lebih
+// murah) lewat env var GEMINI_IMAGE_MODEL tanpa perlu ubah kode ini lagi.
+export const GEMINI_IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || "gemini-3-pro-image-preview";
 
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 
@@ -118,6 +127,17 @@ async function generateFromParts(parts: GeminiPart[], aspectRatio: AspectRatio):
     const imagePart = responseParts?.find((part) => part.inlineData?.data);
 
     if (!imagePart?.inlineData?.data) {
+      // PERBAIKAN: sebelumnya langsung menyerah di percobaan PERTAMA kalau AI
+      // merespons OK (200) tapi tanpa gambar (mis. model menolak/cuma balas
+      // teks sesaat) — beda dari kasus timeout/503 yang sudah retry 3x. Ini
+      // akar kenapa fitur Referensi (2 gambar sekaligus, tugas lebih berat,
+      // lebih sering kena kasus ini) gagal berulang. Sekarang retry juga,
+      // pola sama seperti timeout/503 di atas.
+      if (attempt < RETRY_DELAYS_MS.length) {
+        console.warn(`Gemini tidak kembalikan gambar (percobaan ke-${attempt + 1}), mencoba lagi...`);
+        await wait(RETRY_DELAYS_MS[attempt]);
+        continue;
+      }
       return { ok: false, error: "AI tidak mengembalikan gambar. Coba lagi." };
     }
 

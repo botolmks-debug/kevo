@@ -1,11 +1,11 @@
 "use client";
 
 import { getLang } from "@/lib/i18n";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { BusyToast } from "@/components/ui/BusyToast";
 import { Button } from "@/components/ui/Button";
-import { CanvasEditor } from "@/components/editor/CanvasEditor";
+import { DomEditor } from "@/components/editor/DomEditor";
 import { applyEditorOverrides, type EditorOverrides } from "@/lib/editor/layoutOverrides";
 import { buildFooterSocials } from "@/lib/onboarding/profileStorage";
 import { withFooterOverride } from "@/app/generate/withFooterOverride";
@@ -25,7 +25,11 @@ const CAROUSEL_TOKEN_COST = 4;
 // dari UI atas permintaan user (9 Sep 2026) — set true untuk tampilkan lagi.
 // Kode & state-nya TIDAK dihapus, cuma UI-nya. Prompt storytelling di
 // buildCarouselPrompt() TETAP aktif untuk mode normal (tidak terikat flag ini).
-const SHOW_CAROUSEL_EXPERIMENTS = false;
+// Mode eksperimental (Cerita Berantai & Panorama) DIAKTIFKAN LAGI (12 Sep
+// 2026) khusus untuk tes: apakah Nano Banana Pro (gemini-3-pro-image-preview)
+// bisa selesaikan masalah kontinuitas antar slide yang sebelumnya diakali
+// pakai teknik ini. Set false lagi kalau tes tidak berhasil/mau disembunyikan.
+const SHOW_CAROUSEL_EXPERIMENTS = true;
 // SLIDE_COUNT_DEFAULT = mode normal & cerita berantai (4 slide). Mode
 // Panorama SEKARANG 3 slide (bukan 4) — lihat `slideCount` di dalam
 // komponen, dihitung dari state `panorama4`.
@@ -115,8 +119,17 @@ export function CarouselAuto({
 
   // Tema opsional dari user — judul/deskripsi/caption akan mengikuti tema ini.
   const [theme, setTheme] = useState("");
-  const [chainedStory, setChainedStory] = useState(false); // eksperimental: cerita berantai (slide 2&3 pakai slide sebelumnya sbg referensi)
-  const [panorama4, setPanorama4] = useState(false); // eksperimental: 1 panorama dipotong jadi 3 slide
+  // Cerita Berantai SEKARANG jadi SATU-SATUNYA mode Carousel (permintaan user
+  // 12 Sep 2026, setelah tes langsung dengan Nano Banana Pro terbukti hasilnya
+  // jauh lebih konsisten). Panorama & "tanpa eksperimen" DISEMBUNYIKAN dari UI
+  // — bukan dihapus, kode lamanya (splitPanorama, generateWidePanoramaOpenAI,
+  // jalur `else` di route.ts) tetap ada kalau nanti mau diaktifkan lagi.
+  const chainedStory = true;
+  const panorama4 = false;
+  // DomEditor butuh ref DOM node-nya (dipakai internal untuk seleksi/ukuran
+  // elemen) — proses Simpan carousel TETAP lewat /api/render (server Satori),
+  // TIDAK berubah, jadi ref ini tidak dipakai untuk export screenshot di sini.
+  const domRef = useRef<HTMLDivElement>(null);
   const slideCount = panorama4 ? SLIDE_COUNT_PANORAMA : SLIDE_COUNT_DEFAULT;
   const [overlayColor, setOverlayColor] = useState("#0fb6a6");
   const [overlayOpacity, setOverlayOpacity] = useState(80);
@@ -361,54 +374,13 @@ export function CarouselAuto({
 
       {SHOW_CAROUSEL_EXPERIMENTS ? (
       <Card className="flex flex-col gap-2">
-        <h3 className="text-sm font-semibold text-navy">Mode eksperimental (opsional)</h3>
-        <label className="flex cursor-pointer items-start gap-2 text-sm">
-          <input
-            type="radio"
-            name="carouselExperiment"
-            className="mt-0.5 accent-primary"
-            checked={!chainedStory && !panorama4}
-            onChange={() => { setChainedStory(false); setPanorama4(false); }}
-          />
-          <span className="text-navy">Tanpa eksperimen (default) — 3 foto independen paralel, slide 4 = foto produk aslimu</span>
-        </label>
-        <label className="flex cursor-pointer items-start gap-2 text-sm">
-          <input
-            type="radio"
-            name="carouselExperiment"
-            className="mt-0.5 accent-primary"
-            checked={chainedStory}
-            onChange={() => { setChainedStory(true); setPanorama4(false); }}
-          />
-          <span>
-            <span className="font-medium text-navy">Cerita berantai</span>
-            <br />
-            <span className="text-xs text-navy/50">
-              Tiap slide tetap foto utuh & bermakna sendiri — slide 2 digenerate dengan foto slide 1 sebagai
-              referensi, slide 3 dengan foto slide 2, supaya orang/tempat/kondisinya konsisten. Slide 4 tetap foto
-              produk aslimu. Prosesnya lebih lambat (gambar dibuat berurutan).
-            </span>
-          </span>
-        </label>
-        <label className="flex cursor-pointer items-start gap-2 text-sm">
-          <input
-            type="radio"
-            name="carouselExperiment"
-            className="mt-0.5 accent-primary"
-            checked={panorama4}
-            onChange={() => { setPanorama4(true); setChainedStory(false); }}
-          />
-          <span>
-            <span className="font-medium text-navy">Panorama (3 slide kotak)</span>
-            <br />
-            <span className="text-xs text-navy/50">
-              1 foto panorama lebar berisi 3 momen cerita sekaligus, dipotong jadi 3 slide KOTAK (1:1) — bukan 4
-              potret 4:5 seperti sebelumnya. Foto produk aslimu ditempel ke bagian ke-3 setelah panorama jadi. Kalau
-              server menerima ukuran khusus (3240x1080), hasilnya pas sempurna tanpa bilah kosong; kalau tidak, ada
-              fallback yang sedikit memberi bilah warna di sisi kiri-kanan.
-            </span>
-          </span>
-        </label>
+        <h3 className="text-sm font-semibold text-navy">Cara kerja Carousel</h3>
+        <p className="text-xs text-navy/50">
+          Tiap slide tetap foto utuh & bermakna sendiri — slide 2 digenerate dengan foto slide 1 sebagai referensi,
+          slide 3 dengan foto slide 2, supaya orang/tempat/kondisinya konsisten seperti halaman-halaman di buku
+          cerita yang sama. Slide 4 tetap foto produk aslimu. Prosesnya sedikit lebih lambat dari generate biasa
+          (gambar dibuat berurutan, bukan sekaligus) — mohon ditunggu sampai selesai.
+        </p>
       </Card>
       ) : null}
 
@@ -495,7 +467,7 @@ export function CarouselAuto({
           </div>
           <p className="text-xs font-medium text-navy/60">Preview slide {activeSlide + 1} — geser &amp; edit langsung. Posisi logo &amp; sosmed otomatis seragam di semua slide.</p>
           <div className="mx-auto">
-            <CanvasEditor
+            <DomEditor
               key={`carousel-${activeSlide}-${backgrounds[activeSlide]?.length ?? 0}`}
               layout={applyEditorOverrides(withLogoOverride(withFooter, activeLogo), "4:5", activeOverrides).layouts["4:5"]}
               values={slideValues(activeSlide)}
@@ -524,7 +496,7 @@ export function CarouselAuto({
                   all.map((v, idx) => (idx === activeSlide ? { ...v, [slotId]: val } : v)),
                 )
               }
-              footerPreviewText={footerOverride?.socials?.[0]?.value}
+              photo={slideValues(activeSlide).photo ?? null}
               socials={footerOverride?.socials ?? []}
               businessName={businessProfile?.business.name}
               logoUrl={activeLogo?.url ?? null}
@@ -534,6 +506,7 @@ export function CarouselAuto({
                 // Versi logo (terang/gelap) juga diseragamkan ke semua slide.
                 setOverridesPerSlide((all) => all.map((o) => ({ ...o, logoVariant: v })))
               }
+              exportRef={domRef}
             />
           </div>
 
