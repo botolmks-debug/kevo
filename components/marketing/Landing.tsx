@@ -234,10 +234,22 @@ export function Landing() {
         {/* ── Trust bar ── */}
         <section className="border-y border-line bg-white/60">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-2 px-5 py-4 text-sm text-muted">
-            <span>Konten dari 1 foto</span>
-            <span>Jadi dalam hitungan menit</span>
-            <span>Feed, Story, & Square</span>
-            <span>Caption + hashtag otomatis</span>
+            <span className="flex items-center gap-1.5">
+              <Image src="/icon-cover/centang.png" alt="" width={16} height={16} className="shrink-0" />
+              Konten dari 1 foto
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Image src="/icon-cover/centang.png" alt="" width={16} height={16} className="shrink-0" />
+              Jadi dalam hitungan menit
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Image src="/icon-cover/centang.png" alt="" width={16} height={16} className="shrink-0" />
+              Feed, Story, & Square
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Image src="/icon-cover/centang.png" alt="" width={16} height={16} className="shrink-0" />
+              Caption + hashtag otomatis
+            </span>
           </div>
         </section>
 
