@@ -23,6 +23,69 @@ export function resolveSlotValue(
   return values[slot.id];
 }
 
+function decodeHtmlEntities(s: string): string {
+  return s
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0*39;/gi, "'");
+}
+
+/**
+ * Ambil teks TAMPAK saja dari HTML rich-text DomEditor (buang semua tag,
+ * <div>/<br> jadi newline) — dipakai KHUSUS untuk pengukuran (fitFontSize/
+ * estimateLines), bukan untuk rendering visual (lihat parseRichLines).
+ */
+export function plainTextFromHtml(html: string): string {
+  return decodeHtmlEntities(
+    html
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/div>/gi, "\n")
+      .replace(/<[^>]+>/g, ""),
+  ).trim();
+}
+
+type TextRun = { text: string; color?: string };
+
+/**
+ * Parse HTML rich-text DomEditor (hasil document.execCommand('foreColor'),
+ * lihat components/editor/DomEditor.tsx) jadi baris-baris berisi potongan
+ * teks + warna opsional, supaya bisa dirender sebagai <span> Satori
+ * berwarna — BUKAN teks literal berisi tag HTML seperti bug sebelumnya.
+ * contentEditable browser bikin <div> baru per baris saat Enter ditekan,
+ * jadi <div>/<br> di sini diperlakukan sebagai pemisah baris (baris baru
+ * paksa dari user, terpisah dari auto-wrap yang ditangani Satori sendiri
+ * lewat flexWrap di dalam satu baris).
+ */
+export function parseRichLines(html: string): TextRun[][] {
+  const normalized = html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<div[^>]*>/gi, "");
+
+  const lines = normalized.split("\n");
+  const spanRe = /<span[^>]*style="[^"]*color\s*:\s*([^;"]+)[^"]*"[^>]*>([\s\S]*?)<\/span>|([^<]+)/gi;
+
+  return lines.map((line) => {
+    const runs: TextRun[] = [];
+    let match: RegExpExecArray | null;
+    spanRe.lastIndex = 0;
+    while ((match = spanRe.exec(line))) {
+      if (match[3] !== undefined) {
+        const text = decodeHtmlEntities(match[3]);
+        if (text) runs.push({ text });
+      } else {
+        const color = match[1].trim();
+        const inner = decodeHtmlEntities(match[2].replace(/<[^>]+>/g, ""));
+        if (inner) runs.push({ text: inner, color });
+      }
+    }
+    return runs;
+  });
+}
+
 // "extra" = 9 font pilihan editor kanvas selain Inter (lihat lib/templates/fonts.ts
 // dan spec-editor-kanvas-kevo.md). Template bawaan semua masih pakai "Inter" saja —
 // font ini cuma dipakai kalau user pilih lewat editor.
@@ -174,9 +237,19 @@ async function renderSlotElement(slot: Slot, values: Record<string, string>) {
   };
 
   if (slot.type === "text") {
-    const rawValue = resolveSlotValue(slot, values) ?? "";
+    const rawHtml = resolveSlotValue(slot, values) ?? "";
+    // rawHtml bisa berisi HTML rich-text dari DomEditor (hasil
+    // document.execCommand('foreColor') untuk warna per-kata, contoh:
+    // `<span style="color: rgb(236,72,153)">Ube</span> Adalah Ubi Ungu...`).
+    // Satori TIDAK mem-parse HTML string — kalau langsung dirender sebagai
+    // teks, tag <span style="..."> ikut muncul literal di gambar hasil
+    // export. plainTextFromHtml() dipakai KHUSUS untuk pengukuran ukuran
+    // font/baris (butuh panjang teks TAMPAK, bukan markup-nya), sedangkan
+    // parseRichLines() dipakai untuk rendering visual (supaya warna
+    // per-kata tetap muncul di gambar akhir, bukan cuma di preview editor).
+    const plainValue = plainTextFromHtml(rawHtml);
     // Auto-shrink: judul/teks panjang MENGECIL agar muat, bukan dipotong "…".
-    const fittedFontSize = fitFontSize(rawValue, {
+    const fittedFontSize = fitFontSize(plainValue, {
       boxWidth: slot.box.width,
       boxHeight: slot.box.height,
       maxFontSize: slot.maxFontSize,
@@ -185,20 +258,13 @@ async function renderSlotElement(slot: Slot, values: Record<string, string>) {
     });
     // lineClamp = jumlah baris yang DIBUTUHKAN teks (+headroom), SEPERTI editor Konva —
     // jadi teks tampil utuh (tidak dipotong), walau user memperbesar font melebihi kotak.
-    const linesInBox = estimateLines(rawValue, slot.box.width, fittedFontSize) + 1;
-    const fitted = rawValue;
+    const linesInBox = estimateLines(plainValue, slot.box.width, fittedFontSize) + 1;
+    const richLines = parseRichLines(rawHtml);
 
-    const textStyle: SatoriStyle = {
-      display: "block",
-      width: "100%",
+    const baseSpanStyle: SatoriStyle = {
       fontFamily: slot.fontFamily,
       fontSize: fittedFontSize,
       fontWeight: slot.fontWeight ?? 400,
-      color: slot.color,
-      textAlign: slot.align,
-      lineClamp: linesInBox,
-      // Samakan dengan editor Konva (default lineHeight = 1) supaya tinggi blok
-      // teks & posisinya identik antara preview dan hasil export.
       lineHeight: 1,
     };
 
@@ -224,7 +290,7 @@ async function renderSlotElement(slot: Slot, values: Record<string, string>) {
       shadowParts.push(`0px 0px ${s.blur}px rgba(${r},${g},${b},${s.opacity})`);
     }
     if (shadowParts.length) {
-      (textStyle as { textShadow?: string }).textShadow = shadowParts.join(", ");
+      (baseSpanStyle as { textShadow?: string }).textShadow = shadowParts.join(", ");
     }
 
     return (
@@ -232,7 +298,30 @@ async function renderSlotElement(slot: Slot, values: Record<string, string>) {
         key={slot.id}
         style={{ ...boxStyle, alignItems: "flex-start", justifyContent: alignToJustify(slot.align) }}
       >
-        <div style={textStyle}>{fitted}</div>
+        <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
+          {richLines.map((runs, lineIdx) => (
+            <div
+              key={lineIdx}
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                width: "100%",
+                lineClamp: linesInBox,
+                justifyContent: alignToJustify(slot.align),
+                textAlign: slot.align,
+              }}
+            >
+              {runs.map((run, runIdx) => (
+                <span
+                  key={runIdx}
+                  style={{ ...baseSpanStyle, color: run.color ?? slot.color }}
+                >
+                  {run.text}
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
