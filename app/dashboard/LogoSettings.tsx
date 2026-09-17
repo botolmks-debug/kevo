@@ -6,6 +6,7 @@ import { FileButton } from "@/components/ui/FileButton";
 import { Card } from "@/components/ui/Card";
 import { getLang, t, type Lang } from "@/lib/i18n";
 import type { BusinessLogo, LogoPosition } from "@/lib/onboarding/businessProfile";
+import { GenerateLogoButton } from "@/components/dashboard/GenerateLogoButton";
 
 type Status = "idle" | "loading" | "error" | "success";
 type LogoVariant = "dark" | "light";
@@ -214,6 +215,9 @@ export function LogoSettings() {
         <p className="text-sm text-navy/60">{t("dash.logo.desc", lang)}</p>
       </div>
       {loadError ? <p className="text-sm text-red-600">{loadError}</p> : null}
+
+      <GenerateLogoButton onSaved={loadLogos} hasExistingLogo={!!logoDark || !!logoLight} />
+
       <div className="grid gap-4 sm:grid-cols-2">
         <LogoCard variant="dark" logo={logoDark} onReload={loadLogos} lang={lang} />
         <LogoCard variant="light" logo={logoLight} onReload={loadLogos} lang={lang} />
