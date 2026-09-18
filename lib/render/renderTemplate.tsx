@@ -387,6 +387,7 @@ async function renderSlotElement(slot: Slot, values: Record<string, string>) {
             width: slot.box.width,
             height: slot.box.height,
             objectFit: "contain",
+            ...(slot.mirror ? { transform: "scaleX(-1)" } : {}),
           }}
         />
       </div>
@@ -416,6 +417,7 @@ async function renderSlotElement(slot: Slot, values: Record<string, string>) {
             width: slot.box.width + zx * 2,
             height: slot.box.height + zy * 2,
             objectFit: "cover",
+            ...(slot.mirror ? { transform: "scaleX(-1)" } : {}),
           }}
         />
       </div>
@@ -434,6 +436,7 @@ async function renderSlotElement(slot: Slot, values: Record<string, string>) {
         ...boxStyle,
         objectFit: slot.fit,
         borderRadius: slot.borderRadius ?? 0,
+        ...(slot.mirror ? { transform: "scaleX(-1)" } : {}),
       }}
     />
   );

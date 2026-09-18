@@ -16,6 +16,12 @@ export type TextSlotOverride = {
   outline?: { width: number; color: string } | null;
 };
 
+/** Override untuk slot bertipe image (foto latar) — key = slot.id. */
+export type ImageSlotOverride = {
+  /** Cerminkan horizontal (flip kiri-kanan). */
+  mirror?: boolean;
+};
+
 export type FooterOverride = {
   x: number;
   y: number;
@@ -59,6 +65,8 @@ export type FreeItem = {
   outline?: { width: number; color: string } | null;
   /** kind "image" — data URI (di-embed, aman untuk export). */
   src?: string;
+  /** kind "image" — cerminkan horizontal (flip kiri-kanan). */
+  mirror?: boolean;
   /** kind "shape" — bentuk dasar/panah/efek promo dari menu "+ Elemen". */
   shapeType?: "rect" | "circle" | "triangle" | "arrow-right" | "arrow-block" | "arrow-curve" | "star" | "burst" | "ribbon" | "speech";
   fill?: string;
@@ -76,6 +84,10 @@ export type OverlayFx = {
 
 export type EditorOverrides = {
   slots: Record<string, TextSlotOverride>;
+  /** Override untuk slot bertipe image (foto latar utama) — key = slot.id.
+   * Dipakai baik di CanvasEditor maupun DomEditor supaya mirror foto
+   * tersimpan di 1 tempat yang sama & konsisten dipakai render server (Satori). */
+  images?: Record<string, ImageSlotOverride>;
   footer?: FooterOverride;
   logo?: LogoLayout;
   /** Versi logo yang dipakai di konten: "light" (default) atau "dark". */
@@ -100,6 +112,11 @@ export function applyEditorOverrides(
   const layout = template.layouts[ratio];
 
   const slots = layout.slots.map((slot) => {
+    if (slot.type === "image") {
+      const imgOverride = overrides.images?.[slot.id];
+      if (!imgOverride) return slot;
+      return { ...slot, ...(imgOverride.mirror !== undefined ? { mirror: imgOverride.mirror } : {}) };
+    }
     if (slot.type !== "text") return slot;
     const override = overrides.slots[slot.id];
     if (!override) return slot;

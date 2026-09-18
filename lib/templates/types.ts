@@ -50,6 +50,8 @@ export type ImageSlot = {
   label?: string;
   /** Contoh isi (dipakai sebagai placeholder di form, bukan value awal). */
   placeholder?: string;
+  /** Cerminkan horizontal (flip kiri-kanan) — diisi dari EditorOverrides.images. */
+  mirror?: boolean;
 };
 
 export type Slot = TextSlot | ImageSlot;
