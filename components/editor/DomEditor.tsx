@@ -221,6 +221,20 @@ const BURST_POINTS = (() => {
   return pts.join(" ");
 })();
 
+/** Ikon flip/mirror horizontal — konsisten dipakai di semua tombol Mirror
+ * (foto latar, elemen gambar, elemen bentuk) supaya seragam dengan gaya
+ * ikon kontrol lain (bukan teks+emoji). */
+function MirrorIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3v18" strokeDasharray="2.5 2.5" />
+      <path d="M17 8l4 4-4 4" />
+      <path d="M7 8L3 12l4 4" />
+    </svg>
+  );
+}
+
 function ShapeView({ it, scale }: { it: FreeItem; scale: number }) {
   const fill = it.fill ?? "#2563eb";
   const strokeW = (it.strokeWidth ?? 0) * scale;
@@ -561,6 +575,19 @@ export function DomEditor({
   const footerShowName = overrides.footer?.showName ?? true;
   const visSocials = socials.slice(0, MAX_SOCIALS);
   const overlay: OverlayFx = overrides.overlay ?? { type: "none", color: "#000000", opacity: 0.45 };
+  // Slot foto latar (biasanya id "photo") — dipakai buat baca/tulis mirror
+  // lewat overrides.images, key yang SAMA dipakai CanvasEditor & Satori
+  // (lib/render/renderTemplate.tsx) supaya preview & hasil export konsisten.
+  const photoSlotId = layout.slots.find((s) => s.type === "image")?.id;
+  const photoMirror = photoSlotId ? !!overrides.images?.[photoSlotId]?.mirror : false;
+  function togglePhotoMirror() {
+    if (!photoSlotId) return;
+    const cur = overrides.images?.[photoSlotId] ?? {};
+    commit({
+      ...overrides,
+      images: { ...overrides.images, [photoSlotId]: { ...cur, mirror: !cur.mirror } },
+    });
+  }
 
   // ----- fx per elemen -----
   function getFx(key: string): ElementFx {
@@ -1119,7 +1146,7 @@ export function DomEditor({
               kadang lolos dari instruksi prompt. Tanpa ini, DomEditor tidak
               sinkron dengan hasil server-render. */}
           {photo && <img src={photo} alt="" crossOrigin="anonymous" draggable={false}
-            style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", transform:"scale(1.04)", transformOrigin:"center", ...IMG_STYLE }} />}
+            style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", transform:`scale(1.04)${photoMirror ? " scaleX(-1)" : ""}`, transformOrigin:"center", ...IMG_STYLE }} />}
 
           {/* overlay warna/gradient di atas foto — ikut terekspor */}
           {overlay.type !== "none" && (
@@ -1242,9 +1269,11 @@ export function DomEditor({
                 )
               ) : it.kind === "image" ? (
                 <img src={it.src} alt="" draggable={false}
-                  style={{ width:"100%", height:"100%", objectFit:"contain", ...IMG_STYLE }} />
+                  style={{ width:"100%", height:"100%", objectFit:"contain", ...(it.mirror ? { transform: "scaleX(-1)" } : {}), ...IMG_STYLE }} />
               ) : (
-                <ShapeView it={it} scale={scale} />
+                <div style={{ width:"100%", height:"100%", ...(it.mirror ? { transform: "scaleX(-1)" } : {}) }}>
+                  <ShapeView it={it} scale={scale} />
+                </div>
               )}
             </div>
           ))}
@@ -1435,6 +1464,11 @@ export function DomEditor({
                 onChange={(e)=>commit({ ...overrides, overlay: { ...overlay, opacity: Number(e.target.value)/100 } })} />
             </>
           )}
+          <span className="mx-1 h-4 w-px bg-navy/15" />
+          <button type="button" onClick={togglePhotoMirror} title="Mirror (flip horizontal)"
+            className={`flex items-center gap-1 rounded-lg border px-2.5 py-1 font-medium ${photoMirror?"border-primary bg-primary/10 text-primary":"border-navy/15 text-navy/70"}`}>
+            <MirrorIcon /> Mirror
+          </button>
         </div>
       )}
 
@@ -1865,6 +1899,10 @@ export function DomEditor({
                 onChange={(e)=>patchItem(selItem.id, { fill: e.target.value })}
                 className="h-10 w-12 shrink-0 rounded border border-navy/15 sm:h-8 sm:w-9" />
             </label>
+            <button type="button" onClick={()=>patchItem(selItem.id, { mirror: !selItem.mirror })} title="Mirror (flip horizontal) — berguna buat balik arah panah"
+              className={`flex shrink-0 items-center gap-1 rounded-lg border px-2.5 py-1 font-medium ${selItem.mirror?"border-primary bg-primary/10 text-primary":"border-navy/15 text-navy/70"}`}>
+              <MirrorIcon /> Mirror
+            </button>
             <div className="flex items-center gap-2">
               {selItem.shapeType === "arrow-curve" ? (
                 // Panah Lengkung: strokeWidth di sini artinya KETEBALAN GARIS
@@ -1907,6 +1945,15 @@ export function DomEditor({
                   className="h-6 w-full accent-primary sm:h-auto sm:w-24" />
               </SliderToggle>
             )}
+          </div>
+        )}
+
+        {selItem && selItem.kind === "image" && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+            <button type="button" onClick={()=>patchItem(selItem.id, { mirror: !selItem.mirror })} title="Mirror (flip horizontal)"
+              className={`flex items-center gap-1 rounded-lg border px-2.5 py-1 font-medium ${selItem.mirror?"border-primary bg-primary/10 text-primary":"border-navy/15 text-navy/70"}`}>
+              <MirrorIcon /> Mirror
+            </button>
           </div>
         )}
       </div>

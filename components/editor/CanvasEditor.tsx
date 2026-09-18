@@ -132,6 +132,19 @@ function LogoKonva({ url, size, scale }: { url: string; size: number; scale: num
   );
 }
 
+/** Ikon flip/mirror horizontal — sama persis dengan yang dipakai DomEditor.tsx,
+ * supaya kontrol Mirror konsisten di kedua editor. */
+function MirrorIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3v18" strokeDasharray="2.5 2.5" />
+      <path d="M17 8l4 4-4 4" />
+      <path d="M7 8L3 12l4 4" />
+    </svg>
+  );
+}
+
 export function CanvasEditor({
   layout, values, overrides, onOverridesChange, onTextChange,
   footerPreviewText, socials, businessName, logoUrl,
@@ -155,17 +168,30 @@ export function CanvasEditor({
   // Konva menggambar teks di <canvas> yang TIDAK menunggu web-font (@font-face)
   // selesai dimuat. Akibatnya font display seperti "Bebas Neue" sempat digambar
   // pakai font fallback → di preview tampak beda/lebih tipis dari hasil export
-  // Satori (yang memakai buffer font asli). Muat SEMUA font lebih dulu, lalu
-  // paksa redraw sekali (lewat key <Layer>) supaya preview = hasil render.
+  // Satori (yang memakai buffer font asli). Muat font lebih dulu, lalu paksa
+  // redraw sekali (lewat key <Layer>) supaya preview = hasil render.
+  //
+  // PENTING: cuma preload font yang BENERAN dipakai di template ini (dari
+  // slot.fontFamily / override per-slot), BUKAN semua ~18 font di
+  // FONT_OPTIONS. Sebelumnya effect ini load SEMUA font display/script
+  // (Pacifico, Righteous, Bebas Neue, dst) setiap kali editor dibuka, padahal
+  // biasanya cuma 1-2 yang kepakai di 1 template — itu yang bikin halaman
+  // "Buat Konten"/"Edit Konten" berat di-load (bisa beberapa MB font TTF
+  // ke-download percuma). Sekarang cuma font yang benar-benar tampil yang
+  // di-fetch, dan otomatis ikut re-preload kalau user ganti font di tengah sesi.
   useEffect(() => {
     if (typeof document === "undefined" || !("fonts" in document)) {
       setFontsReady(true);
       return;
     }
+    const families = new Set<string>();
+    for (const slot of layout.slots) {
+      if (slot.type !== "text") continue;
+      families.add(overrides.slots[slot.id]?.fontFamily ?? slot.fontFamily);
+    }
     let cancelled = false;
-    const families = Array.from(new Set(FONT_OPTIONS.map((f) => f.family)));
     Promise.all(
-      families.flatMap((fam) => [
+      Array.from(families).flatMap((fam) => [
         document.fonts.load(`400 32px "${fam}"`),
         document.fonts.load(`700 32px "${fam}"`),
       ]),
@@ -174,7 +200,23 @@ export function CanvasEditor({
       .then(() => { if (!cancelled) setFontsReady(true); })
       .catch(() => { if (!cancelled) setFontsReady(true); });
     return () => { cancelled = true; };
-  }, []);
+  }, [layout.slots, overrides.slots]);
+
+  // Preview font di dropdown <option style={{fontFamily}}> butuh font-nya SUDAH
+  // dimuat browser dulu baru terlihat bedanya (sebelum itu, semua opsi tetap
+  // tampil pakai font fallback). Bukan preload di awal buka halaman (itu bug
+  // yang sudah diperbaiki) — ini di-load LAZY, cuma sekali, tepat saat user
+  // benar-benar klik/fokus ke dropdown font (baru mau lihat-lihat pilihan).
+  const fontPreviewsLoadedRef = useRef(false);
+  function preloadFontPreviews() {
+    if (fontPreviewsLoadedRef.current) return;
+    if (typeof document === "undefined" || !("fonts" in document)) return;
+    fontPreviewsLoadedRef.current = true;
+    const families = Array.from(new Set(FONT_OPTIONS.map((f) => f.family)));
+    for (const fam of families) {
+      document.fonts.load(`400 14px "${fam}"`);
+    }
+  }
 
   const scale = previewWidth / layout.canvas.width;
   const previewHeight = Math.round(layout.canvas.height * scale);
@@ -458,6 +500,15 @@ export function CanvasEditor({
   // Foto latar — ambil dari slot image pertama
   const photoSlot = imageSlots[0];
   const photoSrc = photoSlot ? (values[photoSlot.id] ?? "") : "";
+  const photoMirror = photoSlot ? !!overrides.images?.[photoSlot.id]?.mirror : false;
+  function togglePhotoMirror() {
+    if (!photoSlot) return;
+    const cur = overrides.images?.[photoSlot.id] ?? {};
+    onOverridesChange({
+      ...overrides,
+      images: { ...overrides.images, [photoSlot.id]: { ...cur, mirror: !cur.mirror } },
+    });
+  }
   // Scrim preview hanya ditampilkan kalau template memang punya dekorasi gelap
   // di depan (mis. polos / produk-latar). Template interaksi tak punya → tanpa
   // kotak hitam.
@@ -481,7 +532,7 @@ export function CanvasEditor({
               position: "absolute", inset: 0,
               width: "100%", height: "100%",
               objectFit: "cover",
-              transform: "scale(1.04)",
+              transform: photoMirror ? "scale(1.04) scaleX(-1)" : "scale(1.04)",
               zIndex: 0, pointerEvents: "none",
             }} />
         ) : null}
@@ -645,6 +696,21 @@ export function CanvasEditor({
       </div>
 
       <p className="text-xs text-navy/50">Geser teks, sosmed, atau logo — otomatis nempel (snap) ke tengah/tepi. Klik logo/sosmed untuk atur. Dobel-klik teks untuk edit isi{canToggleLogo ? ", dobel-klik logo untuk ganti versi terang/gelap" : ""}.</p>
+
+      {/* Panel Foto */}
+      {photoSrc ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-white p-3 text-xs">
+          <span className="font-semibold text-navy">Foto</span>
+          <button
+            type="button"
+            onClick={togglePhotoMirror}
+            title="Mirror (flip horizontal)"
+            className={`flex items-center gap-1 rounded-lg border px-2.5 py-1 font-medium ${photoMirror ? "border-primary bg-primary/10 text-primary" : "border-navy/15 text-navy/70"}`}
+          >
+            <MirrorIcon /> Mirror
+          </button>
+        </div>
+      ) : null}
 
       {/* Panel pesan-antar (untuk konten makanan/minuman) */}
       <div className="flex flex-col gap-2 rounded-2xl border border-line bg-white p-3 text-xs">
@@ -828,9 +894,17 @@ export function CanvasEditor({
           } />
           <label className="flex items-center gap-1.5">
             <span className="text-navy/60">Font</span>
-            <select value={captionEff.fontFamily} onChange={(e) => updateSlot(captionSlot.id, { fontFamily: e.target.value })}
-              className="rounded border border-line px-2 py-1 text-xs">
-              {FONT_OPTIONS.map((f) => <option key={f.id} value={f.family}>{f.label}</option>)}
+            <select
+              value={captionEff.fontFamily}
+              onChange={(e) => updateSlot(captionSlot.id, { fontFamily: e.target.value })}
+              onFocus={preloadFontPreviews}
+              className="rounded border border-line px-2 py-1 text-xs"
+            >
+              {FONT_OPTIONS.map((f) => (
+                <option key={f.id} value={f.family} style={{ fontFamily: f.family }}>
+                  {f.label}
+                </option>
+              ))}
             </select>
           </label>
           <label className="flex items-center gap-2">
