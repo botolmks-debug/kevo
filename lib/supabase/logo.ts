@@ -1,10 +1,38 @@
-import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { LogoPosition } from "@/lib/onboarding/businessProfile";
 import { removeSolidBackground } from "@/lib/images/backgroundRemoval";
 import { BUCKET, publicImageUrl } from "./images";
 import { DEV_BUSINESS_ID } from "./devBusiness";
 import { describeSupabaseError } from "./logError";
+import { uploadToCloudinary, deleteFromCloudinary, isCloudinaryUrl } from "@/lib/storage/cloudinary";
+
+/** Hapus 1 file lama, di Cloudinary ATAU Supabase Storage tergantung asalnya. */
+async function cleanupOldFile(client: SupabaseClient, path: string) {
+  if (isCloudinaryUrl(path)) {
+    await deleteFromCloudinary(path);
+    return;
+  }
+  const { error } = await client.storage.from(BUCKET).remove([path]);
+  if (error) console.error(`cleanupOldFile (supabase) failed: ${describeSupabaseError(error)}`);
+}
+
+/** Ambil bytes file lama, dari Cloudinary (fetch URL) ATAU Supabase Storage (download). */
+async function downloadExistingFile(
+  client: SupabaseClient,
+  path: string,
+): Promise<{ ok: true; buffer: Buffer } | { ok: false; error: string }> {
+  if (isCloudinaryUrl(path)) {
+    const res = await fetch(path);
+    if (!res.ok) return { ok: false, error: "Gagal mengambil logo saat ini dari Cloudinary." };
+    return { ok: true, buffer: Buffer.from(await res.arrayBuffer()) };
+  }
+  const { data, error } = await client.storage.from(BUCKET).download(path);
+  if (error || !data) {
+    console.error(`downloadExistingFile (supabase) failed: ${describeSupabaseError(error)}`);
+    return { ok: false, error: "Gagal mengambil logo saat ini." };
+  }
+  return { ok: true, buffer: Buffer.from(await data.arrayBuffer()) };
+}
 
 // Dua versi logo disimpan TERPISAH di kolomnya masing-masing supaya tidak
 // saling menimpa: "dark" = logo untuk latar terang (background putih/cerah),
@@ -22,11 +50,6 @@ const LOGO_FOLDER: Record<LogoVariant, string> = {
   dark: "logo",
   light: "logo-light",
 };
-
-function fileExtension(fileName: string): string {
-  const parts = fileName.split(".");
-  return parts.length > 1 ? parts[parts.length - 1] : "jpg";
-}
 
 async function currentLogoStoragePath(
   client: SupabaseClient,
@@ -69,14 +92,16 @@ export async function uploadLogo(
     return previous;
   }
 
-  const storagePath = `${businessId}/${LOGO_FOLDER[variant]}/${randomUUID()}.${fileExtension(input.file.name)}`;
-  const { error: uploadError } = await client.storage.from(BUCKET).upload(storagePath, input.file, {
-    cacheControl: "31536000",
+  const buffer = Buffer.from(await input.file.arrayBuffer());
+  const uploaded = await uploadToCloudinary(buffer, {
+    folder: `keposting/${businessId}/${LOGO_FOLDER[variant]}`,
+    resourceType: "image",
   });
-  if (uploadError) {
-    console.error(`uploadLogo (storage) failed: ${describeSupabaseError(uploadError)}`);
+  if (!uploaded.ok) {
+    console.error(`uploadLogo (cloudinary) failed: ${uploaded.error}`);
     return { ok: false, error: "Gagal mengunggah logo. Coba lagi." };
   }
+  const storagePath = uploaded.url;
 
   const { error: upsertError } = await client
     .from("business_profile")
@@ -90,10 +115,7 @@ export async function uploadLogo(
   }
 
   if (previous.path && previous.path !== storagePath) {
-    const { error: cleanupError } = await client.storage.from(BUCKET).remove([previous.path]);
-    if (cleanupError) {
-      console.error(`uploadLogo (cleanup old file) failed: ${describeSupabaseError(cleanupError)}`);
-    }
+    await cleanupOldFile(client, previous.path);
   }
 
   return { ok: true, url: publicImageUrl(client, storagePath) };
@@ -124,10 +146,7 @@ export async function deleteLogo(
     return { ok: false, error: "Gagal menghapus logo. Coba lagi." };
   }
 
-  const { error: storageError } = await client.storage.from(BUCKET).remove([previous.path]);
-  if (storageError) {
-    console.error(`deleteLogo (storage cleanup) failed: ${describeSupabaseError(storageError)}`);
-  }
+  await cleanupOldFile(client, previous.path);
 
   return { ok: true };
 }
@@ -154,30 +173,28 @@ export async function removeLogoBackground(
     return { ok: false, error: "Belum ada logo untuk dihapus background-nya." };
   }
 
-  const { data: downloaded, error: downloadError } = await client.storage.from(BUCKET).download(previous.path);
-  if (downloadError || !downloaded) {
-    console.error(`removeLogoBackground (download) failed: ${describeSupabaseError(downloadError)}`);
-    return { ok: false, error: "Gagal mengambil logo saat ini. Coba lagi." };
+  const downloaded = await downloadExistingFile(client, previous.path);
+  if (!downloaded.ok) {
+    return { ok: false, error: downloaded.error };
   }
 
   let processedBuffer: Buffer;
   try {
-    const inputBuffer = Buffer.from(await downloaded.arrayBuffer());
-    processedBuffer = await removeSolidBackground(inputBuffer);
+    processedBuffer = await removeSolidBackground(downloaded.buffer);
   } catch (error) {
     console.error(`removeLogoBackground (processing) failed: ${error instanceof Error ? error.message : error}`);
     return { ok: false, error: "Gagal memproses logo. Coba lagi." };
   }
 
-  const storagePath = `${businessId}/${LOGO_FOLDER[variant]}/${randomUUID()}.png`;
-  const { error: uploadError } = await client.storage.from(BUCKET).upload(storagePath, processedBuffer, {
-    contentType: "image/png",
-    cacheControl: "31536000",
+  const uploaded = await uploadToCloudinary(processedBuffer, {
+    folder: `keposting/${businessId}/${LOGO_FOLDER[variant]}`,
+    resourceType: "image",
   });
-  if (uploadError) {
-    console.error(`removeLogoBackground (upload) failed: ${describeSupabaseError(uploadError)}`);
+  if (!uploaded.ok) {
+    console.error(`removeLogoBackground (cloudinary upload) failed: ${uploaded.error}`);
     return { ok: false, error: "Gagal menyimpan logo hasil hapus background. Coba lagi." };
   }
+  const storagePath = uploaded.url;
 
   const { error: upsertError } = await client
     .from("business_profile")
@@ -190,10 +207,7 @@ export async function removeLogoBackground(
     return { ok: false, error: "Logo tersimpan tapi gagal menyimpan datanya. Coba lagi." };
   }
 
-  const { error: cleanupError } = await client.storage.from(BUCKET).remove([previous.path]);
-  if (cleanupError) {
-    console.error(`removeLogoBackground (cleanup old file) failed: ${describeSupabaseError(cleanupError)}`);
-  }
+  await cleanupOldFile(client, previous.path);
 
   return { ok: true, url: publicImageUrl(client, storagePath) };
 }

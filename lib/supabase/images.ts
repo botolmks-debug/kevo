@@ -1,8 +1,8 @@
-import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { categoryToType, type ImageUsage } from "@/lib/images/categories";
 import { DEV_BUSINESS_ID } from "./devBusiness";
 import { describeSupabaseError } from "./logError";
+import { uploadToCloudinary, deleteFromCloudinary, isCloudinaryUrl } from "@/lib/storage/cloudinary";
 
 export const BUCKET = "user-images";
 
@@ -37,11 +37,6 @@ export function buildImageRow(input: {
   };
 }
 
-function fileExtension(fileName: string): string {
-  const parts = fileName.split(".");
-  return parts.length > 1 ? parts[parts.length - 1] : "jpg";
-}
-
 export type UploadImageInput = {
   file: File;
   description: string;
@@ -58,19 +53,26 @@ export async function uploadImage(
   input: UploadImageInput,
 ): Promise<UploadImageResult> {
   const businessId = input.businessId ?? DEV_BUSINESS_ID;
-  const storagePath = `${businessId}/${randomUUID()}.${fileExtension(input.file.name)}`;
 
-  const { error: uploadError } = await client.storage.from(BUCKET).upload(storagePath, input.file, {
-    cacheControl: "31536000",
+  // Upload BARU → Cloudinary (bukan Supabase Storage lagi). File lama tetap
+  // di Supabase & tetap terbaca (lihat publicImageUrl di bawah) — tidak ada
+  // migrasi paksa.
+  const buffer = Buffer.from(await input.file.arrayBuffer());
+  const uploaded = await uploadToCloudinary(buffer, {
+    folder: `keposting/${businessId}/gambar`,
+    resourceType: "image",
   });
-  if (uploadError) {
-    console.error(`uploadImage (storage) failed: ${describeSupabaseError(uploadError)}`);
+  if (!uploaded.ok) {
+    console.error(`uploadImage (cloudinary) failed: ${uploaded.error}`);
     return { ok: false, error: "Gagal mengunggah gambar. Coba lagi." };
   }
 
+  // storage_path sekarang berisi URL Cloudinary penuh untuk upload baru
+  // (vs path relatif Supabase untuk data lama) — publicImageUrl() otomatis
+  // membedakan keduanya.
   const row = buildImageRow({
     businessId,
-    storagePath,
+    storagePath: uploaded.url,
     description: input.description,
     category: input.category,
     usage: input.usage,
@@ -104,7 +106,40 @@ export async function listImages(
   return { ok: true, images: (data ?? []) as ImageRow[] };
 }
 
+/**
+ * Ambil bytes sebuah file yang path/URL-nya tersimpan di kolom storage_path
+ * (dipakai buat baca ulang gambar referensi "Database Gambar" sebagai input
+ * AI generate). storagePath bisa URL Cloudinary (upload baru) ATAU path
+ * relatif Supabase Storage lama — fungsi ini otomatis pilih cara ambilnya
+ * yang benar, supaya kode pemanggil tidak perlu tahu bedanya.
+ */
+export async function downloadStoredFile(
+  client: SupabaseClient,
+  storagePath: string,
+): Promise<{ ok: true; buffer: Buffer; mimeType: string } | { ok: false; error: string }> {
+  if (isCloudinaryUrl(storagePath)) {
+    const res = await fetch(storagePath);
+    if (!res.ok) return { ok: false, error: `Gagal mengambil file dari Cloudinary (${res.status}).` };
+    const mimeType = res.headers.get("content-type") || "image/jpeg";
+    return { ok: true, buffer: Buffer.from(await res.arrayBuffer()), mimeType };
+  }
+  const { data, error } = await client.storage.from(BUCKET).download(storagePath);
+  if (error || !data) {
+    console.error(`downloadStoredFile (supabase) failed: ${describeSupabaseError(error)}`);
+    return { ok: false, error: "Gagal mengambil file dari storage." };
+  }
+  return { ok: true, buffer: Buffer.from(await data.arrayBuffer()), mimeType: (data as Blob).type || "image/jpeg" };
+}
+
+/**
+ * Bangun URL publik dari storage_path. Sejak Cloudinary aktif untuk upload
+ * BARU, storage_path bisa berisi 2 bentuk: URL Cloudinary penuh (upload baru)
+ * ATAU path relatif Supabase Storage lama (upload sebelum migrasi) — fungsi
+ * ini otomatis deteksi mana yang mana, jadi gambar lama & baru SAMA-SAMA
+ * terbaca tanpa perlu migrasi data.
+ */
 export function publicImageUrl(client: SupabaseClient, storagePath: string): string {
+  if (isCloudinaryUrl(storagePath)) return storagePath;
   return client.storage.from(BUCKET).getPublicUrl(storagePath).data.publicUrl;
 }
 
@@ -138,6 +173,14 @@ export async function deleteImage(client: SupabaseClient, id: string): Promise<D
   if (deleteRowError) {
     console.error(`deleteImage (row) failed: ${describeSupabaseError(deleteRowError)}`);
     return { ok: false, error: "Gagal menghapus gambar. Coba lagi." };
+  }
+
+  if (isCloudinaryUrl(data.storage_path)) {
+    // File baru (Cloudinary) — kegagalan hapus di sini TIDAK menggagalkan
+    // hapus baris DB (sudah terlanjur dihapus di atas); dicatat di log saja,
+    // sama seperti perilaku lama untuk file Supabase.
+    await deleteFromCloudinary(data.storage_path);
+    return { ok: true, storageCleanedUp: true };
   }
 
   const { error: storageError } = await client.storage.from(BUCKET).remove([data.storage_path]);

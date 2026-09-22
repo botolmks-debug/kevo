@@ -4,7 +4,8 @@ import { createServiceRoleClient } from "@/lib/supabase/serviceRole";
 import { consumeToken, refundToken, consumeTokens, isAdmin } from "@/lib/supabase/tokens";
 import { checkSupabaseEnvPresence } from "@/lib/env";
 import { loadBusinessProfile } from "@/lib/supabase/businessProfile";
-import { listImages, publicImageUrl, type ImageRow } from "@/lib/supabase/images";
+import { listImages, publicImageUrl, downloadStoredFile, type ImageRow } from "@/lib/supabase/images";
+import { uploadToCloudinary } from "@/lib/storage/cloudinary";
 import { logError } from "@/lib/monitoring/errorLog";
 import { describeProductImage } from "@/lib/ai/describeImage";
 import {
@@ -45,7 +46,6 @@ import {
 import { buildGeneralImagePrompt, buildInteraksiImagePrompt } from "@/lib/ai/autoImagePrompt";
 import { FONT_OPTIONS } from "@/lib/templates/fonts";
 import type { AspectRatio } from "@/lib/templates/types";
-import { randomUUID } from "crypto";
 
 export const runtime = "nodejs";
 // Naikkan batas waktu route handler — Gemini image bisa butuh 90–120 detik.
@@ -53,7 +53,6 @@ export const maxDuration = 300;
 
 const VALID_RATIOS: AspectRatio[] = ["4:5", "1:1", "9:16"];
 const VALID_JENIS: GeneratedContentJenis[] = ["produk", "general", "interaksi"];
-const BUCKET = "user-images";
 
 function envErrorResponse() {
   return NextResponse.json(
@@ -223,10 +222,10 @@ export async function POST(request: NextRequest) {
   // soal biaya (dipanggil 2x kalau tidak di-skip).
   if (body.jenis === "produk" && !isGabung && sourceImage && !body.produkDescOverride?.trim() && produkDesc.trim().length < 12) {
     try {
-      const { data, error } = await createServiceRoleClient().storage.from(BUCKET).download(sourceImage.storage_path);
-      if (!error && data) {
-        produkMime = (data as Blob).type || "image/jpeg";
-        produkBase64 = Buffer.from(await data.arrayBuffer()).toString("base64");
+      const dl = await downloadStoredFile(createServiceRoleClient(), sourceImage.storage_path);
+      if (dl.ok) {
+        produkMime = dl.mimeType;
+        produkBase64 = dl.buffer.toString("base64");
         const seen = await describeProductImage({
           imageBase64: produkBase64,
           mimeType: produkMime,
@@ -378,13 +377,11 @@ export async function POST(request: NextRequest) {
     const images: { imageBase64: string; mimeType: string }[] = [];
     try {
       for (const img of sourceImages) {
-        // Baca foto sumber via SERVICE client (tembus bucket privat/RLS), bukan
-        // fetch URL publik yang bisa gagal → akar bug storage.
-        const { data, error } = await createServiceRoleClient().storage.from(BUCKET).download(img.storage_path);
-        if (error || !data) throw new Error(error?.message ?? "download gagal");
-        const mt = (data as Blob).type || "image/jpeg";
-        const b64 = Buffer.from(await data.arrayBuffer()).toString("base64");
-        images.push({ imageBase64: b64, mimeType: mt });
+        // Baca foto sumber via SERVICE client (tembus bucket privat/RLS untuk
+        // data lama Supabase), otomatis fetch langsung kalau sudah Cloudinary.
+        const dl = await downloadStoredFile(createServiceRoleClient(), img.storage_path);
+        if (!dl.ok) throw new Error(dl.error);
+        images.push({ imageBase64: dl.buffer.toString("base64"), mimeType: dl.mimeType });
       }
     } catch {
       return fail("Gagal mengambil salah satu gambar produk.", 502);
@@ -401,10 +398,10 @@ export async function POST(request: NextRequest) {
       imageBase64 = produkBase64; mimeType = produkMime;
     } else {
     try {
-      const { data, error } = await createServiceRoleClient().storage.from(BUCKET).download(sourceImage.storage_path);
-      if (error || !data) throw new Error(error?.message ?? "download gagal");
-      mimeType = (data as Blob).type || "image/jpeg";
-      imageBase64 = Buffer.from(await data.arrayBuffer()).toString("base64");
+      const dl = await downloadStoredFile(createServiceRoleClient(), sourceImage.storage_path);
+      if (!dl.ok) throw new Error(dl.error);
+      mimeType = dl.mimeType;
+      imageBase64 = dl.buffer.toString("base64");
     } catch {
       return fail("Gagal mengambil gambar produk.", 502);
     }
@@ -467,16 +464,19 @@ export async function POST(request: NextRequest) {
   }
 
   // ── Simpan gambar BERSIH ke storage (untuk keperluan edit ulang nanti) ───
+  // Upload BARU → Cloudinary (bukan Supabase lagi); backgroundPath yang
+  // dikirim ke insertGeneratedContent otomatis jadi URL Cloudinary penuh.
   const serviceClient = createServiceRoleClient();
-  const bgPath = `${user.id}/bg/${randomUUID()}.png`;
   const bgBuffer = dataUriToBuffer(imageDataUri);
-  const { error: bgUploadError } = await serviceClient.storage
-    .from(BUCKET)
-    .upload(bgPath, bgBuffer, { contentType: "image/png" });
+  const bgUploaded = await uploadToCloudinary(bgBuffer, {
+    folder: `keposting/${user.id}/bg`,
+    resourceType: "image",
+  });
   // Kalau gagal simpan bg, lanjut saja — tidak fatal; edit konten lama akan fallback ke imageUrl
-  if (bgUploadError) {
-    console.warn("Gagal simpan background bersih:", bgUploadError.message);
+  if (!bgUploaded.ok) {
+    console.warn("Gagal simpan background bersih:", bgUploaded.error);
   }
+  const bgPath = bgUploaded.ok ? bgUploaded.url : undefined;
 
   // ── Render gambar final (dengan overlay judul + logo + sosmed) ───────────
   const useArtDirector = body.jenis === "produk" && !isGabung && body.useArtDirector === true;
@@ -598,7 +598,7 @@ export async function POST(request: NextRequest) {
     caption: content.caption,
     ratio: body.ratio,
     businessId: user.id,
-    backgroundPath: bgUploadError ? undefined : bgPath,
+    backgroundPath: bgPath,
   }, serviceClient);
   if (!insertResult.ok) return fail(insertResult.error, 502);
 

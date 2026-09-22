@@ -4,7 +4,7 @@ import { createServiceRoleClient } from "@/lib/supabase/serviceRole";
 import { consumeTokens, refundTokens } from "@/lib/supabase/tokens";
 import { checkSupabaseEnvPresence } from "@/lib/env";
 import { loadBusinessProfile } from "@/lib/supabase/businessProfile";
-import { listImages } from "@/lib/supabase/images";
+import { listImages, downloadStoredFile } from "@/lib/supabase/images";
 import { logError } from "@/lib/monitoring/errorLog";
 import { generateJsonContent } from "@/lib/ai/geminiJson";
 import { generateImage, editImage, editImageWithReference } from "@/lib/ai/geminiImage";
@@ -23,7 +23,6 @@ export const maxDuration = 300;
  * gambar) dan sudah "termasuk" di 4 token ini. */
 export const CAROUSEL_TOKEN_COST = 4;
 
-const BUCKET = "user-images";
 
 type RequestBody = { imageId?: string; imageDescription?: string; theme?: string; language?: "id" | "en"; chainedStory?: boolean; panorama4?: boolean };
 
@@ -128,11 +127,9 @@ export async function POST(request: NextRequest) {
       const imagesResult = await listImages(supabase, user.id);
       const image = imagesResult.ok ? imagesResult.images.find((img) => img.id === imageId) ?? null : null;
       if (image) {
-        const { data, error } = await createServiceRoleClient().storage.from(BUCKET).download(image.storage_path);
-        if (!error && data) {
-          const mimeType = (data as Blob).type || "image/jpeg";
-          const base64 = Buffer.from(await data.arrayBuffer()).toString("base64");
-          productPhoto = { base64, mimeType };
+        const dl = await downloadStoredFile(createServiceRoleClient(), image.storage_path);
+        if (dl.ok) {
+          productPhoto = { base64: dl.buffer.toString("base64"), mimeType: dl.mimeType };
         }
       }
     } catch {

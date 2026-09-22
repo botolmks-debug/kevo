@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/serviceRole";
 import { checkSupabaseEnvPresence } from "@/lib/env";
 import { loadBusinessProfile } from "@/lib/supabase/businessProfile";
-import { listImages, type ImageRow } from "@/lib/supabase/images";
+import { listImages, downloadStoredFile, type ImageRow } from "@/lib/supabase/images";
 import { logError } from "@/lib/monitoring/errorLog";
 import { describeProductImage } from "@/lib/ai/describeImage";
 import { sanitizeTitles } from "@/lib/ai/sanitizeTitle";
@@ -19,7 +19,6 @@ import { generateJsonContent } from "@/lib/ai/geminiJson";
 export const runtime = "nodejs";
 export const maxDuration = 60; // cuma teks (5 judul) — jauh lebih cepat drpd generate gambar
 
-const BUCKET = "user-images";
 const VALID_TEMA = ["hook", "edukasi", "produk", "promo"] as const;
 type ContentTema = (typeof VALID_TEMA)[number];
 const VALID_JENIS = ["produk", "general", "interaksi"] as const;
@@ -120,10 +119,10 @@ export async function POST(request: NextRequest) {
   let produkDesc = sourceImage.description ?? "";
   if (produkDesc.trim().length < 12) {
     try {
-      const { data, error } = await createServiceRoleClient().storage.from(BUCKET).download(sourceImage.storage_path);
-      if (!error && data) {
-        const mimeType = (data as Blob).type || "image/jpeg";
-        const imageBase64 = Buffer.from(await data.arrayBuffer()).toString("base64");
+      const dl = await downloadStoredFile(createServiceRoleClient(), sourceImage.storage_path);
+      if (dl.ok) {
+        const { mimeType, buffer } = dl;
+        const imageBase64 = buffer.toString("base64");
         const seen = await describeProductImage({
           imageBase64, mimeType, lang: body.language === "en" ? "en" : "id", industry: profile.business.industry,
         });

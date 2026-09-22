@@ -1,10 +1,10 @@
-import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 import type { AspectRatio } from "@/lib/templates/types";
 import { BUCKET } from "./images";
 import { DEV_BUSINESS_ID } from "./devBusiness";
 import { describeSupabaseError } from "./logError";
+import { uploadToCloudinary, deleteFromCloudinary, isCloudinaryUrl, publicIdFromCloudinaryUrl } from "@/lib/storage/cloudinary";
 
 // Cache 1 tahun — hasil generate final tidak pernah berubah setelah tersimpan
 // (re-save = upload BARU ke path yang SAMA, isinya tetap konten "definitif"
@@ -123,8 +123,17 @@ async function enforceContentCap(
       if (row.background_path) storagePaths.push(row.background_path);
     }
     if (storagePaths.length > 0) {
-      const { error: rmErr } = await dbClient.storage.from(BUCKET).remove(storagePaths);
-      if (rmErr) console.warn(`enforceContentCap (storage remove) gagal: ${describeSupabaseError(rmErr)}`);
+      // storagePaths bisa campuran: path Supabase lama + URL Cloudinary baru —
+      // pisahkan, hapus masing-masing lewat API yang benar.
+      const supabasePaths = storagePaths.filter((p) => !isCloudinaryUrl(p));
+      const cloudinaryUrls = storagePaths.filter((p) => isCloudinaryUrl(p));
+      if (supabasePaths.length > 0) {
+        const { error: rmErr } = await dbClient.storage.from(BUCKET).remove(supabasePaths);
+        if (rmErr) console.warn(`enforceContentCap (storage remove) gagal: ${describeSupabaseError(rmErr)}`);
+      }
+      if (cloudinaryUrls.length > 0) {
+        await Promise.all(cloudinaryUrls.map((url) => deleteFromCloudinary(url)));
+      }
     }
     const ids = toDelete.map((r) => r.id);
     const { error: delErr } = await dbClient.from("generated_content").delete().in("id", ids);
@@ -144,32 +153,29 @@ export async function insertGeneratedContent(
   storageClient: SupabaseClient = client,
 ): Promise<InsertGeneratedContentResult> {
   const businessId = input.businessId ?? DEV_BUSINESS_ID;
-  const storagePath = `${businessId}/generated/${randomUUID()}.jpg`;
   const uploadBuffer = await toStorageJpeg(input.pngBuffer);
 
   // FIFO cap 60: buang konten terlama dulu kalau kuota user sudah penuh.
   // Pakai storageClient (service-role dari route) supaya delete lolos RLS.
   await enforceContentCap(storageClient, businessId);
 
-  // Upload dengan RETRY — "fetch failed" adalah kegagalan jaringan sesaat ke
-  // Supabase Storage; percobaan ulang biasanya berhasil. upsert:true supaya aman
-  // kalau percobaan sebelumnya sempat separuh jalan.
-  let uploadError: unknown = null;
+  // Upload BARU → Cloudinary. Data lama (Supabase) tidak dimigrasi, tetap
+  // terbaca lewat publicImageUrl() yang mendeteksi bentuk storage_path.
+  let uploaded: Awaited<ReturnType<typeof uploadToCloudinary>> | null = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
-    const res = await storageClient.storage.from(BUCKET).upload(storagePath, uploadBuffer, {
-      contentType: "image/jpeg",
-      cacheControl: LONG_CACHE_CONTROL,
-      upsert: true,
+    uploaded = await uploadToCloudinary(uploadBuffer, {
+      folder: `keposting/${businessId}/generated`,
+      resourceType: "image",
     });
-    uploadError = res.error;
-    if (!uploadError) break;
+    if (uploaded.ok) break;
     if (attempt < 3) await new Promise((r) => setTimeout(r, 500 * attempt));
   }
-  if (uploadError) {
-    const detail = describeSupabaseError(uploadError);
-    console.error(`insertGeneratedContent (storage) failed after retries: ${detail}`);
+  if (!uploaded || !uploaded.ok) {
+    const detail = uploaded && !uploaded.ok ? uploaded.error : "unknown";
+    console.error(`insertGeneratedContent (cloudinary) failed after retries: ${detail}`);
     return { ok: false, error: `Gagal mengunggah hasil generate: ${detail}` };
   }
+  const storagePath = uploaded.url;
 
   const { data, error } = await client
     .from("generated_content")
@@ -216,26 +222,24 @@ export async function insertVideoGeneratedContent(
   storageClient: SupabaseClient = client,
 ): Promise<InsertGeneratedContentResult> {
   const businessId = input.businessId ?? DEV_BUSINESS_ID;
-  const storagePath = `${businessId}/generated/${randomUUID()}.mp4`;
 
   await enforceContentCap(storageClient, businessId);
 
-  let uploadError: unknown = null;
+  let uploaded: Awaited<ReturnType<typeof uploadToCloudinary>> | null = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
-    const res = await storageClient.storage.from(BUCKET).upload(storagePath, input.videoBuffer, {
-      contentType: "video/mp4",
-      cacheControl: LONG_CACHE_CONTROL,
-      upsert: true,
+    uploaded = await uploadToCloudinary(input.videoBuffer, {
+      folder: `keposting/${businessId}/generated`,
+      resourceType: "video",
     });
-    uploadError = res.error;
-    if (!uploadError) break;
+    if (uploaded.ok) break;
     if (attempt < 3) await new Promise((r) => setTimeout(r, 500 * attempt));
   }
-  if (uploadError) {
-    const detail = describeSupabaseError(uploadError);
-    console.error(`insertVideoGeneratedContent (storage) failed after retries: ${detail}`);
+  if (!uploaded || !uploaded.ok) {
+    const detail = uploaded && !uploaded.ok ? uploaded.error : "unknown";
+    console.error(`insertVideoGeneratedContent (cloudinary) failed after retries: ${detail}`);
     return { ok: false, error: `Gagal mengunggah video: ${detail}` };
   }
+  const storagePath = uploaded.url;
 
   const { data, error } = await client
     .from("generated_content")
@@ -290,16 +294,37 @@ export async function updateGeneratedContent(
   }
 
   const uploadBuffer = await toStorageJpeg(input.pngBuffer);
-  const { error: uploadError } = await client.storage
-    .from(BUCKET)
-    .upload((existing as { storage_path: string }).storage_path, uploadBuffer, {
-      contentType: "image/jpeg",
-      cacheControl: LONG_CACHE_CONTROL,
-      upsert: true,
+  const existingPath = (existing as { storage_path: string }).storage_path;
+
+  // Re-save konten: kalau path SEBELUMNYA sudah Cloudinary (konten baru pasca-
+  // migrasi), timpa file Cloudinary yang sama (public_id sama = overwrite di
+  // uploadToCloudinary). Kalau path lama masih Supabase (konten dari sebelum
+  // Cloudinary aktif), tetap upload ke path Supabase yang sama seperti semula
+  // — supaya konten lama tidak "lompat" sumber cuma gara-gara di-edit ulang.
+  let newStoragePath = existingPath;
+  if (isCloudinaryUrl(existingPath)) {
+    const publicId = publicIdFromCloudinaryUrl(existingPath)?.publicId;
+    const uploaded = await uploadToCloudinary(uploadBuffer, {
+      resourceType: "image",
+      publicId,
     });
-  if (uploadError) {
-    console.error(`updateGeneratedContent (storage) failed: ${describeSupabaseError(uploadError)}`);
-    return { ok: false, error: "Gagal mengunggah hasil render ulang. Coba lagi." };
+    if (!uploaded.ok) {
+      console.error(`updateGeneratedContent (cloudinary) failed: ${uploaded.error}`);
+      return { ok: false, error: "Gagal mengunggah hasil render ulang. Coba lagi." };
+    }
+    newStoragePath = uploaded.url;
+  } else {
+    const { error: uploadError } = await client.storage
+      .from(BUCKET)
+      .upload(existingPath, uploadBuffer, {
+        contentType: "image/jpeg",
+        cacheControl: LONG_CACHE_CONTROL,
+        upsert: true,
+      });
+    if (uploadError) {
+      console.error(`updateGeneratedContent (storage) failed: ${describeSupabaseError(uploadError)}`);
+      return { ok: false, error: "Gagal mengunggah hasil render ulang. Coba lagi." };
+    }
   }
 
   const { data, error } = await client
@@ -307,6 +332,7 @@ export async function updateGeneratedContent(
     .update({
       on_image_text: input.onImageText,
       caption: input.caption,
+      storage_path: newStoragePath,
       ...(input.layoutState !== undefined ? { layout_state: input.layoutState } : {}),
     })
     .eq("id", id)

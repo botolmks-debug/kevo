@@ -14,7 +14,7 @@ import { createServiceRoleClient } from "@/lib/supabase/serviceRole";
 import { consumeTokens, refundTokens, isAdmin } from "@/lib/supabase/tokens";
 import { checkSupabaseEnvPresence } from "@/lib/env";
 import { loadBusinessProfile } from "@/lib/supabase/businessProfile";
-import { listImages } from "@/lib/supabase/images";
+import { listImages, downloadStoredFile } from "@/lib/supabase/images";
 import { logError } from "@/lib/monitoring/errorLog";
 import { generateJsonContent } from "@/lib/ai/geminiJson";
 import { generateImage, editImageWithReference } from "@/lib/ai/geminiImage";
@@ -26,7 +26,6 @@ import { getRecentCaptions, buildAntiRepetisiBlock } from "@/lib/ai/antiRepetisi
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-const BUCKET = "user-images";
 
 // Jumlah slide "Video Cerita Produk" — SLIDE_COUNT-1 slide pertama dapat foto
 // AI, slide terakhir pakai foto asli user (diedit biar seirama, lihat step 4
@@ -164,10 +163,10 @@ export async function POST(request: NextRequest) {
       const imagesResult = await listImages(supabase, user.id);
       const image = imagesResult.ok ? imagesResult.images.find((img) => img.id === imageId) ?? null : null;
       if (image) {
-        const { data, error } = await createServiceRoleClient().storage.from(BUCKET).download(image.storage_path);
-        if (!error && data) {
-          imageMime = (data as Blob).type || "image/jpeg";
-          imageBase64 = Buffer.from(await data.arrayBuffer()).toString("base64");
+        const dl = await downloadStoredFile(createServiceRoleClient(), image.storage_path);
+        if (dl.ok) {
+          imageMime = dl.mimeType;
+          imageBase64 = dl.buffer.toString("base64");
           const seen = await describeProductImage({ imageBase64, mimeType: imageMime, lang: language, industry: profile.business.industry });
           if (seen.ok && seen.description.trim()) imageDescription = seen.description.trim();
         }
