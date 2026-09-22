@@ -75,9 +75,13 @@ export type FreeItem = {
   cornerRadius?: number;
 };
 
-/** Lapisan warna/gradient di atas foto latar — editor DOM v4. */
+/** Lapisan warna/gradient di atas foto latar — editor DOM v4.
+ * "solid" = gelap penuh rata, eksklusif (tidak bisa digabung sisi lain).
+ * "top"/"bottom"/"left"/"right" = gradient dari 1 sisi, BISA dipilih lebih
+ * dari 1 sekaligus (digabung jadi efek vignette, mis. atas+bawah). */
+export type OverlaySide = "top" | "bottom" | "left" | "right" | "solid";
 export type OverlayFx = {
-  type: "none" | "solid" | "bottom" | "top";
+  sides: OverlaySide[];
   color: string;   // hex
   opacity: number; // 0..1
 };

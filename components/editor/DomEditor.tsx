@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { TemplateLayout, TextSlot, Decoration, FooterSocial } from "@/lib/templates/types";
-import type { EditorOverrides, ElementFx, FreeItem, OverlayFx } from "@/lib/editor/layoutOverrides";
+import type { EditorOverrides, ElementFx, FreeItem, OverlayFx, OverlaySide } from "@/lib/editor/layoutOverrides";
 import { fitFontSize } from "@/lib/render/fitText";
 import { FONT_OPTIONS } from "@/lib/templates/fonts";
 import { DELIVERY_PLATFORMS, DELIVERY_MAP } from "@/lib/social/delivery";
@@ -574,12 +574,26 @@ export function DomEditor({
   const footerTextSize = overrides.footer?.textSize ?? fl.textSize;
   const footerShowName = overrides.footer?.showName ?? true;
   const visSocials = socials.slice(0, MAX_SOCIALS);
-  const overlay: OverlayFx = overrides.overlay ?? { type: "none", color: "#000000", opacity: 0.45 };
+  const overlay: OverlayFx = overrides.overlay ?? { sides: [], color: "#000000", opacity: 0.45 };
   // Slot foto latar (biasanya id "photo") — dipakai buat baca/tulis mirror
   // lewat overrides.images, key yang SAMA dipakai CanvasEditor & Satori
   // (lib/render/renderTemplate.tsx) supaya preview & hasil export konsisten.
   const photoSlotId = layout.slots.find((s) => s.type === "image")?.id;
   const photoMirror = photoSlotId ? !!overrides.images?.[photoSlotId]?.mirror : false;
+  function toggleOverlaySide(side: OverlaySide) {
+    let sides: OverlaySide[];
+    if (side === "solid") {
+      // Solid eksklusif — pilih Penuh akan bersihkan sisi lain, dan sebaliknya.
+      sides = overlay.sides.includes("solid") ? [] : ["solid"];
+    } else {
+      const withoutSolid = overlay.sides.filter((s) => s !== "solid");
+      sides = withoutSolid.includes(side)
+        ? withoutSolid.filter((s) => s !== side)
+        : [...withoutSolid, side];
+    }
+    commit({ ...overrides, overlay: { ...overlay, sides } });
+  }
+
   function togglePhotoMirror() {
     if (!photoSlotId) return;
     const cur = overrides.images?.[photoSlotId] ?? {};
@@ -1148,14 +1162,18 @@ export function DomEditor({
           {photo && <img src={photo} alt="" crossOrigin="anonymous" draggable={false}
             style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", transform:`scale(1.04)${photoMirror ? " scaleX(-1)" : ""}`, transformOrigin:"center", ...IMG_STYLE }} />}
 
-          {/* overlay warna/gradient di atas foto — ikut terekspor */}
-          {overlay.type !== "none" && (
+          {/* overlay warna/gradient di atas foto — ikut terekspor. Solid & sisi
+              (top/bottom/left/right) digabung jadi satu div multi-gradient
+              (CSS background-image bisa berlapis), supaya beberapa sisi
+              sekaligus (mis. atas+bawah) menumpuk jadi efek vignette. */}
+          {overlay.sides.length > 0 && (
             <div style={{ position:"absolute", inset:0, zIndex:OVERLAY_Z, pointerEvents:"none",
-              ...(overlay.type === "solid"
+              ...(overlay.sides.includes("solid")
                 ? { backgroundColor: hexToRgba(overlay.color, overlay.opacity) }
-                : overlay.type === "bottom"
-                ? { backgroundImage: `linear-gradient(to top, ${hexToRgba(overlay.color, overlay.opacity)} 0%, ${hexToRgba(overlay.color, 0)} 60%)` }
-                : { backgroundImage: `linear-gradient(to bottom, ${hexToRgba(overlay.color, overlay.opacity)} 0%, ${hexToRgba(overlay.color, 0)} 60%)` }) }} />
+                : { backgroundImage: overlay.sides.map((side) => {
+                    const dir = side === "bottom" ? "to top" : side === "top" ? "to bottom" : side === "left" ? "to right" : "to left";
+                    return `linear-gradient(${dir}, ${hexToRgba(overlay.color, overlay.opacity)} 0%, ${hexToRgba(overlay.color, 0)} 60%)`;
+                  }).join(", ") }) }} />
           )}
 
           {frontDecos.map((d, i) => <DecoView key={"f"+i} d={d} scale={scale} z={FRONT_DECO_Z} />)}
@@ -1448,14 +1466,18 @@ export function DomEditor({
       {photo && selKey === "photo" && (
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
           <span className="font-semibold text-navy">Overlay foto:</span>
-          {([["none","Tanpa"],["bottom","Gelap bawah"],["top","Gelap atas"],["solid","Penuh"]] as const).map(([t, label]) => (
+          {([["bottom","Gelap bawah"],["top","Gelap atas"],["left","Gelap kiri"],["right","Gelap kanan"],["solid","Penuh"]] as const).map(([t, label]) => (
             <button key={t} type="button"
-              onClick={()=>commit({ ...overrides, overlay: { ...overlay, type: t } })}
-              className={`rounded-lg border px-2.5 py-1 font-medium ${overlay.type===t?"border-primary bg-primary/10 text-primary":"border-navy/15 text-navy/70"}`}>
+              onClick={()=>toggleOverlaySide(t)}
+              title={t === "solid" ? "Eksklusif — pilih ini akan bersihkan sisi lain" : "Bisa dipilih lebih dari 1 sekaligus"}
+              className={`rounded-lg border px-2.5 py-1 font-medium ${overlay.sides.includes(t)?"border-primary bg-primary/10 text-primary":"border-navy/15 text-navy/70"}`}>
               {label}
             </button>
           ))}
-          {overlay.type !== "none" && (
+          {overlay.sides.length === 0 && (
+            <span className="text-navy/40">(Tanpa overlay)</span>
+          )}
+          {overlay.sides.length > 0 && (
             <>
               <input type="color" value={overlay.color}
                 onChange={(e)=>commit({ ...overrides, overlay: { ...overlay, color: e.target.value } })}
