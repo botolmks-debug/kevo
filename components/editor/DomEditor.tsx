@@ -7,6 +7,7 @@ import { fitFontSize } from "@/lib/render/fitText";
 import { FONT_OPTIONS } from "@/lib/templates/fonts";
 import { DELIVERY_PLATFORMS, DELIVERY_MAP } from "@/lib/social/delivery";
 import { CERT_BADGES, CERT_BADGE_MAP, CERT_BADGE_H, CERT_BADGE_GAP } from "@/lib/social/badges";
+import ObjectSelectModal, { type CutoutResult } from "@/components/editor/ObjectSelectModal";
 
 /**
  * DomEditor v4 — EDITOR SATU-MESIN. Edit = hasil (dipotret html-to-image).
@@ -462,6 +463,7 @@ export function DomEditor({
   // Dobel-klik teks → ketik langsung di kanvas (contentEditable, commit saat blur/Enter)
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [shapeMenuOpen, setShapeMenuOpen] = useState(false);
+  const [objSelOpen, setObjSelOpen] = useState(false); // ✂️ Pilih Objek (SAM di browser, gratis)
   const editRef = useRef<HTMLDivElement | null>(null);
   // Simpan lokasi seleksi teks SEBELUM color-wheel (input type="color")
   // mengambil fokus (dialog warna native OS/browser bikin fokus pindah dari
@@ -827,6 +829,19 @@ export function DomEditor({
     reader.readAsDataURL(file);
   }
 
+  /** Hasil "✂️ Pilih Objek": potongan objek jadi elemen gambar di posisi yang sama. */
+  function addCutoutItem(r: CutoutResult) {
+    if (items.length >= MAX_ITEMS) { window.alert(`Maksimal ${MAX_ITEMS} elemen tambahan.`); return; }
+    const id = `o${Date.now().toString(36)}`;
+    const item: FreeItem = {
+      id, kind: "image", src: r.src,
+      x: r.x, y: r.y, w: Math.max(20, r.w), h: Math.max(20, r.h),
+      ...(r.mirror ? { mirror: true } : {}),
+    };
+    commit({ ...overrides, items: [...items, item] });
+    setSelKey(`item-${id}`);
+  }
+
   function addShapeItem(shapeType: NonNullable<FreeItem["shapeType"]>) {
     if (items.length >= MAX_ITEMS) {
       window.alert(`Maksimal ${MAX_ITEMS} elemen tambahan.`);
@@ -1115,6 +1130,21 @@ export function DomEditor({
           className="rounded-lg border border-primary px-2.5 py-1 text-xs font-semibold text-primary">+ Gambar</button>
         <input ref={fileRef} type="file" accept="image/*" className="hidden"
           onChange={(e)=>{ const f = e.target.files?.[0]; if (f) addImageItem(f); e.target.value = ""; }} />
+        {photo && (
+          <button type="button" onClick={()=>setObjSelOpen(true)} title="Pilih & lepas objek dari foto (gratis)"
+            className="rounded-lg border border-primary px-2.5 py-1 text-xs font-semibold text-primary">✂️ Pilih Objek</button>
+        )}
+        {objSelOpen && photo && (
+          <ObjectSelectModal
+            photoUrl={photo}
+            mirror={photoMirror}
+            canvasW={layout.canvas.width}
+            canvasH={layout.canvas.height}
+            photoScale={1.04}
+            onClose={()=>setObjSelOpen(false)}
+            onDone={(r)=>{ setObjSelOpen(false); addCutoutItem(r); }}
+          />
+        )}
         <span className="mx-1 h-5 w-px bg-navy/10" />
         <div className="relative">
           <button type="button" onClick={()=>setShapeMenuOpen((v)=>!v)}
@@ -1150,6 +1180,7 @@ export function DomEditor({
         <div ref={(el) => { stageRef.current = el; (exportRef as React.MutableRefObject<HTMLDivElement | null>).current = el; }}
           onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
           onPointerDown={(e)=>{ if (e.target === e.currentTarget) setSelKey("photo"); }} // klik area kosong (bukan kena elemen lain) = pilih "Foto latar", munculkan kontrol Overlay
+          onDoubleClick={(e)=>{ if (e.target === e.currentTarget && photo) setObjSelOpen(true); }} // dobel-klik foto = ✂️ Pilih Objek
           onKeyDown={onKeyDown} tabIndex={0}
           style={{ position:"relative", width:displayW, height:displayH, borderRadius:0, overflow:"hidden", background:"#111", touchAction:"none", outline:"none" }}>
 
