@@ -44,6 +44,7 @@ import {
   themeImageNote,
 } from "@/lib/ai/autoContentPrompt";
 import { buildGeneralImagePrompt, buildInteraksiImagePrompt } from "@/lib/ai/autoImagePrompt";
+import { isValidIde, normalizeIde, kreatifTextBlock, kreatifSceneRule, buildKreatifImagePrompt, type KreatifIde } from "@/lib/ai/konsepKreatif";
 import { FONT_OPTIONS } from "@/lib/templates/fonts";
 import type { AspectRatio } from "@/lib/templates/types";
 
@@ -99,7 +100,7 @@ export async function GET() {
 const VALID_TEMA = ["hook", "edukasi", "produk", "promo"] as const;
 type ContentTema = (typeof VALID_TEMA)[number];
 
-type RequestBody = { jenis: GeneratedContentJenis; ratio: AspectRatio; imageId?: string; imageIds?: string[]; language?: "id" | "en"; referenceDataUri?: string; tema?: ContentTema; konsep?: string; lockedTitle?: string; produkDescOverride?: string; formatLabel?: string; useArtDirector?: boolean; useTracing?: boolean };
+type RequestBody = { jenis: GeneratedContentJenis; ratio: AspectRatio; imageId?: string; imageIds?: string[]; language?: "id" | "en"; referenceDataUri?: string; tema?: ContentTema; konsep?: string; lockedTitle?: string; produkDescOverride?: string; formatLabel?: string; useArtDirector?: boolean; useTracing?: boolean; kreatif?: KreatifIde };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -122,6 +123,7 @@ function isValidBody(body: unknown): body is RequestBody {
   if (body.formatLabel !== undefined && typeof body.formatLabel !== "string") return false;
   if (body.useArtDirector !== undefined && typeof body.useArtDirector !== "boolean") return false;
   if (body.useTracing !== undefined && typeof body.useTracing !== "boolean") return false;
+  if (body.kreatif !== undefined && !isValidIde(body.kreatif)) return false;
   return true;
 }
 
@@ -303,7 +305,13 @@ export async function POST(request: NextRequest) {
   const sharedExtra = [antiRepetisiBlock, momenBlock].filter(Boolean).join("\n");
   const extraGabung = [konsepExtraLegacy, temaExtra, sharedExtra].filter(Boolean).join("\n") || undefined;
   const extraProdukOnly = [temaExtra, sharedExtra].filter(Boolean).join("\n") || undefined;
-  const extraGeneralOnly = sharedExtra || undefined; // konsep utk general lewat param dedicated (lihat bawah)
+  // IDE KREATIF AI (khusus General): ide tidak biasa hasil brainstorm AI di
+  // /api/generate-auto/ideas yang dipilih user. Blok teksnya ikut di `extra`,
+  // aturan imageScene diganti lewat param sceneRule, dan prompt gambarnya beda.
+  const kreatif = body.jenis === "general" ? body.kreatif : undefined;
+  const kreatifBlock = kreatif ? kreatifTextBlock(kreatif, body.language) : "";
+  const kreatifScene = kreatif ? kreatifSceneRule(kreatif) : undefined;
+  const extraGeneralOnly = [kreatifBlock, sharedExtra].filter(Boolean).join("\n") || undefined; // konsep utk general lewat param dedicated (lihat bawah)
   const extraInteraksi = sharedExtra || undefined;
   const lockedTitle = body.lockedTitle?.trim();
   // Kalau user sudah pilih judul dari popup "5 pilihan judul" — jangan
@@ -322,11 +330,11 @@ export async function POST(request: NextRequest) {
 
   const contentPrompt = (
     isLockedProduk ? buildProdukCaptionForTitlePrompt(profile, produkDesc, lockedTitle!, body.language, extraProdukOnly, konsepText)
-    : isLockedGeneral ? buildGeneralCaptionForTitlePrompt(profile, lockedTitle!, body.language, extraGeneralOnly, konsepText)
+    : isLockedGeneral ? buildGeneralCaptionForTitlePrompt(profile, lockedTitle!, body.language, extraGeneralOnly, konsepText, kreatifScene)
     : isLockedInteraksi ? buildInteraksiCaptionForTitlePrompt(profile, lockedInteraksiFormat!, lockedTitle!, body.language, extraInteraksi)
     : isGabung ? buildGabungContentPrompt(profile, sourceImages.map((s) => s.description ?? ""), body.language, extraGabung)
     : body.jenis === "produk" ? buildProdukContentPrompt(profile, produkDesc, body.language, extraProdukOnly, konsepText)
-    : body.jenis === "general" ? buildGeneralContentPrompt(profile, body.language, extraGeneralOnly, konsepText)
+    : body.jenis === "general" ? buildGeneralContentPrompt(profile, body.language, extraGeneralOnly, konsepText, kreatifScene)
     : buildInteraksiContentPrompt(profile, body.language, extraInteraksi)
   ) + notesBlock;
 
@@ -455,7 +463,9 @@ export async function POST(request: NextRequest) {
   } else {
     const scene = content.imageScene ?? "";
     const prompt =
-      body.jenis === "general"
+      body.jenis === "general" && kreatif
+        ? buildKreatifImagePrompt(normalizeIde(kreatif, profile.business.name), body.language, profile.business.name) // promptGambar ide LANGSUNG, bukan imageScene
+        : body.jenis === "general"
         ? buildGeneralImagePrompt(scene, body.language) + (body.tema ? themeImageNote(body.tema, body.language) : "")
         : buildInteraksiImagePrompt(scene, body.language);
     const result = await generateImage({ prompt, aspectRatio: body.ratio });
@@ -467,7 +477,15 @@ export async function POST(request: NextRequest) {
   // Upload BARU → Cloudinary (bukan Supabase lagi); backgroundPath yang
   // dikirim ke insertGeneratedContent otomatis jadi URL Cloudinary penuh.
   const serviceClient = createServiceRoleClient();
-  const bgBuffer = dataUriToBuffer(imageDataUri);
+  // Gambar bersih dari AI bisa PNG besar (model Pro, resolusi tinggi) —
+  // kompres ke JPEG dulu supaya upload cepat & tidak kena batas ukuran.
+  let bgBuffer = dataUriToBuffer(imageDataUri);
+  try {
+    const sharpMod = (await import("sharp")).default;
+    bgBuffer = await sharpMod(bgBuffer).flatten({ background: "#ffffff" }).jpeg({ quality: 90 }).toBuffer();
+  } catch {
+    // best-effort — kalau gagal kompres, upload apa adanya
+  }
   const bgUploaded = await uploadToCloudinary(bgBuffer, {
     folder: `keposting/${user.id}/bg`,
     resourceType: "image",

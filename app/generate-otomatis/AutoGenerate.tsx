@@ -26,6 +26,28 @@ import { shareContent } from "@/lib/share";
 import { ReferenceTermsModal } from "@/components/generate-otomatis/ReferenceTermsModal";
 import { CarouselAuto } from "@/components/generate-otomatis/CarouselAuto";
 import { EmptyGalleryNotice } from "@/components/ui/EmptyGalleryNotice";
+import type { KreatifIde } from "@/lib/ai/konsepKreatif";
+
+// Nama ide kreatif yang sudah DIPILIH user disimpan di browser supaya AI
+// tidak menawarkan ide yang sama lagi (anti-berulang). Maks 40 terakhir.
+const IDE_TERPAKAI_KEY = "keposting-ide-terpakai";
+function readIdeTerpakai(): string[] {
+  try {
+    const raw = localStorage.getItem(IDE_TERPAKAI_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.filter((x): x is string => typeof x === "string").slice(0, 40) : [];
+  } catch {
+    return [];
+  }
+}
+function addIdeTerpakai(nama: string) {
+  try {
+    const next = [nama, ...readIdeTerpakai().filter((x) => x !== nama)].slice(0, 40);
+    localStorage.setItem(IDE_TERPAKAI_KEY, JSON.stringify(next));
+  } catch {
+    // best-effort
+  }
+}
 
 type PickableImage = {
   id: string;
@@ -116,6 +138,10 @@ export function AutoGenerate() {
   const [jenis, setJenis] = useState<GeneratedContentJenis | "referensi" | "carousel">("produk");
   const [tema, setTema] = useState<ContentTema | null>(null); // pilihan tema konten (judul+deskripsi+gambar)
   const [konsep, setKonsep] = useState(""); // arahan bebas dari user (opsional) — kalau diisi, jadi prioritas di atas tema
+  // General: false = foto biasa, true = "Ide Kreatif AI" (AI brainstorm 5 ide tidak biasa dulu).
+  const [kreatifMode, setKreatifMode] = useState(false);
+  const [ideaChoices, setIdeaChoices] = useState<{ ideas: KreatifIde[]; ratioArg?: AspectRatio } | null>(null);
+  const [ideasLoading, setIdeasLoading] = useState(false);
   // Popup "5 pilihan judul dulu" — khusus jenis "produk". null = popup tidak
   // tampil. Array = tampil dengan pilihan ini. produkDesc disimpan dari
   // respons /titles supaya generate final TIDAK perlu describeProductImage
@@ -249,7 +275,7 @@ export function AutoGenerate() {
     img.src = url;
   }
 
-  async function handleGenerate(ratioArg?: AspectRatio, locked?: { title: string; produkDesc: string; formatLabel?: string }) {
+  async function handleGenerate(ratioArg?: AspectRatio, locked?: { title: string; produkDesc: string; formatLabel?: string; kreatif?: KreatifIde }) {
     if (jenis === "carousel") return; // carousel punya alur generate sendiri (CarouselAuto)
     if (generatingRef.current) return; // sudah ada proses generate berjalan
     if ((jenis === "produk" || jenis === "referensi") && selectedImageIds.length === 0) {
@@ -282,6 +308,12 @@ export function AutoGenerate() {
     // produk (titles cuma butuh foto+deskripsi produk, bukan gambar
     // referensi gayanya — referenceDataUri baru dipakai di tahap generate
     // gambar FINAL). General & Interaksi tidak butuh foto sama sekali.
+    // General + Ide Kreatif AI: AI brainstorm 5 ide tidak biasa dulu. User
+    // pilih 1 ide -> judul ide itu langsung dipakai (tanpa popup judul lagi).
+    if (jenis === "general" && kreatifMode && !locked) {
+      await fetchIdeas(ratioArg);
+      return;
+    }
     if ((jenis === "produk" || jenis === "referensi" || jenis === "general" || jenis === "interaksi") && !locked) {
       if (generatingRef.current) return;
       generatingRef.current = true;
@@ -356,6 +388,8 @@ export function AutoGenerate() {
                 // Format Interaksi (Kuis/Edukasi/dst) yang dikunci dari tahap
                 // /titles — WAJIB dipakai ulang PERSIS sama di tahap ini.
                 formatLabel: locked?.formatLabel,
+                // Ide Kreatif AI (khusus General) — ide yang dipilih user dari popup.
+                kreatif: jenis === "general" ? locked?.kreatif : undefined,
                 // AI Art Director (eksperimental) — cuma efektif utk jenis "produk"
                 // dgn 1 foto (bukan gabung); route.ts yang menyaring sisanya.
                 useArtDirector: (jenis === "produk" || jenis === "referensi") ? useArtDirector : undefined,
@@ -401,6 +435,44 @@ export function AutoGenerate() {
     } finally {
       generatingRef.current = false;
     }
+  }
+
+  /** Ambil 5 ide kreatif dari AI. extraAvoid = ide yang sedang tampil (utk tombol "Ide lain"). */
+  async function fetchIdeas(ratioArg?: AspectRatio, extraAvoid: string[] = []) {
+    if (generatingRef.current) return;
+    generatingRef.current = true;
+    setIdeasLoading(true);
+    setGenerateStatus("idle");
+    setGenerateError(null);
+    try {
+      const res = await fetch("/api/generate-auto/ideas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          language: getLang(),
+          avoid: [...extraAvoid, ...readIdeTerpakai()].slice(0, 60),
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error ?? L("Gagal mengambil ide.", "Failed to get ideas."));
+      setIdeaChoices({ ideas: data.ideas as KreatifIde[], ratioArg });
+    } catch (error) {
+      setIdeaChoices(null);
+      setGenerateStatus("error");
+      setGenerateError(error instanceof Error ? error.message : L("Gagal mengambil ide.", "Failed to get ideas."));
+    } finally {
+      setIdeasLoading(false);
+      generatingRef.current = false;
+    }
+  }
+
+  /** Dipanggil pas user pilih salah satu ide kreatif. */
+  function handlePickIdea(ide: KreatifIde) {
+    if (!ideaChoices) return;
+    const ratioArg = ideaChoices.ratioArg;
+    addIdeTerpakai(ide.nama);
+    setIdeaChoices(null);
+    void handleGenerate(ratioArg, { title: ide.judul, produkDesc: "", kreatif: ide });
   }
 
   /** Dipanggil pas user klik salah satu dari 5 kartu judul di popup. */
@@ -687,6 +759,37 @@ export function AutoGenerate() {
         </div>
       ) : null}
 
+      {jenis === "general" ? (
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium text-navy">{L("Gaya konten", "Content style")}</span>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              { on: false, icon: "📷", label: L("Biasa", "Standard"), desc: L("Foto realistis tentang usahamu, seperti sebelumnya.", "A realistic photo about your business, as before.") },
+              { on: true, icon: "💡", label: L("Ide Kreatif AI", "AI Creative Ideas"), desc: L("AI memikirkan 5 ide tidak biasa khusus usahamu, kamu pilih satu. Ide yang sudah dipakai tidak ditawarkan lagi.", "AI thinks up 5 unusual ideas for your business, you pick one. Used ideas won't be offered again.") },
+            ].map((opt) => {
+              const active = kreatifMode === opt.on;
+              return (
+                <button
+                  key={String(opt.on)}
+                  type="button"
+                  onClick={() => setKreatifMode(opt.on)}
+                  aria-pressed={active}
+                  className={`flex items-start gap-3 rounded-2xl border p-3.5 text-left transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.98] active:shadow-sm ${
+                    active ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-line hover:border-primary/40 hover:bg-navy/[0.02]"
+                  }`}
+                >
+                  <span className="text-xl leading-none">{opt.icon}</span>
+                  <span className="flex flex-col gap-0.5">
+                    <span className={`text-sm font-semibold ${active ? "text-primary" : "text-navy"}`}>{opt.label}</span>
+                    <span className="text-xs text-navy/60">{opt.desc}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
       {jenis === "berita" ? (
         <div className="flex items-start gap-3 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-amber-50/50 p-4">
           <span className="text-2xl leading-none">🗞️</span>
@@ -879,6 +982,47 @@ export function AutoGenerate() {
 
       {isGenerating ? (
         <GenerateLoadingOverlay onCancel={() => setGenerateStatus("idle")} />
+      ) : null}
+
+      {ideasLoading ? (
+        <GenerateLoadingOverlay onCancel={() => { generatingRef.current = false; setIdeasLoading(false); }} />
+      ) : null}
+
+      {/* Popup "5 ide kreatif" — General + Ide Kreatif AI. */}
+      {ideaChoices ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setIdeaChoices(null)}>
+          <div className="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-1 text-lg font-bold text-navy">{L("Pilih ide konten", "Pick a content idea")}</h3>
+            <p className="mb-4 text-sm text-navy/60">
+              {L("AI akan membuat gambar & caption dari ide yang kamu pilih.", "AI will create the image & caption from the idea you pick.")}
+            </p>
+            <div className="flex flex-col gap-2.5">
+              {ideaChoices.ideas.map((ide, i) => (
+                <button key={i} type="button" onClick={() => handlePickIdea(ide)}
+                  className="flex items-start gap-3 rounded-xl border border-line px-4 py-3 text-left transition hover:border-primary hover:bg-primary/5">
+                  <span className="text-2xl leading-none">{ide.emoji}</span>
+                  <span className="flex flex-col gap-1">
+                    <span className="text-sm font-semibold text-navy">{ide.nama}</span>
+                    <span className="text-xs text-navy/70">{ide.deskripsi}</span>
+                    <span className="text-xs text-primary">{L("Judul", "Headline")}: {ide.judul}</span>
+                    {ide.teksGambar?.length ? (
+                      <span className="text-[11px] text-navy/50">{L("Teks di gambar", "Text in image")}: {ide.teksGambar.join(" · ")}</span>
+                    ) : null}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="mt-4 flex items-center justify-between">
+              <button type="button" onClick={() => setIdeaChoices(null)}
+                className="text-sm text-navy/50 hover:text-navy">{L("Batal", "Cancel")}</button>
+              <button type="button"
+                onClick={() => { const shown = ideaChoices.ideas.map((x) => x.nama); const r = ideaChoices.ratioArg; setIdeaChoices(null); void fetchIdeas(r, shown); }}
+                className="rounded-full border border-primary px-4 py-1.5 text-sm font-semibold text-primary hover:bg-primary/5">
+                {L("🔄 Ide lain", "🔄 Other ideas")}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {titlesLoading ? (

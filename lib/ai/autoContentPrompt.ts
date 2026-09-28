@@ -1085,7 +1085,11 @@ ${fontRule(lang)}
 Jawab HANYA dengan objek JSON itu, tanpa teks lain.`;
 }
 
-export function buildGeneralContentPrompt(profile: BusinessProfile, lang?: Lang, extra?: string, konsep?: string): string {
+export function buildGeneralContentPrompt(profile: BusinessProfile, lang?: Lang, extra?: string, konsep?: string, sceneRule?: string): string {
+  // sceneRule (opsional): dipakai KONSEP KREATIF (lib/ai/konsepKreatif.ts) —
+  // menggantikan aturan imageScene "foto realistis tanpa teks" & melewati
+  // arah topik acak (pickContentDirection) supaya tidak bentrok dgn formatnya.
+  const direction = sceneRule ? "" : pickContentDirection(lang);
   if (isEn(lang)) {
     const opener = konsep?.trim()
       ? `Create content in English — READ THE MANDATORY CONCEPT BELOW FIRST before assuming this is a normal business-topic piece.`
@@ -1096,7 +1100,7 @@ ${opener}
 
 ${konsep?.trim() ? konsepDecisionBlock(konsep, lang) + "\n\n" : ""}${profileBlock(profile, lang)}
 
-${extraBlocks(extra)}${pickContentDirection(lang)}
+${extraBlocks(extra)}${direction}
 
 For the HEADLINE (onImageText) this time, use ${pickHeadlineAngle(lang)}. Craft a FRESH new phrase; don't repeat commonly used titles.
 For the caption WRITING STYLE this time, use: ${pickWritingStyle(lang)} (still within the brand voice defined above).
@@ -1104,7 +1108,7 @@ For the caption WRITING STYLE this time, use: ${pickWritingStyle(lang)} (still w
 JSON format: {"onImageText": "...", "caption": "...", "imageScene": "...", "fontId": "..."}
 ${onImageRule(lang)}
 ${captionRules(lang)}
-imageScene = one English sentence, a realistic photo scene that reflects the topic/direction note above (or the mandatory concept above if one was given). Specific, not generic. No text/logo in the scene.
+${sceneRule ?? "imageScene = one English sentence, a realistic photo scene that reflects the topic/direction note above (or the mandatory concept above if one was given). Specific, not generic. No text/logo in the scene."}
 ${fontRule(lang)}
 ${jsonTail(lang)}`;
   }
@@ -1118,7 +1122,7 @@ ${openerId}
 
 ${konsep?.trim() ? konsepDecisionBlock(konsep, lang) + "\n\n" : ""}${profileBlock(profile, lang)}
 
-${extraBlocks(extra)}${pickContentDirection(lang)}
+${extraBlocks(extra)}${direction}
 
 Untuk JUDUL (onImageText) kali ini, pakai ${pickHeadlineAngle(lang)}. Buat frasa BARU yang segar; jangan mengulang judul yang biasa dipakai.
 Untuk GAYA PENULISAN caption kali ini, pakai: ${pickWritingStyle(lang)} (tetap dalam nada brand yang sudah ditentukan di atas).
@@ -1126,7 +1130,7 @@ Untuk GAYA PENULISAN caption kali ini, pakai: ${pickWritingStyle(lang)} (tetap d
 Format JSON: {"onImageText": "...", "caption": "...", "imageScene": "...", "fontId": "..."}
 ${onImageRule(lang)}
 ${captionRules(lang)}
-imageScene = satu kalimat Bahasa Indonesia, adegan foto realistis yang mencerminkan topik/arah konten di atas (atau konsep wajib di atas kalau ada). Spesifik, bukan umum. Tanpa teks/logo di adegan.
+${sceneRule ?? "imageScene = satu kalimat Bahasa Indonesia, adegan foto realistis yang mencerminkan topik/arah konten di atas (atau konsep wajib di atas kalau ada). Spesifik, bukan umum. Tanpa teks/logo di adegan."}
 ${fontRule(lang)}
 ${jsonTail(lang)}`;
 }
@@ -1166,7 +1170,7 @@ Jawab HANYA dengan objek JSON itu, tanpa teks lain.`;
 }
 
 /** Dipanggil setelah user pilih judul dari popup — General butuh imageScene juga (beda dari produk yg edit foto asli). */
-export function buildGeneralCaptionForTitlePrompt(profile: BusinessProfile, chosenTitle: string, lang?: Lang, extra?: string, konsep?: string): string {
+export function buildGeneralCaptionForTitlePrompt(profile: BusinessProfile, chosenTitle: string, lang?: Lang, extra?: string, konsep?: string, sceneRule?: string): string {
   if (isEn(lang)) {
     return `${persona(lang)}
 ${outputLangDirective(lang)}
@@ -1180,7 +1184,7 @@ For the caption WRITING STYLE, use: ${pickWritingStyle(lang)} (still within the 
 
 JSON format: {"caption": "...", "imageScene": "...", "fontId": "..."}
 ${captionRules(lang)}
-imageScene = one English sentence, a realistic photo scene reflecting the chosen headline above. Specific, not generic. No text/logo in the scene.
+${sceneRule ?? "imageScene = one English sentence, a realistic photo scene reflecting the chosen headline above. Specific, not generic. No text/logo in the scene."}
 ${fontRule(lang)}
 Reply with ONLY the JSON object, no other text.`;
   }
@@ -1196,7 +1200,7 @@ Untuk GAYA PENULISAN caption, pakai: ${pickWritingStyle(lang)} (tetap dalam nada
 
 Format JSON: {"caption": "...", "imageScene": "...", "fontId": "..."}
 ${captionRules(lang)}
-imageScene = satu kalimat Bahasa Indonesia, adegan foto realistis yang mencerminkan judul terpilih di atas. Spesifik, bukan umum. Tanpa teks/logo di adegan.
+${sceneRule ?? "imageScene = satu kalimat Bahasa Indonesia, adegan foto realistis yang mencerminkan judul terpilih di atas. Spesifik, bukan umum. Tanpa teks/logo di adegan."}
 ${fontRule(lang)}
 Jawab HANYA dengan objek JSON itu, tanpa teks lain.`;
 }

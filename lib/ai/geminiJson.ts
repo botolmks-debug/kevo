@@ -24,16 +24,23 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function callGemini(prompt: string, apiKey: string, model: string): Promise<Response> {
+/**
+ * Opsi per-panggilan (opsional). Default = perilaku lama (GEMINI_TEXT_MODEL,
+ * 2048 token, 45 detik). Dipakai Ide Kreatif AI yang butuh model lebih kuat
+ * + output lebih panjang (model "thinking" memakai jatah maxOutputTokens juga).
+ */
+export type JsonContentOptions = { model?: string; maxOutputTokens?: number; timeoutMs?: number };
+
+async function callGemini(prompt: string, apiKey: string, model: string, opts: JsonContentOptions = {}): Promise<Response> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), opts.timeoutMs ?? REQUEST_TIMEOUT_MS);
   try {
     return await fetch(`${GEMINI_API_BASE}/models/${model}:generateContent?key=${apiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: MAX_OUTPUT_TOKENS, responseMimeType: "application/json" },
+        generationConfig: { maxOutputTokens: opts.maxOutputTokens ?? MAX_OUTPUT_TOKENS, responseMimeType: "application/json" },
       }),
       signal: controller.signal,
     });
@@ -68,7 +75,8 @@ function parseJsonText(text: string): Record<string, unknown> | null {
  * Otomatis untuk dapat headline+caption+deskripsi scene sekaligus dalam satu
  * panggilan (lihat lib/ai/autoContentPrompt.ts untuk bentuk prompt & JSON-nya).
  */
-async function generateJsonContentGemini(prompt: string): Promise<GeminiJsonResult> {
+async function generateJsonContentGemini(prompt: string, opts: JsonContentOptions = {}): Promise<GeminiJsonResult> {
+  const model = opts.model || GEMINI_TEXT_MODEL;
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return { ok: false, error: "Fitur AI belum aktif: GEMINI_API_KEY belum diisi di server." };
@@ -77,7 +85,7 @@ async function generateJsonContentGemini(prompt: string): Promise<GeminiJsonResu
   for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
     let response: Response;
     try {
-      response = await callGemini(prompt, apiKey, GEMINI_TEXT_MODEL);
+      response = await callGemini(prompt, apiKey, model, opts);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         if (attempt < RETRY_DELAYS_MS.length) {
@@ -100,7 +108,7 @@ async function generateJsonContentGemini(prompt: string): Promise<GeminiJsonResu
     if (response.status === 404) {
       return {
         ok: false,
-        error: `Model AI "${GEMINI_TEXT_MODEL}" tidak ditemukan/tidak didukung lagi. Set env GEMINI_TEXT_MODEL ke model yang masih aktif.`,
+        error: `Model AI "${model}" tidak ditemukan/tidak didukung lagi. Set env ${opts.model ? "GEMINI_IDEA_MODEL" : "GEMINI_TEXT_MODEL"} ke model yang masih aktif.`,
       };
     }
 
@@ -136,8 +144,8 @@ async function generateJsonContentGemini(prompt: string): Promise<GeminiJsonResu
  * OPENAI_API_KEY tersedia, otomatis dialihkan ke OpenAI sebagai cadangan.
  * Dipakai tab Generate Otomatis (headline+caption+scene sekaligus).
  */
-export async function generateJsonContent(prompt: string): Promise<GeminiJsonResult> {
-  const result = await generateJsonContentGemini(prompt);
+export async function generateJsonContent(prompt: string, opts: JsonContentOptions = {}): Promise<GeminiJsonResult> {
+  const result = await generateJsonContentGemini(prompt, opts);
   if (result.ok) return result;
   if (!process.env.OPENAI_API_KEY) return result;
   console.warn("Gemini gagal (" + result.error + "), mencoba fallback OpenAI...");

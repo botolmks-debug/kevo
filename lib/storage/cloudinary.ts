@@ -57,6 +57,8 @@ export async function uploadToCloudinary(
           resource_type: options.resourceType ?? "image",
           public_id: options.publicId,
           overwrite: true,
+          // Gambar AI resolusi tinggi bisa lambat diupload — default SDK 60 dtk.
+          timeout: 120_000,
         },
         (error, res) => {
           if (error || !res) return reject(error ?? new Error("Upload Cloudinary gagal tanpa detail error."));
@@ -68,8 +70,29 @@ export async function uploadToCloudinary(
     return { ok: true, url: result.secure_url, publicId: result.public_id };
   } catch (err) {
     console.error("uploadToCloudinary failed:", err);
-    return { ok: false, error: err instanceof Error ? err.message : "Gagal upload ke Cloudinary." };
+    return { ok: false, error: describeCloudinaryError(err) };
   }
+}
+
+/**
+ * Error Cloudinary SDK sering berupa OBJEK biasa ({ message, http_code }),
+ * bukan instance Error — dulu pesannya jadi tersembunyi ("Gagal upload ke
+ * Cloudinary."). Sekarang pesan asli + kode HTTP ikut ditampilkan.
+ */
+function describeCloudinaryError(err: unknown): string {
+  if (err instanceof Error && err.message) return err.message;
+  if (typeof err === "object" && err !== null) {
+    const e = err as { message?: unknown; http_code?: unknown; error?: { message?: unknown; http_code?: unknown } };
+    const msg = e.message ?? e.error?.message;
+    const code = e.http_code ?? e.error?.http_code;
+    if (typeof msg === "string" && msg) return `Cloudinary: ${msg}${code ? ` (HTTP ${code})` : ""}`;
+    try {
+      return `Cloudinary: ${JSON.stringify(err).slice(0, 300)}`;
+    } catch {
+      // lanjut ke default
+    }
+  }
+  return "Gagal upload ke Cloudinary.";
 }
 
 /** Cek apakah sebuah storage_path/URL adalah URL Cloudinary (bukan path Supabase lama). */
