@@ -93,11 +93,17 @@ function HeroAnimation() {
       />
       {/* Mockup HP: before di bawah, after terungkap dari atas ke bawah saat scan */}
       <div className="relative aspect-[9/16] w-full overflow-hidden rounded-[28px] border-4 border-navy/85 bg-black shadow-[0_20px_60px_-20px_rgba(40,40,38,0.5)]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        {/* next/image: otomatis convert ke WebP/AVIF + resize sesuai ukuran
+            tampil — sumber asli /public/demo/*.jpg 2-3MB per file, ini yang
+            bikin hero landing page berat kalau di-fetch mentah. fill dipakai
+            karena kontainer posisinya absolute+object-cover (bukan ukuran
+            intrinsik tetap). */}
+        <Image
           src={demo.before}
           alt="Foto produk mentah"
-          className="absolute inset-0 h-full w-full object-cover transition-all duration-700"
+          fill
+          sizes="300px"
+          className="object-cover transition-all duration-700"
           style={{
             filter: revealed
               ? "grayscale(0.4) brightness(0.9)"
@@ -105,11 +111,12 @@ function HeroAnimation() {
             transform: revealed ? "scale(1)" : "scale(1.05)",
           }}
         />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={demo.after}
           alt="Hasil konten Keposting"
-          className="absolute inset-0 h-full w-full object-cover"
+          fill
+          sizes="300px"
+          className="object-cover"
           style={{
             clipPath: revealed ? "inset(0 0 0% 0)" : "inset(0 0 100% 0)",
             // transisi halus hanya saat MENGUNGKAP; saat reset ke produk baru, sembunyi seketika
@@ -356,6 +363,12 @@ export function Landing() {
             <a href="/login" className="hover:text-navy">Masuk</a>
             <a href="/signup" className="hover:text-navy">Daftar</a>
           </div>
+        </div>
+        <div className="border-t border-line/70">
+          <p className="mx-auto max-w-6xl px-5 py-4 text-center text-xs text-muted">
+            © {new Date().getFullYear()} Keposting · Dikelola oleh{" "}
+            <span className="font-semibold text-navy">CV. Autekno Rasa</span>
+          </p>
         </div>
       </footer>
     </div>
