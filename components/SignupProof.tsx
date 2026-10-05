@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 /**
@@ -47,14 +48,12 @@ export function SignupProof() {
   // slot mana yang giliran diganti berikutnya (round-robin)
   const [slotPtr, setSlotPtr] = useState<number>(0);
 
-  // Preload semua gambar POOL dulu — supaya saat rotasi tidak ada jeda load
-  // (kedip/pecah sesaat). Browser cache gambar setelah ini.
-  useEffect(() => {
-    pool.forEach((src) => {
-      const img = new window.Image();
-      img.src = src;
-    });
-  }, [pool]);
+  // CATATAN: sebelumnya di sini ada preload PAKSA seluruh 10 gambar POOL
+  // (±8MB PNG mentah) langsung saat halaman /signup dibuka, padahal cuma 4
+  // yang tampil sekaligus — itu penyebab halaman signup berat di-load.
+  // next/image di bawah sudah otomatis convert ke WebP/AVIF + resize sesuai
+  // ukuran slot (jauh lebih kecil dari PNG asli) dan browser meng-cache
+  // tiap URL setelah pertama kali tampil, jadi preload manual tidak perlu lagi.
 
   useEffect(() => {
     if (!enough) return; // kalau gambar <= 4, tidak perlu berputar
@@ -111,14 +110,15 @@ export function SignupProof() {
         {visible.map((imgIdx, slotIdx) => (
           <div
             key={slotIdx}
-            className="aspect-[9/16] w-full overflow-hidden rounded-xl shadow-sm ring-1 ring-black/5"
+            className="relative aspect-[9/16] w-full overflow-hidden rounded-xl shadow-sm ring-1 ring-black/5"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={pool[imgIdx]}
               alt={`Contoh hasil ${slotIdx + 1}`}
-              loading="lazy"
-              className="h-full w-full object-cover transition-opacity"
+              fill
+              sizes="(max-width: 640px) 22vw, 160px"
+              loading={slotIdx < 4 ? "eager" : "lazy"}
+              className="object-cover transition-opacity"
               style={{
                 opacity: fading === slotIdx ? 0 : 1,
                 transitionDuration: `${FADE_MS}ms`,

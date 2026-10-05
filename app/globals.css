@@ -6,74 +6,96 @@
   font-family: "Abril Fatface";
   src: url("/fonts/AbrilFatface-Regular.ttf") format("truetype");
   font-weight: 400 700;
+  font-display: swap;
 }
 @font-face {
   font-family: "Crimson Text";
   src: url("/fonts/CrimsonText-Bold.ttf") format("truetype");
   font-weight: 400 700;
+  font-display: swap;
 }
 @font-face {
   font-family: "PT Serif";
   src: url("/fonts/PTSerif-Bold.ttf") format("truetype");
   font-weight: 400 700;
+  font-display: swap;
 }
 @font-face {
   font-family: "Poppins";
   src: url("/fonts/Poppins-Bold.ttf") format("truetype");
   font-weight: 400 700;
+  font-display: swap;
 }
 @font-face {
   font-family: "PT Sans";
   src: url("/fonts/PTSans-Bold.ttf") format("truetype");
   font-weight: 400 700;
+  font-display: swap;
 }
 @font-face {
   font-family: "Fjalla One";
   src: url("/fonts/FjallaOne-Regular.ttf") format("truetype");
   font-weight: 400 700;
+  font-display: swap;
 }
 @font-face {
   font-family: "Bebas Neue";
   src: url("/fonts/BebasNeue-Regular.ttf") format("truetype");
   font-weight: 400 700;
+  font-display: swap;
 }
 @font-face {
   font-family: "Pacifico";
   src: url("/fonts/Pacifico-Regular.ttf") format("truetype");
   font-weight: 400 700;
+  font-display: swap;
 }
 @font-face {
   font-family: "Varela Round";
   src: url("/fonts/VarelaRound-Regular.ttf") format("truetype");
   font-weight: 400 700;
+  font-display: swap;
 }
 
 
 
 
-@font-face { font-family: "DM Serif Display"; src: url("/fonts/DMSerifDisplay-Regular.ttf") format("truetype"); font-weight: 400 700; }
-@font-face { font-family: "Righteous"; src: url("/fonts/Righteous-Regular.ttf") format("truetype"); font-weight: 400 700; }
-@font-face { font-family: "Titan One"; src: url("/fonts/TitanOne-Regular.ttf") format("truetype"); font-weight: 400 700; }
-@font-face { font-family: "Bungee"; src: url("/fonts/Bungee-Regular.ttf") format("truetype"); font-weight: 400 700; }
-@font-face { font-family: "Lobster"; src: url("/fonts/Lobster-Regular.ttf") format("truetype"); font-weight: 400 700; }
-@font-face { font-family: "Barlow Condensed"; src: url("/fonts/BarlowCondensed-Bold.ttf") format("truetype"); font-weight: 400 700; }
-@font-face { font-family: "Great Vibes"; src: url("/fonts/GreatVibes-Regular.ttf") format("truetype"); font-weight: 400 700; }
-@font-face { font-family: "Sacramento"; src: url("/fonts/Sacramento-Regular.ttf") format("truetype"); font-weight: 400 700; }
+@font-face { font-family: "DM Serif Display"; src: url("/fonts/DMSerifDisplay-Regular.ttf") format("truetype"); font-weight: 400 700;  font-display: swap; }
+@font-face { font-family: "Righteous"; src: url("/fonts/Righteous-Regular.ttf") format("truetype"); font-weight: 400 700;  font-display: swap; }
+@font-face { font-family: "Titan One"; src: url("/fonts/TitanOne-Regular.ttf") format("truetype"); font-weight: 400 700;  font-display: swap; }
+@font-face { font-family: "Bungee"; src: url("/fonts/Bungee-Regular.ttf") format("truetype"); font-weight: 400 700;  font-display: swap; }
+@font-face { font-family: "Lobster"; src: url("/fonts/Lobster-Regular.ttf") format("truetype"); font-weight: 400 700;  font-display: swap; }
+@font-face { font-family: "Barlow Condensed"; src: url("/fonts/BarlowCondensed-Bold.ttf") format("truetype"); font-weight: 400 700;  font-display: swap; }
+@font-face { font-family: "Great Vibes"; src: url("/fonts/GreatVibes-Regular.ttf") format("truetype"); font-weight: 400 700;  font-display: swap; }
+@font-face { font-family: "Sacramento"; src: url("/fonts/Sacramento-Regular.ttf") format("truetype"); font-weight: 400 700;  font-display: swap; }
+
+/* === 10 font baru — file .ttf BELUM ada di public/fonts/, lihat
+   PANDUAN-FONT-BARU.md. Uncomment tiap baris setelah file-nya sudah ada. */
+@font-face { font-family: "Montserrat"; src: url("/fonts/Montserrat-Bold.woff") format("woff"); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("/fonts/PlusJakartaSans-Bold.woff") format("woff"); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "Space Grotesk"; src: url("/fonts/SpaceGrotesk-Bold.woff") format("woff"); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "Anton"; src: url("/fonts/Anton-Regular.woff") format("woff"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Archivo Black"; src: url("/fonts/ArchivoBlack-Regular.woff") format("woff"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Unbounded"; src: url("/fonts/Unbounded-Bold.woff") format("woff"); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "Caveat"; src: url("/fonts/Caveat-Bold.woff") format("woff"); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "Instrument Serif"; src: url("/fonts/InstrumentSerif-Regular.woff") format("woff"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Libre Baskerville"; src: url("/fonts/LibreBaskerville-Bold.woff") format("woff"); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "Bricolage Grotesque"; src: url("/fonts/BricolageGrotesque-Bold.woff") format("woff"); font-weight: 400 700; font-display: swap; }
 
 /* Inter untuk KANVAS (Konva). Inter versi UI dimuat via next/font dengan nama
    ter-hash, jadi nama literal "Inter" tak dikenal kanvas → slot teks Inter
    (deskripsi/subjudul) sempat digambar pakai font fallback dan beda dari hasil
    Satori. Daftarkan literal "Inter" di sini supaya preview = export. */
-@font-face { font-family: "Inter"; src: url("/fonts/Inter-Regular.ttf") format("truetype"); font-weight: 400; font-style: normal; }
-@font-face { font-family: "Inter"; src: url("/fonts/Inter-Bold.ttf") format("truetype"); font-weight: 700; font-style: normal; }
-@font-face { font-family: "Oswald"; src: url("/fonts/Oswald-Regular.ttf") format("truetype"); font-weight: 400; font-style: normal; }
-@font-face { font-family: "Oswald"; src: url("/fonts/Oswald-Bold.ttf") format("truetype"); font-weight: 700; font-style: normal; }
-@font-face { font-family: "Raleway"; src: url("/fonts/Raleway-Bold.ttf") format("truetype"); font-weight: 400 700; }
-@font-face { font-family: "Barlow"; src: url("/fonts/Barlow-Bold.ttf") format("truetype"); font-weight: 400 700; }
-@font-face { font-family: "Nunito Sans"; src: url("/fonts/NunitoSans-Bold.ttf") format("truetype"); font-weight: 400 700; }
+@font-face { font-family: "Inter"; src: url("/fonts/Inter-Regular.ttf") format("truetype"); font-weight: 400; font-style: normal;  font-display: swap; }
+@font-face { font-family: "Inter"; src: url("/fonts/Inter-Bold.ttf") format("truetype"); font-weight: 700; font-style: normal;  font-display: swap; }
+@font-face { font-family: "Oswald"; src: url("/fonts/Oswald-Regular.ttf") format("truetype"); font-weight: 400; font-style: normal;  font-display: swap; }
+@font-face { font-family: "Oswald"; src: url("/fonts/Oswald-Bold.ttf") format("truetype"); font-weight: 700; font-style: normal;  font-display: swap; }
+@font-face { font-family: "Raleway"; src: url("/fonts/Raleway-Bold.ttf") format("truetype"); font-weight: 400 700;  font-display: swap; }
+@font-face { font-family: "Barlow"; src: url("/fonts/Barlow-Bold.ttf") format("truetype"); font-weight: 400 700;  font-display: swap; }
+@font-face { font-family: "Nunito Sans"; src: url("/fonts/NunitoSans-Bold.ttf") format("truetype"); font-weight: 400 700;  font-display: swap; }
 /* "Helvetica" di picker font memakai Arimo (open-source, metric-compatible
    dengan Helvetica/Arial) — Helvetica asli berlisensi, tidak boleh dibundel. */
-@font-face { font-family: "Arimo"; src: url("/fonts/Arimo-Bold.ttf") format("truetype"); font-weight: 400 700; }
+@font-face { font-family: "Arimo"; src: url("/fonts/Arimo-Bold.ttf") format("truetype"); font-weight: 400 700;  font-display: swap; }
 
 :root {
   --background: #fbf9f6;

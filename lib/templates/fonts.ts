@@ -33,6 +33,21 @@ export const FONT_OPTIONS: FontOption[] = [
   // Uncomment setelah file .ttf-nya ada di public/fonts/:
   // { id: "nunito",     label: "Nunito",           family: "Nunito",           fileName: "Nunito-Bold.ttf",           style: "sans" },
   // { id: "rubik",      label: "Rubik",            family: "Rubik",            fileName: "Rubik-Bold.ttf",            style: "sans" },
+
+  // === 10 font baru (populer di desain konten sosmed/Canva-style & "viral"
+  // di IG/TikTok) — file .ttf-nya BELUM ada di public/fonts/, jalankan dulu
+  // scripts/fetch-google-font.mjs untuk masing-masing (lihat PANDUAN-FONT-BARU.md),
+  // baru uncomment entry di bawah setelah filenya ada.
+  { id: "montserrat",       label: "Montserrat",         family: "Montserrat",         fileName: "Montserrat-Bold.woff",        style: "sans" },
+  { id: "plus-jakarta",     label: "Plus Jakarta Sans",  family: "Plus Jakarta Sans",  fileName: "PlusJakartaSans-Bold.woff",   style: "sans" },
+  { id: "space-grotesk",    label: "Space Grotesk",      family: "Space Grotesk",      fileName: "SpaceGrotesk-Bold.woff",      style: "sans" },
+  { id: "anton",            label: "Anton",              family: "Anton",              fileName: "Anton-Regular.woff",          style: "display" },
+  { id: "archivo-black",    label: "Archivo Black",      family: "Archivo Black",      fileName: "ArchivoBlack-Regular.woff",   style: "display" },
+  { id: "unbounded",        label: "Unbounded",          family: "Unbounded",          fileName: "Unbounded-Bold.woff",         style: "display" },
+  { id: "caveat",           label: "Caveat",             family: "Caveat",             fileName: "Caveat-Bold.woff",            style: "script" },
+  { id: "instrument-serif", label: "Instrument Serif",   family: "Instrument Serif",   fileName: "InstrumentSerif-Regular.woff",style: "serif" },
+  { id: "libre-baskerville",label: "Libre Baskerville",  family: "Libre Baskerville",  fileName: "LibreBaskerville-Bold.woff",  style: "serif" },
+  { id: "bricolage",        label: "Bricolage Grotesque",family: "Bricolage Grotesque",fileName: "BricolageGrotesque-Bold.woff",style: "display" },
   // { id: "playfair",   label: "Playfair Display", family: "Playfair Display", fileName: "PlayfairDisplay-Bold.ttf",  style: "serif" },
   // { id: "lora",       label: "Lora",             family: "Lora",             fileName: "Lora-Bold.ttf",             style: "serif" },
   // { id: "satisfy",    label: "Satisfy",          family: "Satisfy",          fileName: "Satisfy-Regular.ttf",       style: "script" },
